@@ -1,0 +1,113 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Connor McAdams <cmcadams@codeweavers.com>
+Date: Tue, 13 Jan 2026 13:32:05 -0500
+Subject: [PATCH] d3dx11: Implement D3DX11FilterTexture().
+
+Signed-off-by: Connor McAdams <cmcadams@codeweavers.com>
+
+CW-Bug-Id: #20442
+CW-Bug-Id: #23084
+CW-Bug-Id: #23301
+(cherry picked from commit aebaaafc346c7a5896a9733dca0db0b276607076)
+mproton-resolved: The d3dx11 code applies as is. The test hunk is left out: it extends the D3DX11LoadTextureFromTexture() tests, which 046d8148368's port leaves out.
+---
+ dlls/d3dx11_43/d3dx11_43_main.c | 11 -------
+ dlls/d3dx11_43/texture.c        | 58 +++++++++++++++++++++++++++++++++
+ 2 files changed, 58 insertions(+), 11 deletions(-)
+
+diff --git a/dlls/d3dx11_43/d3dx11_43_main.c b/dlls/d3dx11_43/d3dx11_43_main.c
+index 6e90891e7ce..c327b5c5440 100644
+--- a/dlls/d3dx11_43/d3dx11_43_main.c
++++ b/dlls/d3dx11_43/d3dx11_43_main.c
+@@ -29,18 +29,7 @@
+ #include "d3dx11core.h"
+ #include "d3dx11tex.h"
+ 
+-#include "wine/debug.h"
+-
+-WINE_DEFAULT_DEBUG_CHANNEL(d3dx);
+-
+ BOOL WINAPI D3DX11CheckVersion(UINT d3d_sdk_ver, UINT d3dx_sdk_ver)
+ {
+     return d3d_sdk_ver == D3D11_SDK_VERSION && d3dx_sdk_ver == D3DX11_SDK_VERSION;
+ }
+-
+-HRESULT WINAPI D3DX11FilterTexture(ID3D11DeviceContext *context, ID3D11Resource *texture, UINT src_level, UINT filter)
+-{
+-    FIXME("context %p, texture %p, src_level %u, filter %#x stub!\n", context, texture, src_level, filter);
+-
+-    return E_NOTIMPL;
+-}
+diff --git a/dlls/d3dx11_43/texture.c b/dlls/d3dx11_43/texture.c
+index 2438eeb2dbe..846056c0bac 100644
+--- a/dlls/d3dx11_43/texture.c
++++ b/dlls/d3dx11_43/texture.c
+@@ -1267,6 +1267,52 @@ static void d3d11_box_get_mip_level(D3D11_BOX *box, uint32_t level)
+     }
+ }
+ 
++static uint32_t d3d11_get_resource_mip_levels(ID3D11Resource *rsrc)
++{
++    D3D11_RESOURCE_DIMENSION rsrc_dim;
++    uint32_t mip_levels = 0;
++    HRESULT hr;
++
++    ID3D11Resource_GetType(rsrc, &rsrc_dim);
++    switch (rsrc_dim)
++    {
++    case D3D11_RESOURCE_DIMENSION_TEXTURE2D:
++    {
++        D3D11_TEXTURE2D_DESC desc;
++        ID3D11Texture2D *tex_2d;
++
++        hr = ID3D11Resource_QueryInterface(rsrc, &IID_ID3D11Texture2D, (void **)&tex_2d);
++        if (FAILED(hr))
++            break;
++
++        ID3D11Texture2D_GetDesc(tex_2d, &desc);
++        ID3D11Texture2D_Release(tex_2d);
++        mip_levels = desc.MipLevels;
++        break;
++    }
++
++    case D3D11_RESOURCE_DIMENSION_TEXTURE3D:
++    {
++        D3D11_TEXTURE3D_DESC desc;
++        ID3D11Texture3D *tex_3d;
++
++        hr = ID3D11Resource_QueryInterface(rsrc, &IID_ID3D11Texture3D, (void **)&tex_3d);
++        if (FAILED(hr))
++            break;
++
++        ID3D11Texture3D_GetDesc(tex_3d, &desc);
++        ID3D11Texture3D_Release(tex_3d);
++        mip_levels = desc.MipLevels;
++        break;
++    }
++
++    default:
++        break;
++    }
++
++    return mip_levels;
++}
++
+ static HRESULT d3dx_d3d11_texture_init(ID3D11DeviceContext *context, ID3D11Resource *tex_rsrc, uint32_t first_layer,
+         uint32_t first_mip_level, D3D11_MAP map_flags, D3D11_BOX *tex_box, struct d3d11_texture *texture)
+ {
+@@ -1568,3 +1614,15 @@ end:
+     d3dx_d3d11_texture_release(&dst_tex);
+     return SUCCEEDED(hr) ? S_OK : hr;
+ }
++
++HRESULT WINAPI D3DX11FilterTexture(ID3D11DeviceContext *context, ID3D11Resource *texture, UINT src_level, UINT filter)
++{
++    D3DX11_TEXTURE_LOAD_INFO load_info = { NULL, NULL, src_level, src_level + 1, 0, 0, 0, 0, filter, filter };
++
++    TRACE("context %p, texture %p, src_level %u, filter %#x.\n", context, texture, src_level, filter);
++
++    if (d3d11_get_resource_mip_levels(texture) <= src_level)
++        return S_OK;
++
++    return D3DX11LoadTextureFromTexture(context, texture, &load_info, texture);
++}

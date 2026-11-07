@@ -1,0 +1,131 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Connor McAdams <cmcadams@codeweavers.com>
+Date: Wed, 14 Jan 2026 11:52:31 -0500
+Subject: [PATCH] d3dx10: Implement D3DX10SaveTextureToFile{A,W}().
+
+Signed-off-by: Connor McAdams <cmcadams@codeweavers.com>
+
+CW-Bug-Id: #20442
+CW-Bug-Id: #23084
+CW-Bug-Id: #23301
+(cherry picked from commit ed581161c2aadc1ac210a83f2e6e70b6da83e656)
+mproton-resolved: The code applies as is on top of the ported D3DX10SaveTextureToMemory(). The test hunk is left out (it extends the save tests the series doesn't carry).
+---
+ dlls/d3dx10_43/texture.c     | 59 +++++++++++++++++++++++++++---------
+ dlls/d3dx9_36/d3dx_helpers.c | 16 ++++++++++
+ dlls/d3dx9_36/d3dx_helpers.h |  1 +
+ 3 files changed, 62 insertions(+), 14 deletions(-)
+
+diff --git a/dlls/d3dx10_43/texture.c b/dlls/d3dx10_43/texture.c
+index 9aac011603b..c66a3cefa17 100644
+--- a/dlls/d3dx10_43/texture.c
++++ b/dlls/d3dx10_43/texture.c
+@@ -1630,20 +1630,6 @@ HRESULT WINAPI D3DX10FilterTexture(ID3D10Resource *texture, UINT src_level, UINT
+             src_level + 1, info.layers, info.levels - src_level - 1, filter);
+ }
+ 
+-HRESULT WINAPI D3DX10SaveTextureToFileW(ID3D10Resource *texture, D3DX10_IMAGE_FILE_FORMAT format, const WCHAR *filename)
+-{
+-    FIXME("texture %p, format %u, filename %s stub!\n", texture, format, debugstr_w(filename));
+-
+-    return E_NOTIMPL;
+-}
+-
+-HRESULT WINAPI D3DX10SaveTextureToFileA(ID3D10Resource *texture, D3DX10_IMAGE_FILE_FORMAT format, const char *filename)
+-{
+-    FIXME("texture %p, format %u, filename %s stub!\n", texture, format, debugstr_a(filename));
+-
+-    return E_NOTIMPL;
+-}
+-
+ static void d3dx10_buffer_destroy(struct d3dx_buffer *d3dx_buffer)
+ {
+     ID3D10Blob *buffer_iface = (ID3D10Blob *)d3dx_buffer->buffer_iface;
+@@ -1932,3 +1918,48 @@ HRESULT WINAPI D3DX10SaveTextureToMemory(ID3D10Resource *texture, D3DX10_IMAGE_F
+         ID3D10Blob_Release(out_buffer);
+     return SUCCEEDED(hr) ? S_OK : hr;
+ }
++
++HRESULT WINAPI D3DX10SaveTextureToFileW(ID3D10Resource *texture, D3DX10_IMAGE_FILE_FORMAT format, const WCHAR *filename)
++{
++    ID3D10Blob *buffer;
++    HRESULT hr;
++
++    TRACE("texture %p, format %u, filename %s.\n", texture, format, debugstr_w(filename));
++
++    if (!filename)
++        return E_FAIL;
++
++    hr = D3DX10SaveTextureToMemory(texture, format, &buffer, 0);
++    if (SUCCEEDED(hr))
++    {
++        hr = d3dx_write_buffer_to_file(filename, ID3D10Blob_GetBufferPointer(buffer), ID3D10Blob_GetBufferSize(buffer));
++        ID3D10Blob_Release(buffer);
++    }
++
++    return hr;
++}
++
++HRESULT WINAPI D3DX10SaveTextureToFileA(ID3D10Resource *texture, D3DX10_IMAGE_FILE_FORMAT format, const char *filename)
++{
++    WCHAR *buffer;
++    int str_len;
++    HRESULT hr;
++
++    TRACE("texture %p, format %u, filename %s.\n", texture, format, debugstr_a(filename));
++
++    if (!filename)
++        return E_FAIL;
++
++    str_len = MultiByteToWideChar(CP_ACP, 0, filename, -1, NULL, 0);
++    if (!str_len)
++        return HRESULT_FROM_WIN32(GetLastError());
++
++    buffer = malloc(str_len * sizeof(*buffer));
++    if (!buffer)
++        return E_OUTOFMEMORY;
++
++    MultiByteToWideChar(CP_ACP, 0, filename, -1, buffer, str_len);
++    hr = D3DX10SaveTextureToFileW(texture, format, buffer);
++    free(buffer);
++    return hr;
++}
+diff --git a/dlls/d3dx9_36/d3dx_helpers.c b/dlls/d3dx9_36/d3dx_helpers.c
+index bc22753fb12..05beccbc0da 100644
+--- a/dlls/d3dx9_36/d3dx_helpers.c
++++ b/dlls/d3dx9_36/d3dx_helpers.c
+@@ -3574,6 +3574,22 @@ exit:
+ /*
+  * File/resource loading helper functions.
+  */
++HRESULT d3dx_write_buffer_to_file(const WCHAR *dst_filename, void *buffer, unsigned int buffer_size)
++{
++    HANDLE file = CreateFileW(dst_filename, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
++    DWORD bytes_written;
++    HRESULT hr = S_OK;
++
++    if (file == INVALID_HANDLE_VALUE)
++        return HRESULT_FROM_WIN32(GetLastError());
++
++    if (!WriteFile(file, buffer, buffer_size, &bytes_written, NULL))
++        hr = HRESULT_FROM_WIN32(GetLastError());
++
++    CloseHandle(file);
++    return hr;
++}
++
+ HRESULT d3dx_load_file(const WCHAR *path, void **data, uint32_t *size)
+ {
+     DWORD read_len;
+diff --git a/dlls/d3dx9_36/d3dx_helpers.h b/dlls/d3dx9_36/d3dx_helpers.h
+index 1da9a700f27..1dd94744bd3 100644
+--- a/dlls/d3dx9_36/d3dx_helpers.h
++++ b/dlls/d3dx9_36/d3dx_helpers.h
+@@ -481,6 +481,7 @@ HRESULT d3dx_create_subresource_data_for_texture(uint32_t width, uint32_t height
+ /*
+  * File/resource loading helper functions.
+  */
++HRESULT d3dx_write_buffer_to_file(const WCHAR *dst_filename, void *buffer, unsigned int buffer_size);
+ HRESULT d3dx_load_file(const WCHAR *path, void **data, uint32_t *size);
+ HRESULT d3dx_load_resource_init_a(HMODULE module, const char *resource, HRSRC *rsrc);
+ HRESULT d3dx_load_resource_init_w(HMODULE module, const WCHAR *resource, HRSRC *rsrc);
