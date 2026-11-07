@@ -115,6 +115,91 @@ Then `scripts/bin/bundle-wine.sh`, which needs the signing identity.
 
 Takeaway: the feature set DXVK and vkd3d-proton need is essentially there on M2. The next question is correctness and performance under real games.
 
+## Running the matrix
+
+Two scripts take the next session from reboot to a results table. Neither needs sudo.
+
+### 1. `tools/amfi-check.sh`: does ad hoc signing work now?
+
+Run it after rebooting with `amfi_get_out_of_my_way=1` in boot-args and Permissive Security set in Recovery:
+
+```bash
+tools/amfi-check.sh
+```
+
+It reports each step on its own:
+
+1. `csrutil status`, `nvram boot-args`, and whether `amfi_get_out_of_my_way=1` is set. `bputil -d` needs root, so the script prints `sudo bputil -d` for you to run. In its output, look for `Security Mode: Permissive` and boot-args filtering disabled.
+2. It builds `probes/macos_compat_probe.c` twice: a plain arm64 binary, and a child linked with `-Wl,-x86_64_layout_emulation`. The second build needs the macOS 26.4+ linker; if the linker rejects the flag, the script says so and skips it.
+3. A control run, signed ad hoc **without** the entitlement. It should reproduce the M0 results: `KERN_FAILURE` (5) from TSO and `EBADMACHO` (88) from the 4K spawn.
+4. The real run, signed ad hoc **with** `com.apple.developer.cross-architecture-support`. The script checks the exit code and the newest `~/Library/Logs/DiagnosticReports/probe*.ips` written since the run started. A `CODESIGNING` / "Code Signature Invalid" / "Taskgated Invalid Signature" report means AMFI still rejects the entitlement. If the probe didn't start, it also shows recent amfid/taskgated log lines.
+5. TSO: the result of `thread_set_x86_64_compat(self, 1)`, plus a message-passing litmus test (writer stores data then flag, reader loads flag then data) run with TSO off and on. With TSO on, the litmus must show 0 violations. With TSO off, violations are possible but not guaranteed, so that count is informational.
+6. The 4K spawn: `posix_spawn` with `posix_spawnattr_set_4k_page_size_np`, once for each child binary, plus the child's reported page size. A spawn counts as working only if it returns 0 and the child reports 4096.
+
+The last line is the verdict, which also sets the exit status:
+
+- `VERDICT: PASS` (exit 0): the entitled probe launches, and both TSO and the 4K spawn work.
+- `VERDICT: PARTIAL` (exit 1): it launches, but TSO or the 4K spawn fails.
+- `VERDICT: FAIL` (exit 2): it was killed by code signing, or it didn't start.
+
+On PASS, assemble the bundle with athei's script and the ad hoc loader patch (`signing/mach9-adhoc-loader.patch`):
+
+```bash
+cd work/mach9 && LOADER_ADHOC=1 scripts/bin/bundle-wine.sh --dest "$PWD/dist"
+```
+
+### 2. `tools/run-matrix.sh`: every runtime, arch and backend
+
+```bash
+bench/build.sh
+```
+
+```bash
+tools/run-matrix.sh work/mach9/dist/wine "/Applications/Wine Stable.app"
+```
+
+- **Arguments:** the bundle directory (the `wine/` directory under bundle-wine.sh's `--dest`, the one with `bin/wine`) and Rosetta Wine (the `.app`, its `bin/` or `bin/wine`). Pass `-` for either one to skip it.
+- **Runtimes:**
+  - `rosetta`: Rosetta Wine 10 with wined3d, running the x86_64 and i686 builds.
+  - `arm64-tso1`: ARM64 Wine + FEX with `FEX_HARDWARE_TSO=1`, running all four builds.
+  - `arm64-tso0`: the same with `FEX_HARDWARE_TSO=0`, x86_64 and i686 only. aarch64 and arm64ec mpbench are native code, which FEX's TSO setting doesn't affect.
+- **Runs:** each runtime gets a fresh prefix under `prefixes/m1-<date>/<runtime>`. For each arch, the script does one CPU-only run (`--no-gpu`), then one GPU run (`--no-cpu --api all`) per D3D backend.
+- **Backends:** the backend is chosen with `WINE_COMPATDB="exe=mpbench-<arch>.exe;dxgi=<impl>"`.
+  - `wined3d`.
+  - `dxmt`: D3D11 on DXMT, and D3D12 on vkd3d-proton, which ships in the same tree.
+  - `dxvk`: only if `lib/wine/dxgi/dxvk/` exists. mach9 doesn't ship it, and its compatdb doesn't know `dxgi=dxvk` yet.
+  - After each run, the script reads the compatdb block that mpbench's own process logged. If that process got a different tree from the one requested, the run is marked as a **backend mismatch**.
+- **Failures:**
+  - Every run has a timeout (`MATRIX_TIMEOUT`, default 900 s), enforced in shell because macOS has no `timeout(1)`.
+  - A crash, a timeout or missing JSON is recorded as that run's result: a stub JSON with a `run` object. The matrix then carries on.
+- **Output** goes to `results/m1-<date>/`:
+  - one `<runtime>-<arch>-<part>.json` per run, where part is `cpu` or a backend
+  - `logs/`
+  - `matrix.tsv`, one row per run, including the skipped ones
+  - `summary.md`. It opens with a **Problems** list: crashes, timeouts, `ordering_errors` > 0 and backend mismatches. Then, for each arch, it has a CPU table and a GPU table from `bench/compare.py --highlight`. In those tables, ordering errors, error/FAIL cells and scenes that didn't run (`**not run**`) are in bold, and a Flags list follows each table.
+- **Knobs:** `MATRIX_RUNTIMES`, `MATRIX_ARCHS`, `MATRIX_BACKENDS`, `MATRIX_FRAMES` (default 600 at 1280x720, as in the baseline), `MATRIX_ARGS` (for example `--d3d12-shaders dxbc`), `MATRIX_DATE`, `MATRIX_OUT`, `MATRIX_PREFIXES`.
+- **Example:** a quick single-runtime check:
+
+  ```bash
+  MATRIX_RUNTIMES=arm64-tso1 MATRIX_ARCHS=x86_64 MATRIX_FRAMES=60 tools/run-matrix.sh work/mach9/dist/wine -
+  ```
+
+`tests/test_matrix_tools.py` covers the orchestration on Linux, using stub `wine` runtimes that emit canned JSON and compatdb lines, and stub `csrutil`/`nvram`/`clang`/`codesign`. The tests cover:
+
+- combinations and skips
+- crash, timeout and no-JSON runs
+- ordering errors
+- backend mismatches
+- the three amfi-check verdicts
+
+Some things can only be verified on the Mac:
+
+- the real AMFI behaviour
+- whether `-x86_64_layout_emulation` is needed for the 4K child
+- the exact compatdb log format, which the backend check parses
+- Rosetta Wine's path layout
+- real mpbench timings
+
 ## Still to do
 
 1. **Rosetta + DXVK/MoltenVK** and **Rosetta + DXMT**: Gcenx/CrossOver-style builds. Run the full `--api all` set on every stack: `gpu12.features.*` tells us which of GS / stream output / tessellation each layer actually handles, and `vk.*` against `gpu11.*` separates winevulkan → MoltenVK cost from DXVK's own.
