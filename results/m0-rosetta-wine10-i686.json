@@ -1,0 +1,11 @@
+{
+  "bench": "mpbench", "version": 1, "pe_arch": "i386",
+  "frames": 600, "width": 1280, "height": 720,
+  "results": [
+    {"name": "cpu.scalar", "value": 159.8812, "unit": "Miter/s"},
+    {"name": "cpu.vector", "value": 7.2173, "unit": "GFLOP/s(x2)"},
+    {"name": "cpu.memcpy", "value": 18.3412, "unit": "GB/s"},
+    {"name": "cpu.atomic", "value": 57.0007, "unit": "Mops/s"},
+    {"name": "cpu.pingpong", "value": 12200.5525, "unit": "Krt/s", "ordering_errors": 0}
+  ]
+}

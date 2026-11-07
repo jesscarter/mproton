@@ -1,0 +1,12 @@
+{
+  "bench": "mpbench", "version": 1, "pe_arch": "x86_64",
+  "frames": 600, "width": 1280, "height": 720,
+  "results": [
+    {"name": "cpu.scalar", "value": 160.2803, "unit": "Miter/s"},
+    {"name": "cpu.vector", "value": 7.9711, "unit": "GFLOP/s(x2)"},
+    {"name": "cpu.memcpy", "value": 18.6438, "unit": "GB/s"},
+    {"name": "cpu.atomic", "value": 59.2885, "unit": "Mops/s"},
+    {"name": "cpu.pingpong", "value": 12212.6216, "unit": "Krt/s", "ordering_errors": 0},
+    {"name": "gpu.device", "value": 0.0000, "unit": "fl<11_0", "adapter": "NVIDIA GeForce 6800", "feature_level": "0x9300"}
+  ]
+}
