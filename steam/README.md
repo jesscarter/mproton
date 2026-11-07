@@ -99,7 +99,14 @@ The game loads `steamclient.dll`/`steamclient64.dll` (Valve's), and the Wine loa
 - `eeb10d71bea` (`steam://` protocol association)
 - `adba6db13ee` (`C:\Program Files (x86)\Steam` on `PATH`)
 
-The recommended Wine base (Proton Wine + athei's patches, `wine-patches/athei-on-proton-11.0/`) has them. Plain athei `arm64-patched` does not. The modules build against either, because they use no Proton-only Wine API: every ntdll export the unix side imports and every PE import resolves against athei's tree. Without the redirect, though, games never reach lsteamclient.
+The recommended Wine base (Proton Wine + athei's patches) carries these commits, and the mproton Wine series hand-merges `c177a34d784` onto athei 11.20. Plain athei `arm64-patched` does not have them. The modules build against either, because they use no Proton-only Wine API: every ntdll export the unix side imports and every PE import resolves against athei's tree.
+
+**Open blocker on arm64 (not fixed here).** The redirect works through execute page faults on the trampolines. Proton only hooks `steamclient_handle_fault()` into `signal_x86_64.c` and `signal_i386.c`. On an arm64 host:
+
+- `signal_arm64.c` has no such hook.
+- The game's x86 code runs under FEX (ARM64EC, or the WoW64 BTCpu for 32-bit games), and that fault path doesn't reach the hook either.
+
+So until the hook is ported, the redirect won't fire on macOS arm64. The port means either a hook in the arm64/ARM64EC fault path, or having FEX call it. Until then, games never reach lsteamclient.
 
 ## Linux-isms in the unix side (audit)
 
@@ -171,6 +178,8 @@ The launcher runs `wine c:\windows\system32\steam.exe <game> <args>` with `WINED
 - Nothing in that path uses pressure-vessel or Linux paths.
 
 ## Must verify on a Mac
+
+Prerequisite: the steamclient trampoline redirect must be ported to the arm64/FEX fault path (see "Wine-side requirements"). Until then only items 1–3 can be tested; items 2–3 use the standalone probe and need no Wine.
 
 Nothing here has run on macOS yet. Everything above was built and checked on Linux:
 
