@@ -13,6 +13,14 @@ You need a mach9 `wine/` tree: `bin/wine`, `bin/wineserver`, `lib/wine/…`, `sh
 
 Leave `wine.app` untouched. Re-signing it or editing its `Info.plist` breaks it.
 
+Optional: to give games the Steam API, install `steam.exe` and `lsteamclient` (`steam/`, see [steam/README.md](../steam/README.md)) into the bundle's default dirs:
+
+```bash
+make -C steam install WINE_SRC=/path/to/wine WINE_OBJ=/path/to/wine-build DESTDIR=$MPROTON_WINE_DIR
+```
+
+This adds files under `lib/wine/` and leaves `wine.app` alone. The launcher then starts games through `c:\windows\system32\steam.exe`. The steamclient → lsteamclient redirect does not fire on arm64 yet (open blocker in `steam/README.md`), so many games still won't see Steam.
+
 ## 2. Install the game
 
 Either install the game with Steam using the Windows depot (Kaon's `steam_dev.cfg` route in [steam-integration.md](steam-integration.md#mechanism-a-kaon-platform-override-convar-no-patching), or `steamcmd +@sSteamCmdForcePlatformType windows +app_update <appid>`), or just copy a Windows game directory somewhere.
@@ -85,4 +93,4 @@ Runtime knobs pass straight through to the bundle:
 2. Is `$STEAM_COMPAT_DATA_PATH/compatdb.rules` free of `warning:` lines in the `compatdb:` stderr block, and do the `dxgi = …` / `d3d9 = …` lines match the table above?
 3. Does `lsof -p <pid> | grep -i dxgi.dll` show `lib/wine/dxgi/<impl>/`?
 4. Does the user directory come out as `drive_c/users/<your login>`? Proton prefixes use `steamuser`, which Steam Cloud path mapping expects. If the names differ, Cloud sync needs a fix.
-5. With a bundle that carries `steam.exe` ([jesscarter/mproton#5](https://github.com/jesscarter/mproton/pull/5)), does the game start through `c:\windows\system32\steam.exe`?
+5. With `steam.exe` installed in the bundle ([jesscarter/mproton#5](https://github.com/jesscarter/mproton/pull/5)), does the game start through `c:\windows\system32\steam.exe`, and does `steam.exe` find `steamclient.dylib`?
