@@ -152,6 +152,29 @@ Builds `lsteamclient.dll` (ARM64X and i386), `lsteamclient.so` (arm64 Mach-O) an
 
 `bundle-wine.sh` deletes and rebuilds the bundle from scratch on every run, so this step reruns completely whenever any of its inputs changes. That includes the signing mode, the profile, the DXVK or steam build, and the Wine build.
 
+## Fixing the Wine series: batch fixes, build once
+
+A full run takes 25+ minutes, mostly the bundle step, the 32-bit Wine tree, FEX and the SDK. A fix to one Wine file shouldn't pay for all of that. The loop is:
+
+1. **Edit the series in a scratch worktree, never in `work/mach9/src`:**
+   ```bash
+   wine/scripts/series-edit.sh start            # work/series-edit, before the regen patch
+   # fix, commit (one commit per fix), repeat
+   wine/scripts/series-edit.sh finish           # regen patch back on top, wine/patches re-exported and checked
+   ```
+2. **Compile-check:** `build/mproton-build.sh --check` moves `work/mach9/src` to the new series (only changed files are rewritten) and runs `make -k` in the existing Wine build tree. It compiles only what changed and prints **every** error, not just the first. Fix them all (back to step 1) and check again. This takes seconds to a few minutes.
+3. **Once it compiles:** run the full build (`build/mproton-build.sh --from workspace`) once, for the smoke tests and the bundle.
+
+Several fixes, or several cloud branches merged together, go through one `--check` loop and one full build.
+
+What keeps rebuilds incremental, and what used to make them full:
+
+- **Timestamps, not contents.** make rebuilds what is *newer* than its output. If `configure` is newer than `config.status`, make reruns configure. That regenerates `config.h`, which mach9 then edits in place (sonames), so it always counts as changed, and every file includes it. Result: a full rebuild.
+- **Moving `src`:** the workspace step applies the series in a scratch worktree and checks `src` out straight at the result, so git rewrites only files whose contents differ (`build/mproton-build.sh`, `apply_series_incremental`). Checking out the base and re-applying, or editing `src` by going to the commit before the regen patch and back, rewrites `configure` with the same content and a new timestamp.
+- **Backstop:** before each Wine build, `configure` and `include/config.h.in` get the timestamp of their make target back when their content is the same as at the last Wine build (`restore_generated_mtimes`).
+- **ccache** (on by default when installed, `MPROTON_CCACHE=0` turns it off): compiler output is cached by content, so a rebuild that make starts anyway mostly comes from the cache. The cache only helps once a build has filled it; `ccache -s` shows the hit rate.
+- **`make -k`** (mach9 patch 0004): a failing build lists every error.
+
 ## Layout
 
 | Path | What it is |

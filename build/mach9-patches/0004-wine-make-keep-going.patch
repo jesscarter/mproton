@@ -1,0 +1,29 @@
+--- a/bin/build-wine.sh
++++ b/bin/build-wine.sh
+@@ -234,13 +234,15 @@
+ fi
+ 
+ echo "==> Building Wine..."
+-PATH="$WINE_PATH" make -j$(sysctl -n hw.ncpu)
++# -k: on an error, keep compiling everything else, so one build lists every
++# error instead of stopping at the first (make still fails at the end).
++PATH="$WINE_PATH" make -k -j$(sysctl -n hw.ncpu)
+ 
+ if [ -n "$(unpatched_sonames)" ]; then
+     echo "==> config.h was regenerated during the build, re-patching and rebuilding..."
+     check_soname_defines
+     patch_sonames
+-    PATH="$WINE_PATH" make -j$(sysctl -n hw.ncpu)
++    PATH="$WINE_PATH" make -k -j$(sysctl -n hw.ncpu)
+ fi
+ cp "$GSTREAMER_DIST/KEY" "$GST_STAMP"
+ 
+@@ -334,7 +336,7 @@
+         X86LIBS_TARGETS+=("$(test_exe "$pe" "$t")")
+     done
+ done
+-PATH="$WINE_PATH" make -C "$X86LIBS_BUILD_DIR" -j"$(sysctl -n hw.ncpu)" "${X86LIBS_TARGETS[@]}"
++PATH="$WINE_PATH" make -k -C "$X86LIBS_BUILD_DIR" -j"$(sysctl -n hw.ncpu)" "${X86LIBS_TARGETS[@]}"
+ 
+ echo "==> Staging the Wine SDK into $WINE_SDK_DIR..."
+ claim_tree "$WINE_SDK_DIR" sdk 1

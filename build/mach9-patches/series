@@ -12,3 +12,6 @@ build/mach9-patches/0002-fex-stage-data-under-destdir.patch
 # 3. DXVK as a third Direct3D tree of each family (lib/wine/dxgi/dxvk,
 #    lib/wine/d3d9/dxvk) when DXVK_DIST is set, and `dxvk` as a compatdb value.
 build/mach9-patches/0003-dxvk-backend-trees.patch
+# 4. make -k for Wine's builds: one failing build lists every error instead
+#    of only the first, so fixes can be batched (docs/building.md).
+build/mach9-patches/0004-wine-make-keep-going.patch
