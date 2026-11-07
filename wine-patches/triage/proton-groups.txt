@@ -1,0 +1,27 @@
+group                                                                  cat            n  HACK  unix
+multimedia (winegstreamer, mf*, media-converter, quartz, wm*)          portable     318    71     8
+other PE-side game / app fixes                                         portable     192    54    14
+ntdll unix side (virtual memory, signals, sync, process)               conflict     128    53    91
+GPU vendor libs (amd_ags, atiadlxx, amdxc, nvapi, dxgi vendor)         portable     112     0     9
+winex11.drv (window mgmt, input, XInput2, Vulkan surfaces)             mac-equiv     84    24    78
+winebus / HID / Steam Input / controllers                              mac-equiv     71    21     4
+prefix / registry defaults (wine.inf, wineboot, fonts)                 portable      67     8    48
+win32u (windows, messages, display, d3dkmt)                            conflict      59    13     0
+OpenGL (opengl32 / win32u opengl / wined3d)                            conflict      53    17     1
+d3dx / d3dcompiler / ddraw / dxgi PE side                              portable      52     8     0
+wineserver core                                                        conflict      41     2    41
+speech / TTS (windows.media.speech, protontts, Vosk, Piper)            portable      38     3    10
+ARM64 / ARM64EC / FEX / WoW64                                          conflict      32     3    16
+Proton integration (steam.exe, proton hooks, lsteamclient, env vars)   portable      28    21    13
+winevulkan / win32u Vulkan / OpenXR / vrclient                         conflict      27     2     5
+networking (ws2_32, nsiproxy, iphlpapi, winhttp, wininet)              portable      27     2     1
+gamescope / Steam Deck                                                 linux         22    15    13
+fullscreen hack (fshack, win32u/opengl32 side)                         conflict      21     1     0
+anti-cheat / launchers (EAC, BattlEye, EA, Ubisoft, CEF)               portable      19     7     1
+Linux tracing / debug (ftrace, gpuvis, uffd, memfd)                    linux         16     6    15
+fsync / ntsync / in-process sync                                       mac-equiv     15     7    15
+loader / preloader / build system (configure, makedep, winebuild, wine conflict      14     1     4
+audio drivers (winepulse/winealsa) & mmdevapi                          mac-equiv     11     0     3
+winewayland.drv                                                        linux          7     4     5
+total 1454
+{'conflict': 369, 'portable': 853, 'mac-equiv': 181, 'linux': 51}

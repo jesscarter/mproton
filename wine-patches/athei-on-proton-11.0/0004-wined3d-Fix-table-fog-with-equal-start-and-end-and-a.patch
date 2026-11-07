@@ -1,0 +1,224 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Alexander=20Thei=C3=9Fen?= <alex@theissen.io>
+Date: Fri, 16 Oct 2026 23:28:16 +0800
+Subject: [PATCH 04/15] wined3d: Fix table fog with equal start and end and an
+ Apple GL buffer texture crash.
+
+Table fog with FOGSTART equal to FOGEND leaves coordinates below the
+start unfogged and fogs those above it, but the fog scale passed to the
+shader was 1 / (end - start), which is infinite. A coordinate equal to
+the end gave 0 * inf = NaN on every driver. Drivers that evaluate
+(end - coord) * scale per vertex, as KosmicKrisp's NIR varying
+optimisation does with the shaders Zink gives it, interpolate the
+infinities of opposite signs at the vertices to NaN, and the whole
+primitive stayed unfogged. The scale is now finite and makes the step
+about one ULP of the end wide, which also keeps the product finite for
+a huge end such as FLT_MAX, so the result no longer depends on how a
+driver handles infinities. The change applies to every adapter, not
+only to Zink on KosmicKrisp. Drivers that evaluate the fog factor per
+pixel give the same result as before outside that step. The checks of
+the unfogged side in the d3d8, d3d9 and ddraw7 fog special tests have
+been todo_wine since Wine's CI moved to Debian trixie; they succeed on
+Zink and on Apple's OpenGL and are no longer todo.
+On Zink, the d3d9 test_fog checks of the FFP's table fog with an
+orthogonal projection and the two test_texture_transform_flags checks
+of a projected D3DTTFF_COUNT1 coordinate succeed as well. The latter
+also succeed on Apple's OpenGL and are no longer todo; the fog checks
+still fail there, where wined3d reports a GeForce 6800 (device id
+0x0041), a Direct3D 9 class card, and stay todo_wine for that adapter.
+
+Keep the buffer of the dummy buffer texture until the texture is
+deleted. Deleting its name right after glTexBuffer() is valid GL, but
+once Apple's OpenGL reuses that name for another buffer, glBufferData()
+on a later GL_TEXTURE_BUFFER buffer faults inside GLEngine. The fault
+leaves the context's lock held, and the next GL call on that thread
+aborts the process. Buffers created with shader resource or unordered
+access bind flags use that binding.
+
+(cherry picked from commit 158b218383d0b448c23aec28a8651485297070c9)
+---
+ dlls/d3d8/tests/visual.c  |  2 +-
+ dlls/d3d9/tests/visual.c  | 15 ++++++++++++---
+ dlls/ddraw/tests/ddraw7.c |  1 -
+ dlls/wined3d/device.c     | 16 ++++++++++------
+ dlls/wined3d/stateblock.c | 25 +++++++++++++++++++++----
+ dlls/wined3d/wined3d_gl.h |  1 +
+ 6 files changed, 45 insertions(+), 15 deletions(-)
+
+diff --git a/dlls/d3d8/tests/visual.c b/dlls/d3d8/tests/visual.c
+index f1e648a9e09..a7d07c90a5d 100644
+--- a/dlls/d3d8/tests/visual.c
++++ b/dlls/d3d8/tests/visual.c
+@@ -5135,7 +5135,7 @@ static void fog_special_test(void)
+         ok(SUCCEEDED(hr), "Failed to end scene, hr %#lx.\n", hr);
+ 
+         color = getPixelColor(device, 310, 240);
+-        todo_wine_if(tests[i].vertexmode == D3DFOG_NONE) ok(color_match(color, tests[i].color_left, 1),
++        ok(color_match(color, tests[i].color_left, 1),
+                 "Expected left color 0x%08x, got 0x%08x, case %u.\n", tests[i].color_left, color, i);
+         color = getPixelColor(device, 330, 240);
+         ok(color_match(color, tests[i].color_right, 1),
+diff --git a/dlls/d3d9/tests/visual.c b/dlls/d3d9/tests/visual.c
+index ade80fbe9a1..0cccad24e35 100644
+--- a/dlls/d3d9/tests/visual.c
++++ b/dlls/d3d9/tests/visual.c
+@@ -18339,7 +18339,7 @@ static void fog_special_test(void)
+         ok(SUCCEEDED(hr), "Failed to end scene, hr %#lx.\n", hr);
+ 
+         color = getPixelColor(device, 310, 240);
+-        todo_wine_if(tests[i].vertexmode == D3DFOG_NONE) ok(color_match(color, tests[i].color_left, 1),
++        ok(color_match(color, tests[i].color_left, 1),
+                 "Expected left color 0x%08x, got 0x%08x, case %u.\n", tests[i].color_left, color, i);
+         color = getPixelColor(device, 330, 240);
+         ok(color_match(color, tests[i].color_right, 1),
+@@ -28150,11 +28150,13 @@ static void test_ffp_w(void)
+ static void test_fog(void)
+ {
+     IDirect3DVertexShader9 *vs_no_fog, *vs_fog;
++    D3DADAPTER_IDENTIFIER9 identifier;
+     struct d3d9_test_context context;
+     struct surface_readback rb;
+     const struct vec4 *colour;
+     IDirect3DDevice9 *device;
+     IDirect3DSurface9 *rt;
++    BOOL d3d9_class_gl;
+     D3DMATRIX matrix;
+     HRESULT hr;
+ 
+@@ -28255,6 +28257,13 @@ static void test_fog(void)
+         return;
+     device = context.device;
+ 
++    /* wined3d reports a Direct3D 9 class card, a GeForce 6800, on Apple's OpenGL,
++     * where the FFP's table fog with an orthogonal projection still gives the wrong
++     * fog. On Zink it is right. */
++    hr = IDirect3D9_GetAdapterIdentifier(context.d3d, D3DADAPTER_DEFAULT, 0, &identifier);
++    ok(hr == S_OK, "Got hr %#lx.\n", hr);
++    d3d9_class_gl = adapter_is_vendor(&identifier, 0x10de) && identifier.DeviceId == 0x0041;
++
+     hr = IDirect3DDevice9_CreateRenderTarget(device, 640, 480, D3DFMT_A32B32G32R32F,
+             D3DMULTISAMPLE_NONE, 0, FALSE, &rt, NULL);
+     ok(hr == S_OK, "Got hr %#lx.\n", hr);
+@@ -28468,7 +28477,8 @@ static void test_fog(void)
+                     {
+                         colour = get_readback_vec4(&rb, points[i].x, points[i].y);
+ 
+-todo_wine_if ((fog_mode_tests[pixel_mode] != D3DFOG_NONE && (vs_mode == VS_MODE_FFP || (!ortho_fog && vs_mode == VS_MODE_RHW)))
++todo_wine_if ((fog_mode_tests[pixel_mode] != D3DFOG_NONE && ((vs_mode == VS_MODE_FFP && (!ortho_fog || d3d9_class_gl))
++                || (!ortho_fog && vs_mode == VS_MODE_RHW)))
+         || (fog_mode_tests[pixel_mode] == D3DFOG_NONE && fog_mode_tests[vertex_mode] != D3DFOG_NONE && vs_mode == VS_MODE_FFP))
+ {
+                         if (fog_mode_tests[pixel_mode] != D3DFOG_NONE && ortho_fog)
+@@ -28866,7 +28876,6 @@ static void test_texture_transform_flags(void)
+                     colour = get_readback_vec4(&rb, 0, 0);
+                     /* We use point filtering, but we might have sampled the
+                      * neighbouring texel. */
+-                    todo_wine_if (attrib_count == 1 && vs_mode == VS_MODE_FFP && ps_mode <= 1 && i == 7)
+                     ok(fabsf(colour->x - expect[0]) <= 0.006f && fabsf(colour->y - expect[1]) <= 0.006f
+                             && colour->z == expect[2] && colour->w == expect[3],
+                             "Expected colour {%.8e, %.8e, %.8e, %.8e}; got {%.8e, %.8e, %.8e, %.8e}.\n",
+diff --git a/dlls/ddraw/tests/ddraw7.c b/dlls/ddraw/tests/ddraw7.c
+index 2c9bfe22681..53bbd9b4072 100644
+--- a/dlls/ddraw/tests/ddraw7.c
++++ b/dlls/ddraw/tests/ddraw7.c
+@@ -5763,7 +5763,6 @@ static void test_fog_special(void)
+         ok(SUCCEEDED(hr), "Failed to end scene, hr %#lx.\n", hr);
+ 
+         color = get_surface_color(rt, 310, 240);
+-        todo_wine_if(i == 1)
+         ok(compare_color(color, tests[i].color_left, 1),
+                 "Expected left color 0x%08x, got 0x%08x, case %u.\n", tests[i].color_left, color, i);
+         color = get_surface_color(rt, 330, 240);
+diff --git a/dlls/wined3d/device.c b/dlls/wined3d/device.c
+index 5956d672ddf..bf3c4baca82 100644
+--- a/dlls/wined3d/device.c
++++ b/dlls/wined3d/device.c
+@@ -652,18 +652,19 @@ static void wined3d_device_gl_create_dummy_textures(struct wined3d_device_gl *de
+ 
+     if (gl_info->supported[ARB_TEXTURE_BUFFER_OBJECT])
+     {
+-        GLuint buffer;
+-
+-        GL_EXTCALL(glGenBuffers(1, &buffer));
+-        GL_EXTCALL(glBindBuffer(GL_TEXTURE_BUFFER, buffer));
++        GL_EXTCALL(glGenBuffers(1, &textures->tex_buffer_bo));
++        GL_EXTCALL(glBindBuffer(GL_TEXTURE_BUFFER, textures->tex_buffer_bo));
+         GL_EXTCALL(glBufferData(GL_TEXTURE_BUFFER, sizeof(color), &color, GL_STATIC_DRAW));
+         GL_EXTCALL(glBindBuffer(GL_TEXTURE_BUFFER, 0));
+ 
+         gl_info->gl_ops.gl.p_glGenTextures(1, &textures->tex_buffer);
+         TRACE("Dummy buffer texture given name %u.\n", textures->tex_buffer);
+         gl_info->gl_ops.gl.p_glBindTexture(GL_TEXTURE_BUFFER, textures->tex_buffer);
+-        GL_EXTCALL(glTexBuffer(GL_TEXTURE_BUFFER, GL_RGBA8, buffer));
+-        GL_EXTCALL(glDeleteBuffers(1, &buffer));
++        GL_EXTCALL(glTexBuffer(GL_TEXTURE_BUFFER, GL_RGBA8, textures->tex_buffer_bo));
++        /* Keep the buffer name until the texture is deleted. Apple's OpenGL
++         * faults in glBufferData() for a later GL_TEXTURE_BUFFER buffer once
++         * a deleted buffer name that a buffer texture still uses has been
++         * reused, and the bad access leaves its context locked. */
+     }
+ 
+     if (gl_info->supported[ARB_TEXTURE_MULTISAMPLE])
+@@ -708,7 +709,10 @@ static void wined3d_device_gl_destroy_dummy_textures(struct wined3d_device_gl *d
+     }
+ 
+     if (gl_info->supported[ARB_TEXTURE_BUFFER_OBJECT])
++    {
+         gl_info->gl_ops.gl.p_glDeleteTextures(1, &dummy_textures->tex_buffer);
++        GL_EXTCALL(glDeleteBuffers(1, &dummy_textures->tex_buffer_bo));
++    }
+ 
+     if (gl_info->supported[EXT_TEXTURE_ARRAY])
+     {
+diff --git a/dlls/wined3d/stateblock.c b/dlls/wined3d/stateblock.c
+index def9182d9b3..8c92454666e 100644
+--- a/dlls/wined3d/stateblock.c
++++ b/dlls/wined3d/stateblock.c
+@@ -4047,14 +4047,31 @@ void CDECL wined3d_device_apply_stateblock(struct wined3d_device *device,
+             float start = int_to_float(state->rs[WINED3D_RS_FOGSTART]);
+             float end = int_to_float(state->rs[WINED3D_RS_FOGEND]);
+ 
+-            if (start == end && state->rs[WINED3D_RS_FOGTABLEMODE] == WINED3D_FOG_NONE)
++            if (start == end)
+             {
+                 /* With vertex fog, everything is fogged.
+                  * With pixel fog, coordinates < start are unfogged,
+                  * and coordinates > start are fogged.
+-                 * Windows drivers disagree when coord == start. */
+-                fog.end = 0.0f;
+-                fog.scale = 0.0f;
++                 * Windows drivers disagree when coord == start.
++                 *
++                 * For pixel fog, 1 / (end - start) would be infinite. Drivers
++                 * may evaluate (end - coord) * scale per vertex, and
++                 * infinities of opposite signs interpolate to NaN. Make the
++                 * step about one ULP of end wide instead, which keeps the
++                 * product finite also for a huge end such as FLT_MAX, and use
++                 * a scale of 1e20 for an end at or near zero. */
++                if (state->rs[WINED3D_RS_FOGTABLEMODE] == WINED3D_FOG_NONE)
++                {
++                    fog.end = 0.0f;
++                    fog.scale = 0.0f;
++                }
++                else
++                {
++                    float ulp = fabsf(end) * FLT_EPSILON;
++
++                    fog.end = end;
++                    fog.scale = ulp > 1.0e-20f ? 1.0f / ulp : 1.0e20f;
++                }
+             }
+             else
+             {
+diff --git a/dlls/wined3d/wined3d_gl.h b/dlls/wined3d/wined3d_gl.h
+index 00c82c7ac0a..2d25dcd4389 100644
+--- a/dlls/wined3d/wined3d_gl.h
++++ b/dlls/wined3d/wined3d_gl.h
+@@ -854,6 +854,7 @@ struct wined3d_dummy_textures
+     GLuint tex_1d_array;
+     GLuint tex_2d_array;
+     GLuint tex_buffer;
++    GLuint tex_buffer_bo;
+     GLuint tex_2d_ms;
+     GLuint tex_2d_ms_array;
+ };

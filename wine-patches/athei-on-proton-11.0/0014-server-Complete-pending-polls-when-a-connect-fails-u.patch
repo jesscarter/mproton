@@ -1,0 +1,32 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Alexander=20Thei=C3=9Fen?= <alex@theissen.io>
+Date: Sat, 31 Oct 2026 12:56:55 +0800
+Subject: [PATCH 14/15] server: Complete pending polls when a connect fails
+ under kqueue.
+
+kqueue reports a failed connect as EV_EOF, which the server maps to
+POLLHUP without POLLERR, and get_poll_flags() drops that on an
+unconnected socket. A poll already waiting for AFD_POLL_CONNECT_ERR
+then never completed.
+
+- Report POLLERR for a failed connect
+
+(cherry picked from commit b6ef6d11cd7788c394f135a48b0903af9c3f619d)
+---
+ server/sock.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/server/sock.c b/server/sock.c
+index 0337d8d3220..bdc75dcaca0 100644
+--- a/server/sock.c
++++ b/server/sock.c
+@@ -1430,7 +1430,8 @@ static void sock_poll_event( struct fd *fd, int event )
+         if (event & (POLLERR|POLLHUP))
+         {
+             sock->state = SOCK_UNCONNECTED;
+-            event &= ~POLLOUT;
++            /* kqueue reports a failed connect as POLLHUP without POLLERR. */
++            event = (event & ~POLLOUT) | POLLERR;
+         }
+         else if (event & POLLOUT)
+         {

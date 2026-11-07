@@ -1,0 +1,131 @@
+1	e9f01892ec3	clean		configure: Support native aarch64 macOS (keep 4G PAGEZERO, preserve x18 via SDK 12 build version, CGL OpenGL)
+2	ff672f7a52b	clean		winegcc: Always pass section alignment for ARM64EC links.
+3	5200aaa4993	clean		ntdll: Run on arm64 macOS without low 4G remapping and with 16K pages.
+4	99662cf266d	clean		ntdll: Synthesize ARM64 ID registers on macOS; use FEX as the x86 emulators.
+5	cf14e410d44	clean		ntdll: Probe for the low 4G before mapping the shared user data on arm64 macOS.
+6	295ff9f2fd0	clean		ntdll: Don't request host execute permission for emulated x86 images on aarch64.
+7	7d97c176261	clean		ntdll: Emulate stores into a W+X host page from code in that page on arm64 macOS.
+8	813ab7adc6a	clean		ntdll: Emulate LDAPUR loads from the canonical shared user data address.
+9	3f7b0f6321d	clean		dnsapi: Don't resolve a .local hostname through multicast DNS at process attach.
+10	40ffdb1ab11	clean		ntdll: Restore execute permission of W+X pages in NtFlushInstructionCache on arm64 macOS.
+11	b193b0c56d0	clean		ntdll: Optionally exec the loader with 4K pages on macOS 26+ (WINE_4K_PAGES=1).
+12	01af17e19fe	clean		winemac.drv: Run OnMainThread() blocks directly when already on the main thread.
+13	38f1e452b0c	clean		ntdll: Keep write protection of executable pages exact within a 16K host page.
+14	2d7c4145660	clean		win32u: Enable portability enumeration for Vulkan instances when available.
+15	6a57685e042	clean		ntdll: Don't apply executable memory write exceptions to ARM64EC code allocations.
+16	9755f65c5b4	clean		ntdll: Skip occupied regions when searching for free memory on macOS.
+17	d5440cb0ea9	clean		ntdll: Carry EFlags AF and DF through ARM64EC contexts.
+18	b1897a8a860	conflict	dlls/ntdll/unix/virtual.c 	ntdll: Use the low 4G when the process has the cross-architecture entitlement.
+19	0dde19ba7e0	conflict	dlls/ntdll/unix/virtual.c 	ntdll: Default to 4K pages when the process has the cross-architecture entitlement.
+20	4eda0ec76ae	conflict	dlls/kernelbase/process.c 	kernelbase: Launcher compatibility (CEF arguments, Epic GPU setting, unchanged-refcount module lookup).
+21	97cf257ac6f	clean		advapi32: Project permissive ACLs for Battle.net managed paths.
+22	d04fa24be00	clean		services: Longer pipe timeout; pass Epic's EOS session GUID to EpicOnlineServicesHost.
+23	b3e6de78c42	clean		shell32: Pre-create KFDF_PRECREATE known folders.
+24	67183fb20e4	clean		ws2_32: Emulate the Epic EOS InstallHelper MainService REST endpoint.
+25	11864375123	clean		win32u: Keep WM_PAINT fair for WS_EX_COMPOSITED windows.
+26	c76cfb1f549	clean		winegstreamer: Refuse the D3D manager when NV12/P010 textures are unsupported.
+27	04889228ad6	clean		faudio: Fix heap corruption when voices are rerouted.
+28	7245b098d35	clean		services: Update pipe timeout comment for FEX.
+29	fdbf814e136	clean		winemac.drv: release modifiers that went up in another application
+30	f5d53ec753d	clean		winemac: redraw EA App after focus returns
+31	965b6238967	clean		winemac.drv: Don't switch the global macOS input source for non-IME layouts.
+32	95c178ccc30	clean		opengl32: Keep wglChoosePixelFormatARB results on-screen for window drawables.
+33	1c4404c16a7	clean		server: Poll directories for change notifications on macOS.
+34	724f26d7f24	clean		server: Give BUILTIN\Users access to group-accessible files.
+35	a8d0de96adc	clean		ntdll, server: Add msync, an opt-in shared-memory sync backend (WINEMSYNC=1).
+36	3244db68153	conflict	include/wine/server_protocol.h 	server: Regenerate protocol for msync; keep upstream's ntsync path when the device exists.
+37	27c9f3e0306	clean		msync: Fixes for arm64 macOS and long-running servers.
+38	a2adcc9c519	clean		winemac: add GCMouse raw input support
+39	39f98389a1f	clean		winemac: manage native fullscreen and refresh it on activation
+40	6ce3f59fdf7	clean		ntdll: Add WineForge's verified PE patch framework.
+41	1f4921b5a8d	clean		ntdll, wow64: Notify the target's emulator of cross-process NtWriteVirtualMemory.
+42	182bdcae801	clean		steam: add native macOS Steam bridge
+43	74ba6f7c67f	conflict	dlls/kernelbase/Makefile.in 	steam.exe: Drop a dead jsoncpp include that makedep cannot resolve.
+44	9b428ad3531	clean		steam.exe: Drop another dead jsoncpp amalgamation include.
+45	d1ee92458b1	clean		configure: Restore WINE_EXTERNAL for steam.exe; revert the jsoncpp edits.
+46	c74b82db70c	clean		server: Initialize the thread's msync wait slot.
+47	fea21cadf24	clean		server: Don't walk the msync mutex list while waking waiters.
+48	55dcec0c2f3	clean		ntdll: Route Direct3D modules to the Mullion (DXMT) runtime per process.
+49	af9858352d5	clean		ntdll: Default to the Mullion backend when its runtime is present.
+50	3c9c792e906	clean		ntdll: Make WineMetalGL the default OpenGL when it is bundled.
+51	66613516d6c	clean		ntdll: Default to the bundle's MoltenVK ICD and GStreamer plugins.
+52	ae902252c66	clean		configure: Report the build as MetalSharp Wine.
+53	cc42b9543a8	clean		ntdll: Add DXVK as an opt-in backend for x86_64 programs; CJK font replacements; quiet MoltenVK.
+54	c5002271703	clean		wine.inf: Install Arial, Times New Roman, Courier New and Tahoma files into C:\windows\Fonts.
+55	dc3d4e0c64b	clean		MetalSharp Wine 2.0.
+56	f73af7a7231	conflict	dlls/kernelbase/launchers.c 	kernelbase, ntdll: Keep Chromium's GPU thread in the browser process on macOS.
+57	691fe509ece	clean		winemac.drv: Copy the app icon entries before converting them.
+58	fdfbece0406	conflict	dlls/ntdll/Makefile.in 	ntdll: Run WFDXCompat's Rockstar launcher companion on Mullion.
+59	8796df695f8	clean		MetalSharp Wine 2.1.
+60	622ffb78c85	clean		ntdll: Add VKD3D-Proton as an opt-in backend for x86_64 programs.
+61	551bdf49947	clean		winevulkan: Convert VkPhysicalDeviceLayeredApiVulkanPropertiesKHR's properties chain on input.
+62	b3ccd3db946	clean		ntdll: Take D3D10/11 from VKD3D-Proton's directory too, when it has them.
+63	37b8805c0db	clean		ntdll: run FEX without TSO emulation by default (FEX_TSOENABLED=0 unless set)
+64	ede927fc9ed	clean		ntdll, server: send directly when a socket send needs no async (one server round trip)
+65	f45eae307a9	clean		winemac: coalesce pending raw (GCMouse) mouse moves like relative and absolute ones
+66	7cada4e0c43	clean		ntdll: keep FEX's L2 lookup cache on by default (FEX_DISABLEL2CACHE=0 unless set)
+67	f1e2ff7a64e	clean		ntdll: keep FEX's translated code on disk by default (FEX_DISKCACHE=1 unless set)
+68	18727d1e790	clean		ntdll: leave FEX's disk cache off by default
+69	813d9aa2f74	clean		ntdll: optional QoS classes for Windows threads on macOS (WINE_THREAD_QOS); loader: games app category
+70	f54277076b2	clean		ntdll: msync: absolute timeouts, single-handle multiple waits, duplicated handles, and untimed event/semaphore waits stay in process
+71	7b812a41113	clean		wine.inf: Install Microsoft's shader compilers (DXC, ARM64 d3dcompiler_47) into prefixes.
+72	8f423e7ba61	conflict	dlls/kernelbase/launchers.c dlls/kernelbase/launchers.h dlls/kernelbase/loader.c dlls/kernelbase/main.c dlls/mfwmaaec/mfwmaaec.idl dlls/ntdll/unix/wfdxcompat_loader.c dlls/ntdll/wfdxcompat_loader.c 	Restore WineForge copyright and provenance notices
+73	443b5f5c5e7	clean		ntdll: keep FEX's L1 lookup cache at full size by default (FEX_DYNAMICL1CACHE=0 unless set)
+74	f796b27a089	clean		ntdll: WINE_DUMP_EXEC debugging aid: dump executable non-image memory on request
+75	c69cba1515a	conflict	dlls/ntdll/loader.c 	ntdll, kernelbase: HideWineExports hides Wine's exports and registry keys from programs that refuse to run under Wine
+76	4463816214c	clean		ntdll, loader: exec the loader from its own bundle (wine.app next to ntdll.so) when there is one
+77	1d7d69e7ef4	clean		ntdll: a lock NtLockFile takes at once completes through the file's completion port
+78	36d46a29010	clean		ntdll, server: TSO emulation and msync on by default
+79	5514b7e4c25	clean		MetalSharp Wine 3.0.
+80	0b4fae37aca	clean		ntdll: a program's folder's .metalsharp/launch.env sets the environment it starts with
+81	c338233a1fa	conflict	dlls/kernelbase/process.c 	kernelbase: .metalsharp/launch-exe and launch-args, used once by CreateProcess
+82	d7435e23020	clean		server: on macOS, write_process_memory also writes pages that are not host-writable yet
+83	2d89612bd99	clean		ntdll: QueryWorkingSetEx reads residency with mincore() on macOS
+84	129ab3c963d	clean		ntdll: NtRaiseHardError logs the message it was asked to show
+85	33d5ea101a9	clean		ntdll: Resolve \??\GLOBALROOT and \GLOBALROOT in file names.
+86	9ebcbeb317b	conflict	dlls/ntdll/unix/file.c 	ntdll: Implement FileAllocationInformation in NtSetInformationFile.
+87	6824dba8ccc	clean		MetalSharp Wine 4.0.
+88	e55f9f49c9c	clean		winemac.drv: List display modes without kDisplayModeSafeFlag on Apple silicon.
+89	9266544dfe5	clean		winemac.drv: Keep the focus event of a window Wine makes key itself.
+90	b9987643fad	clean		winemac.drv: Decode BC7 2D array textures to RGBA8 for OpenGL.
+91	547bc61c868	clean		win32u: Draw child windows whose parent belongs to another process.
+92	8878f5f46f6	clean		win32u: Don't let a hung window stop the painting of others.
+93	804ebbcab29	clean		wined3d: Query the Vulkan driver's properties.
+94	60147fc605e	clean		wined3d: Don't use multiple viewports on MoltenVK.
+95	bdacac20ce4	clean		wined3d: Trim the render area of draws without attachments to the viewport on MoltenVK.
+96	43bc4049447	clean		wined3d: Create MoltenVK swapchains with three images.
+97	b7d9bd2cd54	clean		wined3d: Resize a swapchain to at least 1x1.
+98	3a78927559f	clean		wined3d: Don't check GL_RGB_422_APPLE cube maps as render targets.
+99	9a1cc5bae60	clean		winemac.drv: Bring Wine to the front when it shows a window.
+100	c93dfa80101	clean		wined3d: Run the Vulkan renderer at feature level 10 and above on MoltenVK.
+101	0b576d84aa0	clean		winemac.drv: Keep ELDEN RING out of native macOS fullscreen.
+102	4a97910fd08	clean		ntdll: Fit a game's saved resolution to the main display when that display changed.
+103	7fb11f14d24	clean		ntdll, win32u: Show a MetalFX game the main display divided by its upscale factor.
+104	0b02dcd58f4	clean		ntdll, win32u: winemac.conf names the GPU a game sees in Windows' device list.
+105	72038150975	conflict	dlls/ntdll/loader.c 	ntdll: HideWineExports by default for The Witcher 3 and God of War Ragnarok, and MetalSharp's winemac.conf.
+106	44a60049ae4	conflict	dlls/ntdll/loader.c 	ntdll: Set up every game that comes with DLSS for DLSS on Mullion.
+107	129398a5cd2	conflict	dlls/ntdll/unix/env.c dlls/ntdll/unix/unix_private.h 	ntdll: Fit The Witcher 3's saved resolution to the main display and MetalFX.
+108	11e7a9d37ef	conflict	dlls/ntdll/unix/env.c dlls/ntdll/unix/saved_resolution.c 	ntdll, win32u: MetalFX and DLSS on VKD3D-Proton's lane.
+109	098f1ca63a1	clean		ntdll: Load VKD3D-Proton's lane's own NGX core and NVAPI.
+110	bb9740bcfe7	clean		win32u: Don't report a MetalFX-upscaled swapchain as suboptimal.
+111	2028ba3b202	clean		winemac.drv: Keep ELDEN RING out of native fullscreen as Steam starts it too.
+112	be96f499f03	conflict	dlls/ntdll/unix/env.c dlls/ntdll/unix/saved_resolution.c 	ntdll: DLSS and MetalFX on DXVK's lane too.
+113	a767d5b4e53	clean		winemac.drv: Keep MetalFX games out of native fullscreen.
+114	14050b9c31b	conflict	dlls/ntdll/unix/saved_resolution.c 	ntdll: Show OpenGL lane games the MetalFX display size.
+115	f06c76f845f	conflict	dlls/ntdll/unix/unix_private.h 	ntdll: Trace the programs of a folder with .metalsharp/trace.
+116	9b4826ef702	clean		ntdll: Don't keep a file descriptor per in-process sync object on macOS.
+117	9b4cd03140a	conflict	dlls/ntdll/unix/virtual.c 	loader, ntdll: Keep 4G-8G free for 64-bit images on arm64 macOS.
+118	d178834cba6	conflict	dlls/ntdll/unix/virtual.c 	Revert "loader, ntdll: Keep 4G-8G free for 64-bit images on arm64 macOS."
+119	6b2d5efe9e5	clean		ntdll: Also apply <program folder>/.metalsharp/launch.local.env, which MetalSharp never writes.
+120	0cf35b5cb43	clean		winemac.drv: Carry GCMouse's fractional deltas to the next report instead of truncating each one.
+121	ed85def7e37	clean		win32u: Report hardware-accelerated GPU scheduling in D3DKMTQueryAdapterInfo's WDDM 2.7 and 2.9 caps.
+122	f69a883929c	conflict	dlls/ntdll/unix/env.c 	ntdll: Show Hogwarts Legacy no ray tracing on Mullion and VKD3D-Proton, unless its launch environment says.
+123	27fcdd4d454	clean		win32u: Vulkan initialization survives the display driver enumerating Vulkan GPUs during it
+124	d7224f50d73	clean		win32u: Scale a MetalFX game's Vulkan surface as its toplevel's client area.
+125	51dc7efeeda	clean		wined3d: Run Crusader Kings II without the command stream thread.
+126	ee590cf7811	clean		ntdll: Start an x64 thread entered on a hybrid module's native export on its x64 export.
+127	e02cf188a77	clean		win32u, winemac.drv: Keep the cursor in a game's fullscreen window, and toggle it per window with Cmd+click.
+128	e842d48a732	clean		ntdll, wow64: Tell the emulator about data views mapped executable.
+129	fd0fa901a62	clean		MetalSharp Wine 5.0.
+130	ac6d538d176	conflict	dlls/ntdll/unix/env.c 	ntdll: Compile MoltenVK pipelines on the calling thread, except for Hogwarts Legacy.
+131	1c97585b3db	conflict	dlls/ntdll/unix/env.c 	ntdll: Set the MoltenVK compile variables without append_envA.

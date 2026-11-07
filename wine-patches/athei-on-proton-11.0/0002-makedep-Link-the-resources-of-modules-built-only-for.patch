@@ -1,0 +1,66 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Alexander=20Thei=C3=9Fen?= <alex@theissen.io>
+Date: Thu, 15 Oct 2026 22:14:48 +0800
+Subject: [PATCH 02/15] makedep: Link the resources of modules built only for
+ the hybrid arch.
+
+A module that is disabled for aarch64 but enabled for arm64ec, such as
+vcruntime140_1, is still built into aarch64-windows, linked as ARM64EC
+from the arm64ec objects. Its resources are compiled only for the
+architectures the module is enabled for, but output_module() took them
+from the aarch64 list, which is empty, so the DLL was linked without
+any. vcruntime140_1.dll had no version resource, and installers and
+launchers that read the file version of the Visual C++ runtime, such as
+the Unreal Engine prerequisites check, treated it as missing.
+
+Take the resources from the architecture the module is linked for when
+it is disabled for the one it is output for.
+
+[from Hadron's "makedep: Link the resources of modules built only as
+ARM64EC."; the code is Hadron's apart from the comment.]
+
+(cherry picked from commit f0cc31b28fd7125ce29e5add27585736dd3cfc07)
+---
+ tools/makedep.c | 10 +++++++---
+ 1 file changed, 7 insertions(+), 3 deletions(-)
+
+diff --git a/tools/makedep.c b/tools/makedep.c
+index a4ed58b11b1..46be35da9af 100644
+--- a/tools/makedep.c
++++ b/tools/makedep.c
+@@ -3613,7 +3613,7 @@ static void output_module( struct makefile *make, unsigned int arch )
+     struct strarray imports = make->imports;
+     const char *module_name, *module;
+     char *p, *spec_file = NULL;
+-    unsigned int link_arch;
++    unsigned int link_arch, res_arch;
+ 
+     if (!(module = get_expanded_arch_var( make, "MODULE", arch ))) module = make->module;
+     if (!make->is_exe)
+@@ -3663,12 +3663,16 @@ static void output_module( struct makefile *make, unsigned int arch )
+                            strmake( "$(libdir)/wine/%s", arch_pe_dirs[arch] ), NULL );
+     }
+ 
++    /* a module disabled for arch is built only for its hybrid arch, and its
++     * resources are compiled for that arch alone */
++    res_arch = make->disabled[arch] ? link_arch : arch;
++
+     strarray_add( &make->all_targets[link_arch], module_name );
+     output( "%s:", obj_dir_path( make, module_name ));
+     if (spec_file) output_filename( spec_file );
+     output_filenames_obj_dir( make, make->object_files[arch] );
+     if (link_arch != arch) output_filenames_obj_dir( make, make->object_files[link_arch] );
+-    output_filenames_obj_dir( make, make->res_files[arch] );
++    output_filenames_obj_dir( make, make->res_files[res_arch] );
+     output_filenames( dep_libs );
+     output_filename( winebuild );
+     output_filename( winegcc );
+@@ -3690,7 +3694,7 @@ static void output_module( struct makefile *make, unsigned int arch )
+     if (link_arch) output_filenames( get_expanded_arch_var_array( make, "EXTRADLLFLAGS", link_arch ));
+     output_filenames_obj_dir( make, make->object_files[arch] );
+     if (link_arch != arch) output_filenames_obj_dir( make, make->object_files[link_arch] );
+-    output_filenames_obj_dir( make, make->res_files[arch] );
++    output_filenames_obj_dir( make, make->res_files[res_arch] );
+     output_debug_files( make, module_name, link_arch );
+     output_filenames( all_libs );
+     output_filename( arch_make_variable( "LDFLAGS", link_arch ));

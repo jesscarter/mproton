@@ -1,0 +1,49 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Alexander=20Thei=C3=9Fen?= <alex@theissen.io>
+Date: Sun, 25 Oct 2026 12:54:41 +0800
+Subject: [PATCH 13/15] win32u: List the virtual modes at the display's own
+ frequency below 60Hz.
+
+The virtual modes are every size at 60Hz and, when the display runs
+faster, every size again at the display's own frequency. A display
+that runs slower gets no entry at its own frequency, but the current
+mode keeps it: EnumDisplaySettings(ENUM_CURRENT_SETTINGS) returns the
+initial mode with the display's frequency until a mode is set.
+find_display_mode skips every entry whose frequency differs from a
+requested one above 1, so handing that DEVMODE back to
+ChangeDisplaySettingsEx fails with DISP_CHANGE_BADMODE, and so does a
+request that copies it and changes only the size, as games do. The Mac
+driver reports the frequency in whole hertz, so this happens on any
+display at 59Hz or below: a 59.94Hz monitor reads 59, and a 30Hz 4K
+panel reads 30. The d3d9 tests that save and restore the display mode
+fail on such a display with "Failed to restore display modes", and
+later tests in the same process run on the mode that was left behind.
+
+List every size at the display's own frequency below 60Hz as well, as
+above it. 60Hz itself would only repeat the entries, and a frequency
+of 0 or 1 is unknown, so those still add nothing. The modes are sorted
+with the higher frequency first, so a request that names no frequency
+still gets 60Hz on such a display.
+
+A display in portrait orientation is still not covered: its initial
+size is listed with width and height swapped, so its current mode
+matches no entry at any frequency.
+
+(cherry picked from commit d31cfb7706be2f8eb752fa1ac233f6e517915678)
+---
+ dlls/win32u/sysparams.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/dlls/win32u/sysparams.c b/dlls/win32u/sysparams.c
+index 83685fa5882..b2aa3b1ddb7 100644
+--- a/dlls/win32u/sysparams.c
++++ b/dlls/win32u/sysparams.c
+@@ -2245,7 +2245,7 @@ static DEVMODEW *get_virtual_modes( const DEVMODEW *initial, const DEVMODEW *max
+         center_modes = !strcmp( env, "359870" );
+ 
+     freqs[1] = devmode_get( initial, DM_DISPLAYFREQUENCY );
+-    if (freqs[1] <= 60) freqs[1] = 0;
++    if (freqs[1] <= 1 || freqs[1] == 60) freqs[1] = 0;
+ 
+     if (!(screen_sizes = get_screen_sizes( maximum, host_modes, host_modes_count, &sizes_count ))) return NULL;
+     modes = malloc( (2 * ARRAY_SIZE(freqs) * ARRAY_SIZE(depths) * (sizes_count + 2) + 1) * sizeof(*modes) );

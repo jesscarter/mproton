@@ -1,0 +1,34 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Alexander=20Thei=C3=9Fen?= <alex@theissen.io>
+Date: Fri, 23 Oct 2026 12:56:18 +0800
+Subject: [PATCH 12/15] win32u: Fall back to eglGetPlatformDisplayEXT() without
+ eglGetPlatformDisplay().
+
+egl_init() only requires EGL_EXT_platform_base, so with an EGL 1.4
+library eglGetPlatformDisplay() is NULL and init_egl_platform() crashed
+instead of opening the display. Use eglGetPlatformDisplayEXT(), which
+that extension provides, and find no display when neither is there.
+
+(cherry picked from commit 2e2225137bb40cd3958677b17ca2c4273242376a)
+---
+ dlls/win32u/opengl.c | 7 ++++++-
+ 1 file changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/win32u/opengl.c b/dlls/win32u/opengl.c
+index 8cdbf520cdb..c927e76aa77 100644
+--- a/dlls/win32u/opengl.c
++++ b/dlls/win32u/opengl.c
+@@ -1498,7 +1498,12 @@ static BOOL init_egl_platform( struct egl_platform *egl, const struct opengl_fun
+     const char *extensions;
+     EGLint major, minor;
+ 
+-    if (!egl->display) egl->display = funcs->p_eglGetPlatformDisplay( egl->type, egl->native_display, NULL );
++    /* eglGetPlatformDisplay() is EGL 1.5, which the library may not have; EGL_EXT_platform_base,
++     * which egl_init() requires, has eglGetPlatformDisplayEXT() */
++    if (!egl->display && funcs->p_eglGetPlatformDisplay)
++        egl->display = funcs->p_eglGetPlatformDisplay( egl->type, egl->native_display, NULL );
++    else if (!egl->display && funcs->p_eglGetPlatformDisplayEXT)
++        egl->display = funcs->p_eglGetPlatformDisplayEXT( egl->type, egl->native_display, NULL );
+     if (!egl->display)
+     {
+         WARN( "Failed to open EGL display for type %#x, native display %p\n", egl->type, egl->native_display );
