@@ -31,7 +31,7 @@ base=$(grep -v '^#' "$here/base.ref" | tr -d '[:space:]')
 url=${ATHEI_WINE_URL:-https://github.com/athei/wine}
 mirror=${WINE_MIRROR_URL:-https://github.com/wine-mirror/wine}
 
-if [ ! -d "$dest/.git" ]; then
+if [ ! -e "$dest/.git" ]; then   # -e: a worktree has a .git file
     if [ -e "$dest" ] && [ -n "$(ls -A "$dest")" ]; then
         echo "error: $dest exists, is not empty and is not a git checkout" >&2; exit 1
     fi
