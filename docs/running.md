@@ -9,7 +9,7 @@ Status: the launcher logic is covered by the pytest suite on Linux, using mocked
 You need a mach9 `wine/` tree: `bin/wine`, `bin/wineserver`, `lib/wine/…`, `share/…`. It must be signed, because the loader in `lib/wine/aarch64-unix/wine.app` only runs with its provisioning profile ([m0-baseline.md](m0-baseline.md#signing-is-a-hard-requirement)). There are two sources:
 
 - **athei's release** (works today). Download an `arm64-*` release from <https://github.com/athei/mach9/releases> and unpack it so that you have a directory holding `bin/wine`. It is signed by athei's team, so it runs without our own Apple membership. It has no DXVK tree, no `steam.exe` and no `lsteamclient`.
-- **Our own build.** This is `work/mach9/dist/wine` after `scripts/bin/bundle-wine.sh`. It is blocked on our signing identity, so it is not available yet.
+- **Our own build.** This is `work/mach9/dist/wine` after `build/mproton-build.sh` ([building.md](building.md)). It has the DXVK trees and, when built, `steam.exe` and `lsteamclient` already installed. It needs our own signing identity, or `LOADER_ADHOC=1` on a Mac with SIP and AMFI relaxed.
 
 Leave `wine.app` untouched. Re-signing it or editing its `Info.plist` breaks it.
 

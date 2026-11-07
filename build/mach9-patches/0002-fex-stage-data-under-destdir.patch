@@ -1,0 +1,35 @@
+diff --git a/bin/build-fex.sh b/bin/build-fex.sh
+index aa6a45b..5518d80 100755
+--- a/bin/build-fex.sh
++++ b/bin/build-fex.sh
+@@ -142,6 +142,7 @@ for target in wow64 arm64ec; do
+         -DENABLE_LTO=False -DENABLE_ASSERTIONS=False -DENABLE_JEMALLOC_GLIBC_ALLOC=False \
+         -DBUILD_TESTING=False -DTUNE_ARCH=generic -DTUNE_CPU=none -DRANGES_NATIVE=OFF \
+         -DENABLE_CCACHE=OFF "${LAUNCHER[@]}" \
++        -DDATA_DIRECTORY= \
+         >/dev/null
+     cmake --build "$FEX_BUILD_DIR/$target"
+ done
+@@ -164,13 +165,21 @@ cmake --build "$FEX_BUILD_DIR/unixlib"
+ # Each tree is installed, as CMake installs it for the paths set above, into
+ # a scratch prefix, since the install also carries headers, tools and data
+ # that have no place in a Wine tree, and only the four files are staged.
++# The scratch prefix is a DESTDIR, not just --prefix: FEX installs its
++# AppConfig and ThunksDB JSON files to DATA_DIRECTORY, an absolute path fixed
++# at configure time (CMAKE_INSTALL_PREFIX/share/fex-emu, so
++# /usr/local/share/fex-emu), which --prefix does not move and which is not
++# writable on most Macs. DESTDIR puts those files under the scratch prefix
++# too, with the libraries at <install>/lib/wine/..., and changes nothing that
++# is compiled. -DDATA_DIRECTORY= above resets a value an earlier configure of
++# the tree cached, so every tree compiles in the same default.
+ # They go into FEX_DIST.part, which is renamed into place once complete, so
+ # an interrupted or failed run never leaves a FEX_DIST that looks finished.
+ echo "==> Staging FEX into $FEX_DIST..."
+ install="$FEX_BUILD_DIR/install"
+ remove_tree "$install"
+ for t in wow64 arm64ec unixlib; do
+-    cmake --install "$FEX_BUILD_DIR/$t" --prefix "$install" >/dev/null
++    DESTDIR="$install" cmake --install "$FEX_BUILD_DIR/$t" --prefix / >/dev/null
+ done
+ part="$FEX_DIST.part"
+ claim_tree "$part" fex-dist 1
