@@ -6,3 +6,4 @@ bench/out/
 work/
 __pycache__/
 .pytest_cache/
+graphics/dxvk/out/

@@ -1,0 +1,27 @@
+# ARM64X: the arm64ec llvm-mingw compiles every source twice, for ARM64EC and for
+# ARM64, and links both halves into one image (-marm64x), as vkd3d-proton's
+# build-arm64x.txt and DXMT's build-arm64ec.txt do. An x64 game running as ARM64EC
+# under FEX loads the ARM64EC half; a native ARM64 program loads the ARM64 half.
+# Unlike vkd3d-proton's file there is no -march/-mtune: the baseline armv8-a code runs
+# on every Apple Silicon generation (M1 is armv8.5-a) and needs no tuning flags.
+[binaries]
+c = 'arm64ec-w64-mingw32-gcc'
+cpp = 'arm64ec-w64-mingw32-g++'
+ar = 'arm64ec-w64-mingw32-ar'
+strip = 'arm64ec-w64-mingw32-strip'
+windres = 'arm64ec-w64-mingw32-windres'
+
+[properties]
+needs_exe_wrapper = true
+
+[built-in options]
+c_args = ['-marm64x']
+cpp_args = ['-marm64x']
+c_link_args = ['-marm64x']
+cpp_link_args = ['-marm64x']
+
+[host_machine]
+system = 'windows'
+cpu_family = 'aarch64'
+cpu = 'aarch64'
+endian = 'little'
