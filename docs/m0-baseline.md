@@ -72,6 +72,24 @@ cd work/mach9 && MINGW_DIR=$PWD/../../toolchains/llvm-mingw scripts/bin/build-wi
 
 Then `scripts/bin/bundle-wine.sh`, which needs the signing identity.
 
+**Build status (2026-11-06):**
+- Built: Mesa/KosmicKrisp, GStreamer, Wine, the Wine SDK, FEX (wow64 + arm64ec), vkd3d-proton. The full run took about 22 minutes on the M2.
+- DXMT is blocked until full Xcode is installed: "no Metal compiler".
+- **Workaround:** FEX's staging step wrote AppConfig to `/usr/local/share/fex-emu`, which isn't writable here. Fixed locally by reconfiguring each `build/fex/<tree>` with `-DDATA_DIRECTORY=$PWD/build/fex/install/share/fex-emu`. Worth reporting upstream to athei.
+
+### KosmicKrisp on M2 (native, no Wine needed)
+
+`results/m0-kosmickrisp-m2-vulkaninfo.txt`, captured with `VK_DRIVER_FILES=…/kosmickrisp_mesa_icd.aarch64.json MESA_KK_EXPERIMENTAL=1 vulkaninfo`:
+
+- **Driver:** Vulkan **1.4.363**, conformance 1.4.6.2, Mesa 27.0.0-devel (athei/mesa `macos-patched`).
+- **Supported (true):** geometryShader, tessellationShader, transformFeedback + geometryStreams, sparse binding/residency (buffer, 2D image), 64-bit buffer and image atomics, robustness2 + nullDescriptor, customBorderColors, depthClipEnable, descriptorIndexing, bufferDeviceAddress, dynamicRendering, timelineSemaphore. Extensions present include `VK_EXT_mutable_descriptor_type`, `VK_EXT_extended_dynamic_state3`, `VK_EXT_vertex_attribute_divisor` and maintenance1–9.
+- **Missing:**
+  - `shaderFloat64`: Metal has no fp64, which matters only for rare D3D11 double-precision shaders.
+  - `VK_EXT_descriptor_buffer`: vkd3d-proton has a fallback.
+  - `VK_EXT_graphics_pipeline_library`: DXVK can't pre-compile pipeline pieces, so expect more shader-compile stutter.
+
+Takeaway: the feature set DXVK and vkd3d-proton need is essentially there on M2. The next question is correctness and performance under real games.
+
 ## Still to do
 
 1. **Rosetta + DXVK/MoltenVK** and **Rosetta + DXMT**: Gcenx/CrossOver-style builds.
