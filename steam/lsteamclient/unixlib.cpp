@@ -827,8 +827,19 @@ static NTSTATUS steamclient_init( Params *params, bool wow64 )
     LOAD_FUNC( Steam_GetAPICallResult );
     LOAD_FUNC( Steam_FreeLastCallback );
     LOAD_FUNC( Steam_ReleaseThreadLocalMemory );
+#ifdef __APPLE__
+    /* mproton: the macOS steamclient.dylib (checked: Steam build of 2026-09-02,
+     * both slices) does not export these two, unlike the Linux steamclient.so
+     * and the Windows steamclient.dll. Treat them as optional; the wrappers
+     * below fall back when they are missing. */
+    p_Steam_IsKnownInterface = (decltype(p_Steam_IsKnownInterface))dlsym( steamclient, "Steam_IsKnownInterface" );
+    p_Steam_NotifyMissingInterface = (decltype(p_Steam_NotifyMissingInterface))dlsym( steamclient, "Steam_NotifyMissingInterface" );
+    if (!p_Steam_IsKnownInterface) WARN( "host steamclient has no Steam_IsKnownInterface, assuming all interfaces are known\n" );
+    if (!p_Steam_NotifyMissingInterface) WARN( "host steamclient has no Steam_NotifyMissingInterface, ignoring\n" );
+#else
     LOAD_FUNC( Steam_IsKnownInterface );
     LOAD_FUNC( Steam_NotifyMissingInterface );
+#endif
 
     TRACE( "Loaded host steamclient from %s\n", debugstr_a(path) );
     return 0;
@@ -883,14 +894,19 @@ static NTSTATUS steamclient_Steam_ReleaseThreadLocalMemory( Params *params, bool
 template< typename Params >
 static NTSTATUS steamclient_Steam_IsKnownInterface( Params *params, bool wow64 )
 {
-    params->_ret = p_Steam_IsKnownInterface( params->version );
+    /* mproton: missing on macOS (see steamclient_init). Saying "known" lets the
+     * game go on to request the interface; the real lookup then returns NULL
+     * if the host client lacks it, which games already handle. */
+    if (!p_Steam_IsKnownInterface) params->_ret = true;
+    else params->_ret = p_Steam_IsKnownInterface( params->version );
     return 0;
 }
 
 template< typename Params >
 static NTSTATUS steamclient_Steam_NotifyMissingInterface( Params *params, bool wow64 )
 {
-    p_Steam_NotifyMissingInterface( params->pipe, params->version );
+    if (p_Steam_NotifyMissingInterface) p_Steam_NotifyMissingInterface( params->pipe, params->version );
+    else WARN( "missing interface %s (pipe %d)\n", debugstr_a(params->version), params->pipe );
     return 0;
 }
 

@@ -86,7 +86,12 @@ int main( int argc, char *argv[] )
     static const char *const entry_points[] =
     {
         "CreateInterface", "Steam_BGetCallback", "Steam_GetAPICallResult", "Steam_FreeLastCallback",
-        "Steam_ReleaseThreadLocalMemory", "Steam_IsKnownInterface", "Steam_NotifyMissingInterface",
+        "Steam_ReleaseThreadLocalMemory",
+    };
+    /* not exported by the macOS steamclient.dylib; lsteamclient falls back without them */
+    static const char *const optional_entry_points[] =
+    {
+        "Steam_IsKnownInterface", "Steam_NotifyMissingInterface",
     };
     char path[PATH_MAX];
     bool connect = false;
@@ -115,6 +120,8 @@ int main( int argc, char *argv[] )
         printf( "%s %s\n", p ? "ok  " : "FAIL", name );
         missing += !p;
     }
+    for (const char *name : optional_entry_points)
+        printf( "%s %s (optional)\n", dlsym( lib, name ) ? "ok  " : "--  ", name );
     if (missing || !connect) return missing ? 1 : 0;
 
     if (!getenv( "SteamAppId" )) setenv( "SteamAppId", "480", 1 ); /* Spacewar */
