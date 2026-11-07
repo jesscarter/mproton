@@ -3,12 +3,39 @@
 #NOTE: If you make modifications here, consider whether they should
 #be duplicated in ../vrclient/gen_wrapper.py
 
-CLANG_PATH='/usr/lib/clang/15'
-
-from clang.cindex import Cursor, CursorKind, Index, TypeKind
+#mproton: the clang resource dir (for <stddef.h>/<stdint.h>) is detected
+#instead of hard-coded, and libc comes from gen_include/ (see parse()).
+import argparse
 import concurrent.futures
+import json
 import os
 import re
+import subprocess
+import sys
+
+from clang.cindex import Cursor, CursorKind, Index, TypeKind
+
+def find_clang_resource_dir():
+    if os.environ.get('CLANG_RESOURCE_DIR'):
+        return os.environ['CLANG_RESOURCE_DIR']
+    for clang in ('clang-15', 'clang'):
+        try:
+            out = subprocess.run([clang, '-print-resource-dir'], capture_output=True, text=True)
+            if out.returncode == 0 and os.path.isdir(out.stdout.strip() + '/include'):
+                return out.stdout.strip()
+        except OSError:
+            pass
+    return '/usr/lib/clang/15'
+
+CLANG_PATH = find_clang_resource_dir()
+GEN_INCLUDE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'gen_include')
+
+arg_parser = argparse.ArgumentParser(description='Generate the lsteamclient wrappers from the Steamworks SDK headers.')
+arg_parser.add_argument('--no-darwin-check', action='store_true',
+                        help='skip the arm64-apple-macos layout cross-check of the u64 ABI')
+arg_parser.add_argument('--dump-layouts', metavar='FILE',
+                        help='write the struct layouts used for each ABI as JSON (for tests/check_abi.py)')
+ARGS = arg_parser.parse_args()
 
 SDK_VERSIONS = [
     "165",
@@ -105,6 +132,24 @@ SDK_VERSIONS = [
 ]
 
 ABIS = ['u32', 'u64', 'w32', 'w64']
+
+#mproton: explicit target triples, so the parse no longer depends on the
+#build host (upstream used -m32/-m64 on an x86_64 Linux host). The Windows
+#ABIs keep upstream's "Linux triple + _WIN32 + ms-bitfields" emulation so the
+#generated code is unchanged; tests/check_abi.py checks those layouts against
+#real *-windows-msvc targets.
+#
+#'d64' is not a generated ABI: it is the native ABI of the macOS
+#steamclient.dylib (arm64). The u64 wrappers are only valid on macOS if every
+#struct has the same layout there as on x86_64 Linux, so d64 is parsed and
+#compared against u64 (see check_darwin_layouts()).
+ABI_TARGETS = {
+    'u32': 'i686-linux-gnu',
+    'u64': 'x86_64-linux-gnu',
+    'w32': 'i686-linux-gnu',
+    'w64': 'x86_64-linux-gnu',
+    'd64': 'arm64-apple-macos11',
+}
 
 SDK_SOURCES = {
     "steam_api.h": [
@@ -1287,12 +1332,13 @@ def handle_class(klass):
 
 
 def parse(sources, sdkver, abi):
-    args = [f'-m{abi[1:]}', '-I' + CLANG_PATH + '/include/', '-I/usr/include/x86_64-linux-gnu/']
+    args = ['-target', ABI_TARGETS[abi], '-nostdlibinc', '-nostdinc++',
+            '-I' + CLANG_PATH + '/include/', '-I' + GEN_INCLUDE]
     if abi[0] == 'w':
         args += ["-D_WIN32", "-U__linux__"]
         args += ["-fms-extensions", "-mms-bitfields"]
         args += ["-Wno-ignored-attributes", "-Wno-incompatible-ms-struct"]
-    if abi[0] == 'u':
+    if abi[0] in ('u', 'd'):
         args += ["-DGNUC"]
 
     index = Index.create()
@@ -1387,6 +1433,7 @@ print('loading SDKs... 100%')
 
 
 tmp_classes = {}
+u64_builds = {}
 
 with concurrent.futures.ThreadPoolExecutor() as executor:
     arg0 = [sdkver for sdkver in SDK_VERSIONS for abi in ABIS]
@@ -1398,6 +1445,7 @@ with concurrent.futures.ThreadPoolExecutor() as executor:
     for i, result in enumerate(results):
         print(f'parsing SDKs... {i * 100 // len(arg0)}%', end='\r')
         sdkver, abi, build = result
+        if abi == 'u64': u64_builds[sdkver] = build #mproton: reused by check_darwin_layouts()
         if sdkver not in all_records: all_records[sdkver] = {}
         if sdkver not in tmp_classes: tmp_classes[sdkver] = {}
 
@@ -1435,6 +1483,75 @@ for i, sdkver in enumerate(reversed(SDK_VERSIONS)):
 print('parsing SDKs... 100%')
 
 
+#mproton: arm64-apple-macos cross-check, see ABI_TARGETS.
+def toplevel_records(build):
+    def in_sdk(c):
+        return c.location.file is not None and 'steamworks_sdk_' in c.location.file.name
+    records = build.cursor.get_children()
+    records = filter(lambda c: c.is_definition(), records)
+    records = filter(lambda c: c.type.get_canonical().kind == TypeKind.RECORD, records)
+    records = filter(lambda c: c.kind != CursorKind.TYPEDEF_DECL, records)
+    records = filter(in_sdk, records)
+    return {canonical_typename(c): c for c in records}
+
+
+def flat_fields(t):
+    """fields as (name, offset in bytes, size), bases flattened; anonymous
+    records (unnamed unions/structs) are expanded since they are not
+    compared as top-level records"""
+    t = t.get_canonical()
+    fields = []
+    for c in t.get_declaration().get_children():
+        if c.kind == CursorKind.CXX_BASE_SPECIFIER and len(list(c.type.get_fields())) > 0:
+            fields += flat_fields(c.type)
+    for f in t.get_fields():
+        offset, ftype = f.get_field_offsetof() // 8, f.type.get_canonical()
+        if ftype.kind == TypeKind.RECORD and ftype.get_declaration().is_anonymous():
+            fields += [(f'{f.spelling}.{n}', offset + o, sz) for n, o, sz in flat_fields(ftype)]
+        fields.append((f.spelling, offset, ftype.get_size()))
+    return fields
+
+
+def record_layout(c):
+    return {'size': c.type.get_size(), 'align': c.type.get_align(), 'fields': flat_fields(c.type)}
+
+
+darwin_layouts = {}
+
+def check_darwin_layouts():
+    def parse_pair(sdkver):
+        u_build = u64_builds[sdkver]
+        _, _, d_build = parse(all_sources[sdkver], sdkver, 'd64')
+        u_recs, d_recs = toplevel_records(u_build), toplevel_records(d_build)
+        diffs, layouts = [], {}
+        for name, u in u_recs.items():
+            if name not in d_recs:
+                continue
+            layouts[name] = record_layout(d_recs[name])
+            if record_layout(u) != layouts[name]:
+                diffs.append(name)
+        missing = sorted(set(u_recs) ^ set(d_recs))
+        return sdkver, len(u_recs), diffs, missing, layouts
+
+    total, bad = 0, []
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        for sdkver, count, diffs, missing, layouts in executor.map(parse_pair, SDK_VERSIONS):
+            total += count
+            darwin_layouts[sdkver] = layouts
+            bad += [f'{sdkver}: layout differs: {n}' for n in diffs]
+            bad += [f'{sdkver}: only declared for one target: {n}' for n in missing]
+    if bad:
+        print('\n'.join(bad))
+        sys.exit('arm64-apple-macos struct layouts differ from x86_64-linux; the u64 '
+                 'wrappers would be wrong for the macOS steamclient.dylib. Generate a '
+                 'separate darwin ABI before using lsteamclient on macOS.')
+    print(f'darwin check: {total} struct definitions in {len(SDK_VERSIONS)} SDKs have the same '
+          f'layout on arm64-apple-macos and x86_64-linux')
+
+if not ARGS.no_darwin_check:
+    check_darwin_layouts()
+
+
 tmp_structs = {}
 
 for i, name in enumerate(all_structs.keys()):
@@ -1458,6 +1575,33 @@ for name, structs in sorted(all_structs.items(), key=struct_order):
 all_structs = tmp_structs
 
 print('classifying structs... 100%')
+
+
+#mproton: layout dump for tests/check_abi.py
+def dump_layouts(path):
+    def struct_layout(rec):
+        return {'size': rec.size, 'align': rec.align,
+                'fields': [(f.name, f.offset, f.size) for f in rec.fields]}
+
+    dump = {'targets': ABI_TARGETS, 'sdks': {}}
+    for name, structs in all_structs.items():
+        if name.startswith('('):
+            continue
+        for sdkver, abis in structs.items():
+            if any(type(a) is Class for a in abis.values()):
+                continue
+            entry = {a: struct_layout(abis[a]) for a in ABIS}
+            entry['exempt'] = name in EXEMPT_STRUCTS
+            entry['w64_u64_conv'] = not entry['exempt'] and abis['w64'].needs_conversion(abis['u64'])
+            entry['w32_u32_conv'] = not entry['exempt'] and abis['w32'].needs_conversion(abis['u32'])
+            if sdkver in darwin_layouts and name in darwin_layouts[sdkver]:
+                entry['d64'] = darwin_layouts[sdkver][name]
+            dump['sdks'].setdefault(sdkver, {})[name] = entry
+    with open(path, 'w') as f:
+        json.dump(dump, f, indent=None, sort_keys=True)
+
+if ARGS.dump_layouts:
+    dump_layouts(ARGS.dump_layouts)
 
 
 for klass in all_classes.values():

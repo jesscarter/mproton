@@ -6,6 +6,7 @@
 #include <pthread.h>
 #include <stdlib.h>
 #include <dlfcn.h>
+#include <unistd.h>
 #include <unordered_map>
 #include <vector>
 
@@ -734,6 +735,43 @@ static void sync_env_var( const char *name, bool unset, const char *val )
     else if (val && (!s || strcmp( s, val ))) setenv( name, val, 1 );
 }
 
+#ifdef __APPLE__
+/* mproton: the macOS client keeps steamclient.dylib inside its app bundle,
+ * ~/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/.
+ * STEAM_COMPAT_CLIENT_INSTALL_PATH is that directory when the mproton launcher
+ * fills it in, but the Steam root when the client sets it (as Linux Steam does).
+ * Accept both, plus an explicit override for testing. */
+static void find_steamclient_dylib( char *path )
+{
+    static const char bundle_dir[] = "Steam.AppBundle/Steam/Contents/MacOS";
+    const char *env;
+
+    if ((env = getenv( "MPROTON_STEAMCLIENT_PATH" )) && *env)
+    {
+        snprintf( path, PATH_MAX, "%s", env );
+        return;
+    }
+
+    if ((env = getenv( "STEAM_COMPAT_CLIENT_INSTALL_PATH" )) && *env)
+    {
+        snprintf( path, PATH_MAX, "%s/steamclient.dylib", env );
+        if (!access( path, R_OK )) return;
+        snprintf( path, PATH_MAX, "%s/%s/steamclient.dylib", env, bundle_dir );
+        if (!access( path, R_OK )) return;
+        WARN( "steamclient.dylib not found under STEAM_COMPAT_CLIENT_INSTALL_PATH %s\n", debugstr_a(env) );
+    }
+
+    if ((env = getenv( "HOME" )) && *env)
+    {
+        snprintf( path, PATH_MAX, "%s/Library/Application Support/Steam/%s/steamclient.dylib", env, bundle_dir );
+        if (!access( path, R_OK )) return;
+    }
+
+    WARN( "Falling back to the DYLD search path to locate the native steamclient library\n" );
+    strcpy( path, "steamclient.dylib" );
+}
+#endif /* __APPLE__ */
+
 template< typename Params >
 static NTSTATUS steamclient_init( Params *params, bool wow64 )
 {
@@ -748,14 +786,7 @@ static NTSTATUS steamclient_init( Params *params, bool wow64 )
     if (steamclient) return 0;
 
 #ifdef __APPLE__
-    if (getenv( "STEAM_COMPAT_CLIENT_INSTALL_PATH" ))
-        snprintf( path, PATH_MAX, "%s/steamclient.dylib", getenv( "STEAM_COMPAT_CLIENT_INSTALL_PATH" ) );
-    else
-    {
-        WARN( "Old Steam client, falling back to DYLD environment to locate native steamclient "
-              "library\n" );
-        strcpy( path, "steamclient.dylib" );
-    }
+    find_steamclient_dylib( path );
 #else /* __APPLE__ */
 #if defined(__x86_64__)
 #define STEAM_ARCH "64"
@@ -779,7 +810,8 @@ static NTSTATUS steamclient_init( Params *params, bool wow64 )
 
     if (!(steamclient = dlopen( path, RTLD_NOW )))
     {
-        ERR( "unable to load native steamclient library\n" );
+        /* mproton: dlerror() says why (missing slice, code signature, library validation) */
+        ERR( "unable to load native steamclient library %s: %s\n", debugstr_a(path), debugstr_a(dlerror()) );
         return -1;
     }
 

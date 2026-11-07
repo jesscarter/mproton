@@ -62,6 +62,44 @@ static bool env_nonzero(const char *env)
     return v != NULL && *v && v[0] != '0';
 }
 
+/* mproton: steam.exe also runs on macOS hosts (Wine on Apple Silicon); see
+ * ../README.md. Everything host specific is keyed off the host sysname. */
+static BOOL host_is_darwin(void)
+{
+    static int is_darwin = -1;
+
+    if (is_darwin == -1)
+    {
+        void (CDECL *p_wine_get_host_version)(const char **sysname, const char **release);
+        const char *sysname = NULL, *release = NULL;
+
+        p_wine_get_host_version = (void *)GetProcAddress( GetModuleHandleW( L"ntdll" ), "wine_get_host_version" );
+        if (p_wine_get_host_version) p_wine_get_host_version( &sysname, &release );
+        is_darwin = sysname && !strcmp( sysname, "Darwin" );
+    }
+    return is_darwin;
+}
+
+/* On macOS STEAM_COMPAT_CLIENT_INSTALL_PATH can be the client binary directory
+ * inside the app bundle (where steamclient.dylib lives) rather than the Steam
+ * root that holds steamapps/. Returns a malloc'ed Steam root path. */
+static char *steam_root_from_client_path( const char *path )
+{
+    static const char bundle_suffix[] = "/Steam.AppBundle/Steam/Contents/MacOS";
+    size_t len = strlen( path ), suffix_len = strlen( bundle_suffix );
+    char *ret;
+
+    while (len > 1 && path[len - 1] == '/') --len;
+    if (host_is_darwin() && len > suffix_len && !strncmp( path + len - suffix_len, bundle_suffix, suffix_len ))
+        len -= suffix_len;
+    if ((ret = malloc( len + 1 )))
+    {
+        memcpy( ret, path, len );
+        ret[len] = 0;
+    }
+    return ret;
+}
+
 static void set_active_process_pid(void)
 {
     DWORD pid = GetCurrentProcessId();
@@ -185,6 +223,9 @@ static void setup_vr_registry(void)
 {
     BOOL (CDECL *init)(void);
     HMODULE vrclient;
+
+    /* mproton: there is no OpenVR/vrclient on macOS */
+    if (host_is_darwin()) return;
 
 #ifdef _WIN64
     if (!(vrclient = LoadLibraryW( L"vrclient_x64" )))
@@ -648,10 +689,75 @@ run:
     }
 }
 
+typedef NTSTATUS (WINAPI *__WINE_UNIX_SPAWNVP)(char *const argv[], int wait);
+
+/* mproton: forward steam.exe commands to the macOS client. There is no
+ * "steam" on PATH and no steam-runtime-steam-remote there:
+ *  - steam:// URLs go to the client through LaunchServices (/usr/bin/open),
+ *    which hands them to the running instance;
+ *  - "-option" command lines go to the client binary, steam_osx, which (like
+ *    the Linux client) passes them on to a running instance; if that binary
+ *    can't be found, to "open -a Steam --args". */
+static BOOL darwin_steam_command( int argc, char *argv[], __WINE_UNIX_SPAWNVP spawnvp )
+{
+    static const char bundle_bin[] = "/Steam.AppBundle/Steam/Contents/MacOS/steam_osx";
+    const char *client_path = getenv( "STEAM_COMPAT_CLIENT_INSTALL_PATH" ), *home = getenv( "HOME" );
+    char *candidates[3] = {0}, **unix_argv;
+    NTSTATUS status = STATUS_UNSUCCESSFUL;
+    int i, first = 1, count = 0, n;
+    char *root;
+
+    if (first < argc && !strcmp( argv[first], "--" )) ++first;
+    if (!(unix_argv = calloc( argc + 4, sizeof(*unix_argv) ))) return FALSE;
+
+    if (first < argc && StrStrIA( argv[first], "steam://" ) == argv[first])
+    {
+        unix_argv[0] = (char *)"/usr/bin/open";
+        unix_argv[1] = argv[first];
+        WINE_TRACE( "forwarding %s to /usr/bin/open\n", wine_dbgstr_a(argv[first]) );
+        status = spawnvp( unix_argv, TRUE );
+    }
+    else
+    {
+        if (client_path && *client_path && (root = steam_root_from_client_path( client_path )))
+        {
+            if ((candidates[count] = malloc( strlen( root ) + sizeof(bundle_bin) )))
+                sprintf( candidates[count++], "%s%s", root, bundle_bin );
+            free( root );
+        }
+        if (home && *home && (candidates[count] = malloc( strlen( home ) + 64 )))
+            sprintf( candidates[count++], "%s/Library/Application Support/Steam%s", home, bundle_bin );
+
+        for (i = 0; i < count && status; ++i)
+        {
+            unix_argv[0] = candidates[i];
+            for (n = first; n < argc; ++n) unix_argv[n - first + 1] = argv[n];
+            unix_argv[argc - first + 1] = NULL;
+            WINE_TRACE( "trying %s\n", wine_dbgstr_a(candidates[i]) );
+            status = spawnvp( unix_argv, TRUE );
+        }
+        if (status)
+        {
+            unix_argv[0] = (char *)"/usr/bin/open";
+            unix_argv[1] = (char *)"-a";
+            unix_argv[2] = (char *)"Steam";
+            unix_argv[3] = (char *)"--args";
+            for (n = first; n < argc; ++n) unix_argv[n - first + 4] = argv[n];
+            unix_argv[argc - first + 4] = NULL;
+            status = spawnvp( unix_argv, TRUE );
+        }
+        for (i = 0; i < count; ++i) free( candidates[i] );
+    }
+    free( unix_argv );
+
+    if (status) WINE_ERR( "Forwarding the command to the macOS Steam client failed, status %#lx.\n", status );
+    else WINE_TRACE( "Forwarded command to native steam.\n" );
+    return TRUE;
+}
+
 /* Forward stub steam.exe commands to the native steam client */
 static BOOL steam_command_handler(int argc, char *argv[])
 {
-    typedef NTSTATUS (WINAPI *__WINE_UNIX_SPAWNVP)(char *const argv[], int wait);
     static __WINE_UNIX_SPAWNVP p__wine_unix_spawnvp;
     NTSTATUS status = STATUS_UNSUCCESSFUL;
     BOOL restart_self = FALSE;
@@ -707,6 +813,9 @@ static BOOL steam_command_handler(int argc, char *argv[])
             return FALSE;
         }
     }
+
+    if (host_is_darwin())
+        return darwin_steam_command( argc, argv, p__wine_unix_spawnvp );
 
     if (!(unix_argv = malloc((argc + 1) * sizeof(*unix_argv))))
     {
@@ -773,7 +882,9 @@ static void setup_steam_files(void)
     TRACE( "steam_install_path %s.\n", debugstr_a(steam_install_path) );
     if (steam_install_path)
     {
-        if (!(str = escape_path_unix_to_dos( steam_install_path )))
+        char *steam_root = steam_root_from_client_path( steam_install_path ); /* mproton */
+
+        if (!steam_root || !(str = escape_path_unix_to_dos( steam_root )))
             ERR( "Could not convert %s to win path.\n", debugstr_a(steam_install_path) );
         else
         {
@@ -781,6 +892,7 @@ static void setup_steam_files(void)
             ++index;
             free( str );
         }
+        free( steam_root );
     }
 
     TRACE( "steam_library_paths %s.\n", debugstr_a(steam_library_paths) );

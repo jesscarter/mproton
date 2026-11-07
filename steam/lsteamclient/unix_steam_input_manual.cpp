@@ -192,6 +192,92 @@ uint32_t manual_convert_nNativeKeyCode( uint32_t win_vk )
         return vk_to_xkeysym[win_vk];
     return 0;
 }
+#elif defined(__APPLE__)
+/* mproton: ISteamHTMLSurface::KeyDown/KeyUp take "the virtual key code value
+ * from your OS", which on macOS is a Carbon kVK_* code (HIToolbox/Events.h).
+ * Values are spelled out so the unix side doesn't need Carbon headers.
+ * kVK_ANSI_A is 0, so keys without a macOS equivalent map to MAC_VK_NONE. */
+#define MAC_VK_NONE 0xffff
+
+uint32_t manual_convert_nNativeKeyCode( uint32_t win_vk )
+{
+    /* VK_0..VK_9 and VK_A..VK_Z (ANSI layout positions) */
+    static const uint16_t digits[10] = { 0x1d, 0x12, 0x13, 0x14, 0x15, 0x17, 0x16, 0x1a, 0x1c, 0x19 };
+    static const uint16_t letters[26] =
+    {
+        0x00, 0x0b, 0x08, 0x02, 0x0e, 0x03, 0x05, 0x04, 0x22, 0x26, 0x28, 0x25, 0x2e, /* A-M */
+        0x2d, 0x1f, 0x23, 0x0c, 0x0f, 0x01, 0x11, 0x20, 0x09, 0x0d, 0x07, 0x10, 0x06, /* N-Z */
+    };
+    static const uint16_t numpad[10] = { 0x52, 0x53, 0x54, 0x55, 0x56, 0x57, 0x58, 0x59, 0x5b, 0x5c };
+    /* VK_F1..VK_F20 */
+    static const uint16_t fkeys[20] =
+    {
+        0x7a, 0x78, 0x63, 0x76, 0x60, 0x61, 0x62, 0x64, 0x65, 0x6d,
+        0x67, 0x6f, 0x69, 0x6b, 0x71, 0x6a, 0x40, 0x4f, 0x50, 0x5a,
+    };
+
+    if (win_vk >= 0x30 && win_vk <= 0x39) return digits[win_vk - 0x30];
+    if (win_vk >= 0x41 && win_vk <= 0x5a) return letters[win_vk - 0x41];
+    if (win_vk >= 0x60 && win_vk <= 0x69) return numpad[win_vk - 0x60];
+    if (win_vk >= 0x70 && win_vk <= 0x83) return fkeys[win_vk - 0x70];
+
+    switch (win_vk)
+    {
+    case 0x08: return 0x33; /* VK_BACK -> kVK_Delete */
+    case 0x09: return 0x30; /* VK_TAB -> kVK_Tab */
+    case 0x0c: return 0x47; /* VK_CLEAR -> kVK_ANSI_KeypadClear */
+    case 0x0d: return 0x24; /* VK_RETURN -> kVK_Return */
+    case 0x10: return 0x38; /* VK_SHIFT -> kVK_Shift */
+    case 0x11: return 0x3b; /* VK_CONTROL -> kVK_Control */
+    case 0x12: return 0x3a; /* VK_MENU -> kVK_Option */
+    case 0x14: return 0x39; /* VK_CAPITAL -> kVK_CapsLock */
+    case 0x15: return 0x68; /* VK_KANA -> kVK_JIS_Kana */
+    case 0x1b: return 0x35; /* VK_ESCAPE -> kVK_Escape */
+    case 0x1d: return 0x66; /* VK_NONCONVERT -> kVK_JIS_Eisu */
+    case 0x20: return 0x31; /* VK_SPACE -> kVK_Space */
+    case 0x21: return 0x74; /* VK_PRIOR -> kVK_PageUp */
+    case 0x22: return 0x79; /* VK_NEXT -> kVK_PageDown */
+    case 0x23: return 0x77; /* VK_END -> kVK_End */
+    case 0x24: return 0x73; /* VK_HOME -> kVK_Home */
+    case 0x25: return 0x7b; /* VK_LEFT -> kVK_LeftArrow */
+    case 0x26: return 0x7e; /* VK_UP -> kVK_UpArrow */
+    case 0x27: return 0x7c; /* VK_RIGHT -> kVK_RightArrow */
+    case 0x28: return 0x7d; /* VK_DOWN -> kVK_DownArrow */
+    case 0x2d: return 0x72; /* VK_INSERT -> kVK_Help (Insert on PC keyboards) */
+    case 0x2e: return 0x75; /* VK_DELETE -> kVK_ForwardDelete */
+    case 0x2f: return 0x72; /* VK_HELP -> kVK_Help */
+    case 0x5b: return 0x37; /* VK_LWIN -> kVK_Command */
+    case 0x5c: return 0x36; /* VK_RWIN -> kVK_RightCommand */
+    case 0x6a: return 0x43; /* VK_MULTIPLY -> kVK_ANSI_KeypadMultiply */
+    case 0x6b: return 0x45; /* VK_ADD -> kVK_ANSI_KeypadPlus */
+    case 0x6c: return 0x5f; /* VK_SEPARATOR -> kVK_JIS_KeypadComma */
+    case 0x6d: return 0x4e; /* VK_SUBTRACT -> kVK_ANSI_KeypadMinus */
+    case 0x6e: return 0x41; /* VK_DECIMAL -> kVK_ANSI_KeypadDecimal */
+    case 0x6f: return 0x4b; /* VK_DIVIDE -> kVK_ANSI_KeypadDivide */
+    case 0xa0: return 0x38; /* VK_LSHIFT -> kVK_Shift */
+    case 0xa1: return 0x3c; /* VK_RSHIFT -> kVK_RightShift */
+    case 0xa2: return 0x3b; /* VK_LCONTROL -> kVK_Control */
+    case 0xa3: return 0x3e; /* VK_RCONTROL -> kVK_RightControl */
+    case 0xa4: return 0x3a; /* VK_LMENU -> kVK_Option */
+    case 0xa5: return 0x3d; /* VK_RMENU -> kVK_RightOption */
+    case 0xad: return 0x4a; /* VK_VOLUME_MUTE -> kVK_Mute */
+    case 0xae: return 0x49; /* VK_VOLUME_DOWN -> kVK_VolumeDown */
+    case 0xaf: return 0x48; /* VK_VOLUME_UP -> kVK_VolumeUp */
+    case 0xba: return 0x29; /* VK_OEM_1 (;:) -> kVK_ANSI_Semicolon */
+    case 0xbb: return 0x18; /* VK_OEM_PLUS -> kVK_ANSI_Equal */
+    case 0xbc: return 0x2b; /* VK_OEM_COMMA -> kVK_ANSI_Comma */
+    case 0xbd: return 0x1b; /* VK_OEM_MINUS -> kVK_ANSI_Minus */
+    case 0xbe: return 0x2f; /* VK_OEM_PERIOD -> kVK_ANSI_Period */
+    case 0xbf: return 0x2c; /* VK_OEM_2 (/?) -> kVK_ANSI_Slash */
+    case 0xc0: return 0x32; /* VK_OEM_3 (`~) -> kVK_ANSI_Grave */
+    case 0xdb: return 0x21; /* VK_OEM_4 ([{) -> kVK_ANSI_LeftBracket */
+    case 0xdc: return 0x2a; /* VK_OEM_5 (\|) -> kVK_ANSI_Backslash */
+    case 0xdd: return 0x1e; /* VK_OEM_6 (]}) -> kVK_ANSI_RightBracket */
+    case 0xde: return 0x27; /* VK_OEM_7 ('") -> kVK_ANSI_Quote */
+    case 0xe2: return 0x0a; /* VK_OEM_102 -> kVK_ISO_Section */
+    }
+    return MAC_VK_NONE;
+}
 #else
 #error You must implement VK<->Native keysym conversion for this platform.
 #endif

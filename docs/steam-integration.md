@@ -148,7 +148,7 @@ Install by copying the dist directory, which holds `mproton`, `mproton_host.py`,
 
 On the launcher side (`launcher/mproton`):
 
-- If `STEAM_COMPAT_CLIENT_INSTALL_PATH` is unset on Darwin, the launcher fills in the same fallback NotProton uses. lsteamclient's `__APPLE__` branch (`lsteamclient/unixlib.cpp:750`) then finds `steamclient.dylib`.
+- If `STEAM_COMPAT_CLIENT_INSTALL_PATH` is unset on Darwin, the launcher fills in the same fallback NotProton uses. lsteamclient's `find_steamclient_dylib()` (`steam/lsteamclient/unixlib.cpp`) then finds `steamclient.dylib`. It also accepts the Steam root, in case Steam itself sets the variable that way. lsteamclient and `steam.exe` live in `steam/`; see [steam/README.md](../steam/README.md).
 - The launcher handles all upstream verbs, including `getcompatpath` via `winepath`.
 
 **Recommended setup today** *(inference)*:
