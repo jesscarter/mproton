@@ -1,0 +1,19 @@
+"compatibilitytools"
+{
+  "compat_tools"
+  {
+    "mproton" // Internal name. Keep "proton" in it: per NotProton's source, the
+              // client applies Steam Cloud path mapping only to tools whose
+              // name contains "proton".
+    {
+      // Tool lives in its own subdirectory of compatibilitytools.d
+      "install_path" "."
+      "display_name" "mproton (experimental)"
+
+      "from_oslist"  "windows"
+      // Upstream Proton says "linux". The macOS client only registers tools
+      // whose to_oslist matches the host OS, so this must be "macos".
+      "to_oslist"    "macos"
+    }
+  }
+}

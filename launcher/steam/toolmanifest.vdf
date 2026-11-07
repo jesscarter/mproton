@@ -1,0 +1,10 @@
+"manifest"
+{
+  "version" "2"
+  // ./run picks a Python 3 interpreter, then execs ./mproton %verb% ...
+  "commandline" "/run %verb%"
+  // No "require_tool_appid": that pulls in the Steam Linux Runtime
+  // (pressure-vessel), which does not exist on macOS.
+  "use_sessions" "1"
+  "compatmanager_layer_name" "proton"
+}

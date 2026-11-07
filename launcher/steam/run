@@ -1,0 +1,16 @@
+#!/bin/sh
+# Steam entry point for mproton (see toolmanifest.vdf).
+# /usr/bin/python3 on macOS is a stub that asks to install the Xcode Command
+# Line Tools, so prefer a Python bundled with the tool, then MPROTON_PYTHON,
+# then whatever python3 is on PATH (e.g. Homebrew).
+# Note: /bin/sh is SIP-protected, so DYLD_* never survive past this point;
+# mproton relies on LC_RPATH instead (see mproton_host.py).
+here=$(cd "$(dirname "$0")" && pwd)
+if [ -n "${MPROTON_PYTHON:-}" ]; then
+    py=$MPROTON_PYTHON
+elif [ -x "$here/files/python/bin/python3" ]; then
+    py=$here/files/python/bin/python3
+else
+    py=python3
+fi
+exec "$py" "$here/mproton" "$@"
