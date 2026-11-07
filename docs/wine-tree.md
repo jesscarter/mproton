@@ -140,7 +140,7 @@ Following [`wine/PORTING.md`](../wine/PORTING.md), the `conflict` commits are be
 - **Superseded by 11.20 (17, `dropped-upstream`, in `wine/scripts/manual-status.tsv`):** bcrypt DH/ECC/OAEP via gnutls, libgmp and gcrypt (6; 11.20 moved bcrypt to SymCrypt), jscript/mshtml cycle collection (2; 11.20 has its own design), icu stub + v68 forward (2; 11.20 builds a real icu.dll), PackageFullNameFromId, the msvcrt `_isatty` wrapper, the msctf reconversion stub, setupapi device removal, the imm32 trailing zero, the d3dx9 sRGB filter flags and D3DX10LoadTextureFromTexture.
 - **Linux-only (2, `skipped-linux`):** the two winepulse timer commits. winepulse isn't built on macOS (winecoreaudio is used).
 - **Tests:** test hunks that extend tests 11.20 rewrote were left out (mostly d3dx10), as each note says. Tests aren't compiled by the build check (`--disable-tests`).
-- **Build:** an incremental build after the batch and a from-scratch build through `wine/apply.sh` (see [Linux verification](#linux-verification)). The build caught one porting bug: `WINE_PACKAGE_FLAGS` leaves `OPENCL_LIBS=-lOpenCL` even when OpenCL isn't found, so the opencl port clears it.
+- **Build:** an incremental build after the batch, then a from-scratch build through `wine/apply.sh`: 0 errors (see [Linux verification](#linux-verification)). The build caught one porting bug: `WINE_PACKAGE_FLAGS` leaves `OPENCL_LIBS=-lOpenCL` even when OpenCL isn't found, so the opencl port clears it.
 
 **Next:** the rest of d3dx (10), then multimedia (33). For the d3dx10 save functions, the d3dx9 helper hunks apply cleanly; the d3dx10 part has to be written on 11.20's staging helpers, because Proton's version uses its own `struct d3d10_texture` code that 11.20 replaced.
 
@@ -170,7 +170,7 @@ Then run mach9's `bin/build-wine.sh --clean` as usual. `apply.sh` reuses an exis
 | build | tree | result |
 |---|---|---|
 | control | athei `5959a04b1af` unmodified | **BUILD OK**, 0 compile errors |
-| mproton | `wine/apply.sh` into an empty dir → `mproton` at `bc005a6160` (`wine-11.20-695`), same tree hash as the branch the series was exported from | **BUILD OK**, 0 compile errors, from scratch |
+| mproton (batch 1) | `wine/apply.sh` into an empty dir → `mproton` at `d22816523c` (`wine-11.20-722`), 686 patches, same tree hash (`65cfb518717`) as the branch the series was exported from | **BUILD OK**, 0 compile errors, from scratch |
 
 What the mproton build produced: 754 PE modules in `*/aarch64-windows/` (ARM64X: the 4215 arm64ec objects are linked into them; `ntdll.dll` carries CHPE metadata), 772 in `*/i386-windows/`, and 33 aarch64 ELF unix libs (`ntdll.so`, `win32u.so`, `winex11.so`, `winegstreamer.so`, `amd_ags_x64.so`, …) plus `wine`, `wine-preloader` and `wineserver`.
 
