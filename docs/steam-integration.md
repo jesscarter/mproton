@@ -138,7 +138,13 @@ From `dylib/feats/compat_run.sh`, the embedded `run` script:
 
 ## What mproton ships (`launcher/steam/`)
 
-Install by copying the dist directory, which holds `mproton`, `mproton_host.py`, `mproton_graphics.py`, `filelock.py`, `files/`, and these three files, to `~/Library/Application Support/Steam/compatibilitytools.d/mproton/`.
+Install by copying the dist directory to `~/Library/Application Support/Steam/compatibilitytools.d/mproton/`. It holds:
+
+- `mproton`, `mproton_host.py`, `mproton_graphics.py`, `mproton_runtime.py`, `mproton_compatdb.py` and `filelock.py`;
+- the Wine runtime: a mach9 bundle as `wine/` (or set `MPROTON_WINE_DIR`), or a Proton-style `files/`;
+- the three files below.
+
+To run a game by hand on a mach9 bundle, without Steam's compatibility-tool path, see [running.md](running.md).
 
 | File | Difference from upstream | Why |
 |---|---|---|
@@ -148,7 +154,7 @@ Install by copying the dist directory, which holds `mproton`, `mproton_host.py`,
 
 On the launcher side (`launcher/mproton`):
 
-- If `STEAM_COMPAT_CLIENT_INSTALL_PATH` is unset on Darwin, the launcher fills in the same fallback NotProton uses. lsteamclient's `__APPLE__` branch (`lsteamclient/unixlib.cpp:750`) then finds `steamclient.dylib`.
+- If `STEAM_COMPAT_CLIENT_INSTALL_PATH` is unset on Darwin, the launcher fills in the same fallback NotProton uses. lsteamclient's `find_steamclient_dylib()` (`steam/lsteamclient/unixlib.cpp`) then finds `steamclient.dylib`. It also accepts the Steam root, in case Steam itself sets the variable that way. lsteamclient and `steam.exe` live in `steam/`; see [steam/README.md](../steam/README.md).
 - The launcher handles all upstream verbs, including `getcompatpath` via `winepath`.
 
 **Recommended setup today** *(inference)*:

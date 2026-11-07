@@ -47,11 +47,16 @@ from random import randrange
 
 import mproton_host
 import mproton_graphics
+import mproton_runtime #mproton: mach9 bundle layout
+import mproton_compatdb
 
 #To enable debug logging, copy "user_settings.sample.py" to "user_settings.py"
 #and edit it if needed.
 
 CURRENT_PREFIX_VERSION="11.0-100"
+#mproton: prefixes made by wineboot -i on a mach9 bundle
+MACH9_PREFIX_PREFIX="mach9-"
+MACH9_PREFIX_VERSION=MACH9_PREFIX_PREFIX + "1"
 
 PFX="Proton: "
 #mproton: ld_path_var replaced by g_host.library_path_var (None on macOS: rpath)
@@ -599,6 +604,34 @@ class Proton:
             self.wine_bin = self.bin_dir + "wine"
             self.wineserver_bin = self.bin_dir + "wineserver"
 
+        #mproton: on Darwin prefer a mach9 bundle (MPROTON_WINE_DIR or <launcher>/wine)
+        self.mach9 = None
+        if g_host.is_darwin:
+            self.mach9, reason = mproton_runtime.find_bundle(base_dir, os.environ)
+            if reason:
+                log(reason)
+                sys.exit(1)
+        elif os.environ.get("MPROTON_WINE_DIR"):
+            log("MPROTON_WINE_DIR is ignored on " + g_host.system + ": a mach9 bundle only runs on macOS")
+        if self.mach9:
+            self.use_mach9_bundle(self.mach9)
+
+    def use_mach9_bundle(self, bundle):
+        #mproton: bin/wine (-> wine.app loader) and wineserver from the bundle;
+        #no files/ tree and no default prefix (wineboot -i makes each prefix)
+        self.dist_dir = bundle.root
+        self.bin_dir = bundle.bin_dir
+        self.lib_dir = bundle.path("lib/")
+        self.fonts_dir = bundle.path("share/fonts/")
+        self.media_dir = bundle.path("share/media/")
+        self.wine_fonts_dir = bundle.path("share/wine/fonts/")
+        self.wine_inf = bundle.path("share/wine/wine.inf")
+        self.default_pfx_dir = None
+        self.wine_bin = bundle.wine_bin
+        self.wineserver_bin = bundle.wineserver_bin
+        self.host_pe_arch = mproton_runtime.HOST_PE_ARCH
+        self.wow64_pe_arch = mproton_runtime.WOW64_PE_ARCH
+
     def path(self, d):
         return self.base_dir + d
 
@@ -636,6 +669,8 @@ class Proton:
 
     def missing_default_prefix(self):
         '''Check if the default prefix dir is missing. Returns true if missing, false if present'''
+        if self.mach9: #mproton: no default prefix on a mach9 bundle
+            return False
         return not os.path.isdir(self.default_pfx_dir)
 
     def make_default_prefix(self):
@@ -656,6 +691,8 @@ class CompatData:
         self.version_file = self.path("version")
         self.config_info_file = self.path("config_info")
         self.fex_config_file = self.path("proton-fex-config.json")
+        #mproton: per-prefix rules for a mach9 bundle (WINE_COMPATDB_FILE must be absolute)
+        self.compatdb_file = os.path.abspath(self.path("compatdb.rules"))
         self.tracked_files_file = self.path("tracked_files")
         self.prefix_lock = FileLock(self.path("pfx.lock"), timeout=-1)
         self.old_machine_guid = None
@@ -962,6 +999,8 @@ class CompatData:
         makedirs(windowsfonts)
         sgi = os.environ.get('SteamGameId', '')
         for fonts_dir in [g_proton.fonts_dir, g_proton.wine_fonts_dir]:
+            if not os.path.isdir(fonts_dir): #mproton: a mach9 bundle has no share/fonts
+                continue
             for font in os.listdir(fonts_dir):
                 if not font.endswith('.ttf') and not font.endswith('.ttc'):
                     continue
@@ -1004,7 +1043,108 @@ class CompatData:
                 os.remove(old)
                 os.symlink(src=link, dst=old)
 
+    def copy_steam_files(self, tracked_files, steam_linux_path):
+        makedirs(self.prefix_dir + self.steam_in_pfx_dir)
+        filestocopy = [("steamclient.dll", "steamclient.dll"),
+                       ("steamclient64.dll", "steamclient64.dll"),
+                       ("GameOverlayRenderer64.dll", "GameOverlayRenderer64.dll"),
+                       ("SteamService.exe", "steam.exe"),
+                       ("Steam.dll", "Steam.dll")]
+        for (src,tgt) in filestocopy:
+            srcfile = steam_linux_path + '/legacycompat/' + src
+            if os.path.isfile(srcfile):
+                try_copy(srcfile, self.steam_in_pfx_dir + tgt, prefix=self.prefix_dir, track_file=tracked_files, link_debug=True)
+
+        filestocopy = [("steamclient64.dll", "steamclient64.dll"),
+                       ("GameOverlayRenderer.dll", "GameOverlayRenderer.dll"),
+                       ("GameOverlayRenderer64.dll", "GameOverlayRenderer64.dll")]
+        for (src,tgt) in filestocopy:
+            srcfile = g_proton.path(src)
+            if os.path.isfile(srcfile):
+                try_copy(srcfile, self.steam_in_pfx_dir + tgt, prefix=self.prefix_dir, track_file=tracked_files, link_debug=True)
+
+        # CW Bug 19152. IL-2 Sturmovik: Cliffs of Dover Blitz Edition needs user's localconfig.vdf
+        if os.environ.get("SteamGameId", 0) == "754530":
+            srcdir = os.path.join(steam_linux_path, 'userdata')
+            dstdir = os.path.join(self.prefix_dir, self.steam_in_pfx_dir, 'userdata')
+            # figuring out the current user is hard, so copy the config for all users
+            for userid in os.listdir(srcdir):
+                srcvdf = os.path.join(srcdir, userid, 'config', 'localconfig.vdf')
+                dstvdf = os.path.join(dstdir, userid, 'config', 'localconfig.vdf')
+                if not os.path.exists(srcvdf):
+                    continue
+                os.makedirs(os.path.dirname(dstvdf), exist_ok=True)
+                shutil.copyfile(srcvdf, dstvdf)
+
+    def setup_prefix_mach9(self):
+        #mproton: a mach9 bundle has no default prefix to copy. wineboot -i
+        #creates the prefix (builtin placeholders included, steam.exe and
+        #lsteamclient among them when the bundle carries them), and Wine
+        #updates it itself when the bundle's wine.inf changes.
+        with self.prefix_lock:
+            old_ver = None
+            if file_exists(self.version_file, follow_symlinks=True):
+                with open(self.version_file, "r") as f:
+                    old_ver = f.readline().strip()
+            if old_ver and not old_ver.startswith(MACH9_PREFIX_PREFIX):
+                log("Prefix " + self.prefix_dir + " was made for Proton " + old_ver +
+                    ", not a mach9 bundle; if the game misbehaves, delete it")
+
+            if not file_exists(self.creation_sync_guard, follow_symlinks=False):
+                makedirs(self.prefix_dir)
+                local_env = dict(g_session.env)
+                local_env["WINEPREFIX"] = self.prefix_dir
+                local_env["WINEDEBUG"] = "-all"
+                #the launcher's rules are written after the session is set up
+                for var in mproton_compatdb.INHERITED_CONFLICTS:
+                    local_env.pop(var, None)
+                rc = g_session.run_proc([g_proton.wine_bin, "wineboot", "-i"], local_env)
+                g_session.run_proc([g_proton.wineserver_bin, "-w"], local_env)
+                if rc != 0:
+                    log("wineboot -i failed (" + str(rc) + ") for " + self.prefix_dir)
+                else:
+                    with open(self.creation_sync_guard, "w"):
+                        pass
+
+            makedirs(self.prefix_dir + "/dosdevices")
+            if not file_exists(self.prefix_dir + "/dosdevices/c:", follow_symlinks=False):
+                os.symlink("../drive_c", self.prefix_dir + "/dosdevices/c:")
+            if not file_exists(self.prefix_dir + "/dosdevices/z:", follow_symlinks=False):
+                os.symlink("/", self.prefix_dir + "/dosdevices/z:")
+
+            steam_linux_path = os.environ["STEAM_COMPAT_CLIENT_INSTALL_PATH"]
+            with open(self.config_info_file, "w") as f:
+                f.write('\n'.join((MACH9_PREFIX_VERSION, g_proton.mach9.root,
+                                   g_session.graphics_backend, steam_linux_path)))
+            with open(self.version_file, "w") as f:
+                f.write(MACH9_PREFIX_VERSION + "\n")
+
+            self.create_fonts_symlinks()
+
+            makedirs(self.prefix_dir + "/drive_c/windows/system32")
+            with open(self.tracked_files_file, "a") as tracked_files:
+                self.copy_steam_files(tracked_files, steam_linux_path)
+
+                #steam.exe and lsteamclient.dll (steam/, PR #5) are Wine builtins
+                #in the bundle's default dirs. wineboot -i puts placeholders for
+                #them into a new prefix; a prefix made before the bundle had
+                #them gets a copy, which Wine loads as the builtin (steam.exe=b).
+                for (wow64, sysdir) in ((False, "system32"), (True, "syswow64")):
+                    if not os.path.isdir(self.prefix_dir + "drive_c/windows/" + sysdir):
+                        continue
+                    for f in ("steam.exe", "lsteamclient.dll"):
+                        dst = self.prefix_dir + "drive_c/windows/" + sysdir + "/" + f
+                        src = g_proton.mach9.pe_dir(wow64) + f
+                        if os.path.isfile(src) and not file_exists(dst, follow_symlinks=True):
+                            try_copy(src, "drive_c/windows/" + sysdir, prefix=self.prefix_dir,
+                                     track_file=tracked_files)
+
+            setup_game_dir_drive()
+            setup_steam_dir_drive()
+
     def setup_prefix(self):
+        if g_proton.mach9: #mproton
+            return self.setup_prefix_mach9()
         with self.prefix_lock:
             if file_exists(self.version_file, follow_symlinks=True):
                 with open(self.version_file, "r") as f:
@@ -1135,37 +1275,7 @@ class CompatData:
 
             with open(self.tracked_files_file, "a") as tracked_files:
                 #copy steam files into place
-                makedirs(self.prefix_dir + self.steam_in_pfx_dir)
-                filestocopy = [("steamclient.dll", "steamclient.dll"),
-                               ("steamclient64.dll", "steamclient64.dll"),
-                               ("GameOverlayRenderer64.dll", "GameOverlayRenderer64.dll"),
-                               ("SteamService.exe", "steam.exe"),
-                               ("Steam.dll", "Steam.dll")]
-                for (src,tgt) in filestocopy:
-                    srcfile = steam_linux_path + '/legacycompat/' + src
-                    if os.path.isfile(srcfile):
-                        try_copy(srcfile, self.steam_in_pfx_dir + tgt, prefix=self.prefix_dir, track_file=tracked_files, link_debug=True)
-
-                filestocopy = [("steamclient64.dll", "steamclient64.dll"),
-                               ("GameOverlayRenderer.dll", "GameOverlayRenderer.dll"),
-                               ("GameOverlayRenderer64.dll", "GameOverlayRenderer64.dll")]
-                for (src,tgt) in filestocopy:
-                    srcfile = g_proton.path(src)
-                    if os.path.isfile(srcfile):
-                        try_copy(srcfile, self.steam_in_pfx_dir + tgt, prefix=self.prefix_dir, track_file=tracked_files, link_debug=True)
-
-                # CW Bug 19152. IL-2 Sturmovik: Cliffs of Dover Blitz Edition needs user's localconfig.vdf
-                if os.environ.get("SteamGameId", 0) == "754530":
-                    srcdir = os.path.join(steam_linux_path, 'userdata')
-                    dstdir = os.path.join(self.prefix_dir, self.steam_in_pfx_dir, 'userdata')
-                    # figuring out the current user is hard, so copy the config for all users
-                    for userid in os.listdir(srcdir):
-                        srcvdf = os.path.join(srcdir, userid, 'config', 'localconfig.vdf')
-                        dstvdf = os.path.join(dstdir, userid, 'config', 'localconfig.vdf')
-                        if not os.path.exists(srcvdf):
-                            continue
-                        os.makedirs(os.path.dirname(dstvdf), exist_ok=True)
-                        shutil.copyfile(srcvdf, dstvdf)
+                self.copy_steam_files(tracked_files, steam_linux_path) #mproton: shared with mach9
 
                 #mproton: OpenVR/OpenXR are not built for macOS
                 if g_host.has_vr:
@@ -1611,6 +1721,11 @@ class Session:
         if os.environ.get("PROTON_USE_WOW64", None) == "1" and g_host.machine == "x86_64":
             self.env["WINEARCH"] = "wow64"
 
+        if g_proton.mach9:
+            #mproton: the bundle finds its own dlls, dylibs, GStreamer and Vulkan driver
+            self.init_wine_mach9()
+            return
+
         #mproton: on macOS bundled dylibs are found via LC_RPATH; no env var (SIP strips DYLD_*)
         ld_path_var = g_host.library_path_var
         ld_library_path = g_host.host_lib_dirs(g_proton.lib_dir)
@@ -1658,6 +1773,37 @@ class Session:
         self.env["ESPEAK_DATA_PATH"] = g_proton.dist_dir + "share"
 
         prepend_to_env_str(self.env, "PATH", g_proton.bin_dir, ":")
+
+    def init_wine_mach9(self):
+        #mproton: what a mach9 bundle needs from its launcher.
+        # - WINEDLLPATH: Wine finds lib/wine relative to ntdll; a user's value is kept.
+        # - GStreamer (GST_*), Vulkan (VK_DRIVER_FILES -> share/vulkan/icd.d/,
+        #   KosmicKrisp): ntdll sets these unless the caller did, so a value the
+        #   user exported (VK_DRIVER_FILES, VK_ICD_FILENAMES, VK_ADD_DRIVER_FILES)
+        #   passes through and replaces the bundled driver.
+        # - FEX_HARDWARE_TSO, FEX_*, WINENCPU, WINEMSYNC: pass through (msync is
+        #   handled with the other sync primitives in init_session).
+        # - WINE_COMPATDB passes through for hand-written rules; the launcher's
+        #   own rules go to the per-prefix WINE_COMPATDB_FILE (init_session).
+        if "WINENCPU" not in self.env and "WINE_CPU_TOPOLOGY" in self.env:
+            #Proton's PROTON_CPU_TOPOLOGY / default_cpu_limit ("N" or "N:cpus")
+            ncpu = self.env["WINE_CPU_TOPOLOGY"].partition(":")[0]
+            if ncpu.isdigit() and int(ncpu) > 0:
+                self.env["WINENCPU"] = ncpu
+        prepend_to_env_str(self.env, "PATH", g_proton.bin_dir, ":")
+
+    def write_compatdb_rules(self):
+        #mproton: graphics backend and DLL overrides as compatdb rules
+        rules, trees = mproton_compatdb.build_rules(self.graphics_backend, self.compat_config,
+                                                    self.env, g_proton.mach9, self.dlloverrides, log)
+        self.compatdb_trees = trees
+        self.compatdb_text = mproton_compatdb.table_text(rules)
+        mproton_compatdb.write_rules_file(g_compatdata.compatdb_file, self.compatdb_text)
+        mproton_compatdb.apply_env(self.env, g_compatdata.compatdb_file, log)
+        if self.log_file:
+            self.log_file.write("compatdb rules (" + g_compatdata.compatdb_file + "):\n" +
+                                self.compatdb_text + "\n")
+            self.log_file.flush()
 
     def check_environment(self, env_name, config_name):
         if env_name not in self.env:
@@ -1815,9 +1961,20 @@ class Session:
         #mproton: extra graphics backends, in the style of PROTON_USE_WINED3D
         for (env_name, config_name) in mproton_graphics.BACKEND_ENV_VARS:
             self.check_environment(env_name, config_name)
-        self.graphics_backend, self.d3dmetal_dir = mproton_graphics.select_backend(
-                self.compat_config, self.env, g_proton.host_pe_arch, log)
-        if self.d3dmetal_dir:
+        if g_proton.mach9:
+            #mproton: a backend is a tree compatdb.so prepends; D3DMetal must be one too
+            bundle = g_proton.mach9
+            def d3dmetal_tree(env, pe_arch):
+                if bundle.has_tree(mproton_runtime.DXGI, mproton_graphics.D3DMETAL, pe_arch):
+                    return bundle.tree_dir(mproton_runtime.DXGI, mproton_graphics.D3DMETAL), None
+                return None, "no " + bundle.tree_dir(mproton_runtime.DXGI, mproton_graphics.D3DMETAL) + pe_arch
+            self.graphics_backend, self.d3dmetal_dir = mproton_graphics.select_backend(
+                    self.compat_config, self.env, g_proton.host_pe_arch, log,
+                    default=mproton_graphics.MACH9, d3dmetal_finder=d3dmetal_tree)
+        else:
+            self.graphics_backend, self.d3dmetal_dir = mproton_graphics.select_backend(
+                    self.compat_config, self.env, g_proton.host_pe_arch, log)
+        if self.d3dmetal_dir and not g_proton.mach9:
             prepend_to_env_str(self.env, "WINEDLLPATH", self.d3dmetal_dir, ":")
             self.env.setdefault("MPROTON_D3DMETAL", "1")
 
@@ -2018,8 +2175,11 @@ class Session:
         if "PROTON_LOG" in self.env and nonzero(self.env["PROTON_LOG"]):
             if self.setup_logging(append_forever=False):
                 self.log_file.write("======================\n")
-                with open(g_proton.version_file, "r") as f:
-                    self.log_file.write("Proton: " + f.readline().strip() + "\n")
+                if file_exists(g_proton.version_file, follow_symlinks=True): #mproton: absent when run from a checkout
+                    with open(g_proton.version_file, "r") as f:
+                        self.log_file.write("Proton: " + f.readline().strip() + "\n")
+                if g_proton.mach9:
+                    self.log_file.write("Wine: mach9 bundle " + g_proton.mach9.root + "\n")
                 if "SteamGameId" in self.env:
                     self.log_file.write("SteamGameId: " + self.env["SteamGameId"] + "\n")
                 self.log_file.write("Command: " + str(sys.argv[2:] + self.cmdlineappend) + "\n")
@@ -2077,6 +2237,11 @@ class Session:
             if "dxgi" in self.dlloverrides:
                 del self.dlloverrides["dxgi"]
 
+        #mproton: hide D3D12 (vkd3d-proton) so a D3D11-capable game falls back to D3D11
+        if "nod3d12" in self.compat_config:
+            self.dlloverrides["d3d12"] = ""
+            self.dlloverrides["d3d12core"] = ""
+
         if "nod3d10" in self.compat_config:
             self.dlloverrides["d3d10_1"] = ""
             self.dlloverrides["d3d10"] = ""
@@ -2106,14 +2271,18 @@ class Session:
                 ]:
                 self.env["PROTON_LIMIT_ADDRESS_SPACE"] = "1"
 
-        s = ""
-        for dll in self.dlloverrides:
-            setting = self.dlloverrides[dll]
-            if len(s) > 0:
-                s = s + ";" + dll + "=" + setting
-            else:
-                s = dll + "=" + setting
-        append_to_env_str(self.env, "WINEDLLOVERRIDES", s, ";")
+        if g_proton.mach9:
+            #mproton: compatdb replaces WINEDLLOVERRIDES (see write_compatdb_rules)
+            self.write_compatdb_rules()
+        else:
+            s = ""
+            for dll in self.dlloverrides:
+                setting = self.dlloverrides[dll]
+                if len(s) > 0:
+                    s = s + ";" + dll + "=" + setting
+                else:
+                    s = dll + "=" + setting
+            append_to_env_str(self.env, "WINEDLLOVERRIDES", s, ";")
 
         #mproton: FEX on arm64 Linux and arm64 macOS (platform.machine() == 'arm64' there)
         if g_host.is_arm64:
@@ -2129,6 +2298,13 @@ class Session:
                 self.env['FEX_APP_CONFIG'] = g_compatdata.fex_config_file
 
             self.env["FEX_APP_CONFIG_LOCATION"] = os.path.join(g_proton.dist_dir, "share/fex-emu/")
+
+    def has_steam_exe(self):
+        #mproton: steam.exe is in the prefix (placeholder or copy) or the bundle
+        if os.environ.get("MPROTON_NO_STEAM_EXE", "0") not in ("", "0"):
+            return False
+        return (file_exists(g_compatdata.prefix_dir + "drive_c/windows/system32/steam.exe", follow_symlinks=True) or
+                file_exists(g_proton.mach9.pe_dir() + "steam.exe", follow_symlinks=True))
 
     def run_proc(self, args, local_env=None):
         if local_env is None:
@@ -2160,6 +2336,10 @@ class Session:
                 #run with winepreloader directly to avoid restart through start.exe
                 self.env["WINELOADERNOEXEC"] = "1"
                 argv = [g_proton.lib_dir + "/wine/x86_64-unix/wine-preloader", g_proton.lib_dir + "/wine/x86_64-unix/wine", "c:\\windows\\system32\\steam.exe"]
+            elif g_proton.mach9 and not self.has_steam_exe():
+                #mproton: bundle without steam.exe (steam/ not installed): run the game directly
+                log("no steam.exe in the bundle or prefix; starting the game without it (no Steam API)")
+                argv = [g_proton.wine_bin]
             else:
                 argv = [g_proton.wine_bin, "c:\\windows\\system32\\steam.exe"]
 

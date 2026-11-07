@@ -1,0 +1,45 @@
+# DXVK v3.1.1 (graphics/dxvk/build.sh x86_64 i386) on wine-9.0 (Ubuntu 9.0~repack-4build3), lavapipe Mesa 25.2.8-0ubuntu0.24.04.4 (LLVM 20.1.2), Xvfb
+# Command: wine mpbench-<arch>.exe --no-cpu --api d3d11 --frames 5   (DXVK_LOG_LEVEL=info)
+# Native lavapipe exposes VK_KHR_load_store_op_none: 1 match(es) in vulkaninfo
+
+== x86_64
+info:  Game: mpbench-x86_64.exe
+info:  DXVK: v3.1.1
+info:  Build: x86_64 clang 23.1.5
+info:  Vulkan: Found vkGetInstanceProcAddr in winevulkan.dll @ 0x6ffffc2b4000
+info:  Extension providers:
+info:    Platform WSI
+info:    OpenXR
+info:  Enabled instance extensions:
+info:    VK_EXT_surface_maintenance1
+info:    VK_KHR_get_surface_capabilities2
+info:    VK_KHR_surface
+info:    VK_KHR_win32_surface
+info:  Found device: llvmpipe (LLVM 20.1.2, 256 bits) (llvmpipe 25.2.8)
+info:    Skipping: Device does not support required feature 'khrLoadStoreOpNone' (extension: VK_KHR_load_store_op_none)
+warn:  DXVK: No adapters found. Please check your device filter settings
+warn:  and Vulkan drivers. A Vulkan 1.3 capable setup is required.
+err:   Failed to initialize DXVK.
+err:   D3D11CreateDevice: Failed to create a DXGI factory
+gpu11.device                 0.00 error        "ok": false, "error": "D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, 0, nullptr, 0, D3D11_SDK_VERSION, &sd, &sc, &dev, &fl, &ctx): 0x80004005"
+
+== i686
+info:  Game: mpbench-i686.exe
+info:  DXVK: v3.1.1
+info:  Build: x86 clang 23.1.5
+info:  Vulkan: Found vkGetInstanceProcAddr in winevulkan.dll @ 0x776837e0
+info:  Extension providers:
+info:    Platform WSI
+info:    OpenXR
+info:  Enabled instance extensions:
+info:    VK_EXT_surface_maintenance1
+info:    VK_KHR_get_surface_capabilities2
+info:    VK_KHR_surface
+info:    VK_KHR_win32_surface
+info:  Found device: llvmpipe (LLVM 20.1.2, 256 bits) (llvmpipe 25.2.8)
+info:    Skipping: Device does not support required feature 'khrLoadStoreOpNone' (extension: VK_KHR_load_store_op_none)
+warn:  DXVK: No adapters found. Please check your device filter settings
+warn:  and Vulkan drivers. A Vulkan 1.3 capable setup is required.
+err:   Failed to initialize DXVK.
+err:   D3D11CreateDevice: Failed to create a DXGI factory
+gpu11.device                 0.00 error        "ok": false, "error": "D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, 0, nullptr, 0, D3D11_SDK_VERSION, &sd, &sc, &dev, &fl, &ctx): 0x80004005"

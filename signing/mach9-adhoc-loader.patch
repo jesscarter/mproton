@@ -1,0 +1,61 @@
+diff --git a/bin/bundle-wine.sh b/bin/bundle-wine.sh
+index 87227ba..1d754d2 100755
+--- a/bin/bundle-wine.sh
++++ b/bin/bundle-wine.sh
+@@ -2118,6 +2118,15 @@ check_vkd3d_proton_build() {
+ # costs nothing.
+ loader_preflight() {
+     local expires now appid certs cert i id
++    # mproton: LOADER_ADHOC=1 signs the loader ad hoc, claiming the entitlement
++    # without a provisioning profile. Only usable on a Mac with SIP (and maybe
++    # AMFI) relaxed; never for distribution.
++    if [ "${LOADER_ADHOC:-0}" = 1 ]; then
++        LOADER_TEAM="" LOADER_BUNDLE_ID="${LOADER_BUNDLE_ID:-dev.mproton.loader.local}"
++        LOADER_IDENTITY=- LOADER_IDENTITY_NAME="(ad hoc)" LOADER_TIMESTAMP=0
++        echo "  Loader: $LOADER_BUNDLE_ID, signed AD HOC (LOADER_ADHOC=1; needs SIP disabled)."
++        return
++    fi
+     if [ ! -f "$LOADER_PROFILE" ]; then
+         echo "Error: no provisioning profile at $LOADER_PROFILE"
+         exit 1
+@@ -2239,7 +2248,7 @@ package_loader() {
+     [ -n "$version" ] || version=0
+     mkdir -p "$app/Contents/MacOS"
+     mv "$unixdir/wine" "$app/Contents/MacOS/wine"
+-    cp "$LOADER_PROFILE" "$app/Contents/embedded.provisionprofile"
++    [ "${LOADER_ADHOC:-0}" = 1 ] || cp "$LOADER_PROFILE" "$app/Contents/embedded.provisionprofile"
+     # Named Mach9, the launcher that runs this Wine: macOS shows the running
+     # executable's bundle in the app menu, and a game process runs wine.app's
+     # executable. The category and the Game Mode keys match Mach9's own
+@@ -2290,9 +2299,13 @@ EOF
+     # LOADER_RUNTIME_ENTITLEMENTS. Nothing else the profile allows (keychain
+     # access groups) is claimed.
+     rm -f "$ents"
++    if [ "${LOADER_ADHOC:-0}" != 1 ]; then
++        /usr/libexec/PlistBuddy \
++            -c "Add :com.apple.application-identifier string $LOADER_TEAM.$LOADER_BUNDLE_ID" \
++            -c "Add :com.apple.developer.team-identifier string $LOADER_TEAM" \
++            "$ents" >/dev/null
++    fi
+     /usr/libexec/PlistBuddy \
+-        -c "Add :com.apple.application-identifier string $LOADER_TEAM.$LOADER_BUNDLE_ID" \
+-        -c "Add :com.apple.developer.team-identifier string $LOADER_TEAM" \
+         -c 'Add :com.apple.developer.cross-architecture-support bool true' \
+         -c 'Add :com.apple.security.custom-x18-abi-toggle bool true' \
+         "$ents" >/dev/null
+@@ -2327,6 +2340,15 @@ check_loader_app() {
+         cat "$TMP_DIR/codesign.log"
+         exit 1
+     fi
++    if [ "${LOADER_ADHOC:-0}" = 1 ]; then
++        codesign -d --entitlements - --xml "$app" > "$signed" 2>/dev/null
++        if [ "$(/usr/libexec/PlistBuddy -c 'Print :com.apple.developer.cross-architecture-support' \
++                "$signed" 2>/dev/null)" != true ]; then
++            echo "Error: ad hoc wine.app does not claim the cross-architecture entitlement"
++            exit 1
++        fi
++        return
++    fi
+     info=$(codesign -dvv "$app" 2>&1)
+     if ! grep -qxF "Authority=$LOADER_IDENTITY_NAME" <<< "$info" \
+         || ! grep -qxF "TeamIdentifier=$LOADER_TEAM" <<< "$info"; then

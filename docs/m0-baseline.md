@@ -70,6 +70,17 @@ athei/mach9's loader refuses to start without `com.apple.developer.cross-archite
 - **CrossOver Preview** (ARM64 + FEX) is only available to holders of a paid CrossOver license, so we aren't using it.
 - **Full Xcode** (not just the Command Line Tools) is needed for the Metal toolchain (`xcrun metal`, used for DXMT's shaders) and for managing the profile.
 
+**Free Personal Team: tested 2026-11-07, doesn't work.** `signing/profile-stub/` is a stub Xcode project whose only purpose is to get a profile from Xcode's automatic signing. Results:
+- `com.apple.developer.cross-architecture-support-unmanaged`: "not found … likely is not a valid entitlement". The `-unmanaged` name from the wine-devel post doesn't exist.
+- `com.apple.developer.cross-architecture-support`: "Personal development teams … do not support the Cross-architecture Compatibility Framework capability". Xcode's name for this capability is **Cross-architecture Compatibility Framework**.
+- So a paid membership is required (or SIP disabled, which we're not doing). Once the paid team is active, the same stub project should work. Pick the paid team in Signing & Capabilities and click Try Again; Xcode then creates a Mac App Development profile for this Mac, which is enough to run locally. A Developer ID profile is only needed for distribution.
+
+**SIP disabled alone: tested 2026-11-07, doesn't work.**
+- Setup: `csrutil status` reports disabled, no boot-args set, macOS 27.2.
+- Test: `probes/macos_compat_probe.c` built and signed ad hoc, claiming `com.apple.developer.cross-architecture-support`.
+- Result: killed at launch with exit 137. The crash report says `"signal":"SIGKILL (Code Signature Invalid)"`, namespace `CODESIGNING`, indicator `"Taskgated Invalid Signature"`. AMFI still rejects a restricted entitlement that no profile backs.
+- Next local-only option: the `amfi_get_out_of_my_way=1` boot-arg plus Permissive Security in Recovery. It's widely documented, but it's unverified on macOS 27, reportedly breaks Private Cloud Compute, and weakens security a lot more than SIP alone.
+
 ### ARM64 build from source (in progress)
 
 athei/mach9 checks out its sources into `work/mach9/` (gitignored):
@@ -87,7 +98,8 @@ Then `scripts/bin/bundle-wine.sh`, which needs the signing identity.
 
 **Build status (2026-11-06):**
 - Built: Mesa/KosmicKrisp, GStreamer, Wine, the Wine SDK, FEX (wow64 + arm64ec), vkd3d-proton. The full run took about 22 minutes on the M2.
-- DXMT is blocked until full Xcode is installed: "no Metal compiler".
+- DXMT (v0.80-364, athei `macos-patched`) is built: ARM64X PE + i386 PE + arm64 `winemetal.so`. It needs full Xcode, `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer` (the Command Line Tools are still the selected toolchain), and the separately downloaded Metal toolchain: `xcodebuild -downloadComponent MetalToolchain`, about 840 MB.
+- **The whole stack is built.** `scripts/bin/bundle-wine.sh` checks for the signing identity first (`loader_preflight`), so assembling the bundle waits for the Developer ID certificate and the provisioning profile with `cross-architecture-support`. Apple enrollment was still processing on 2026-11-06.
 - **Workaround:** FEX's staging step wrote AppConfig to `/usr/local/share/fex-emu`, which isn't writable here. Fixed locally by reconfiguring each `build/fex/<tree>` with `-DDATA_DIRECTORY=$PWD/build/fex/install/share/fex-emu`. Worth reporting upstream to athei.
 
 ### KosmicKrisp on M2 (native, no Wine needed)
@@ -102,6 +114,91 @@ Then `scripts/bin/bundle-wine.sh`, which needs the signing identity.
   - `VK_EXT_graphics_pipeline_library`: DXVK can't pre-compile pipeline pieces, so expect more shader-compile stutter.
 
 Takeaway: the feature set DXVK and vkd3d-proton need is essentially there on M2. The next question is correctness and performance under real games.
+
+## Running the matrix
+
+Two scripts take the next session from reboot to a results table. Neither needs sudo.
+
+### 1. `tools/amfi-check.sh`: does ad hoc signing work now?
+
+Run it after rebooting with `amfi_get_out_of_my_way=1` in boot-args and Permissive Security set in Recovery:
+
+```bash
+tools/amfi-check.sh
+```
+
+It reports each step on its own:
+
+1. `csrutil status`, `nvram boot-args`, and whether `amfi_get_out_of_my_way=1` is set. `bputil -d` needs root, so the script prints `sudo bputil -d` for you to run. In its output, look for `Security Mode: Permissive` and boot-args filtering disabled.
+2. It builds `probes/macos_compat_probe.c` twice: a plain arm64 binary, and a child linked with `-Wl,-x86_64_layout_emulation`. The second build needs the macOS 26.4+ linker; if the linker rejects the flag, the script says so and skips it.
+3. A control run, signed ad hoc **without** the entitlement. It should reproduce the M0 results: `KERN_FAILURE` (5) from TSO and `EBADMACHO` (88) from the 4K spawn.
+4. The real run, signed ad hoc **with** `com.apple.developer.cross-architecture-support`. The script checks the exit code and the newest `~/Library/Logs/DiagnosticReports/probe*.ips` written since the run started. A `CODESIGNING` / "Code Signature Invalid" / "Taskgated Invalid Signature" report means AMFI still rejects the entitlement. If the probe didn't start, it also shows recent amfid/taskgated log lines.
+5. TSO: the result of `thread_set_x86_64_compat(self, 1)`, plus a message-passing litmus test (writer stores data then flag, reader loads flag then data) run with TSO off and on. With TSO on, the litmus must show 0 violations. With TSO off, violations are possible but not guaranteed, so that count is informational.
+6. The 4K spawn: `posix_spawn` with `posix_spawnattr_set_4k_page_size_np`, once for each child binary, plus the child's reported page size. A spawn counts as working only if it returns 0 and the child reports 4096.
+
+The last line is the verdict, which also sets the exit status:
+
+- `VERDICT: PASS` (exit 0): the entitled probe launches, and both TSO and the 4K spawn work.
+- `VERDICT: PARTIAL` (exit 1): it launches, but TSO or the 4K spawn fails.
+- `VERDICT: FAIL` (exit 2): it was killed by code signing, or it didn't start.
+
+On PASS, assemble the bundle with athei's script and the ad hoc loader patch (`signing/mach9-adhoc-loader.patch`):
+
+```bash
+cd work/mach9 && LOADER_ADHOC=1 scripts/bin/bundle-wine.sh --dest "$PWD/dist"
+```
+
+### 2. `tools/run-matrix.sh`: every runtime, arch and backend
+
+```bash
+bench/build.sh
+```
+
+```bash
+tools/run-matrix.sh work/mach9/dist/wine "/Applications/Wine Stable.app"
+```
+
+- **Arguments:** the bundle directory (the `wine/` directory under bundle-wine.sh's `--dest`, the one with `bin/wine`) and Rosetta Wine (the `.app`, its `bin/` or `bin/wine`). Pass `-` for either one to skip it.
+- **Runtimes:**
+  - `rosetta`: Rosetta Wine 10 with wined3d, running the x86_64 and i686 builds.
+  - `arm64-tso1`: ARM64 Wine + FEX with `FEX_HARDWARE_TSO=1`, running all four builds.
+  - `arm64-tso0`: the same with `FEX_HARDWARE_TSO=0`, x86_64 and i686 only. aarch64 and arm64ec mpbench are native code, which FEX's TSO setting doesn't affect.
+- **Runs:** each runtime gets a fresh prefix under `prefixes/m1-<date>/<runtime>`. For each arch, the script does one CPU-only run (`--no-gpu`), then one GPU run (`--no-cpu --api all`) per D3D backend.
+- **Backends:** the backend is chosen with `WINE_COMPATDB="exe=mpbench-<arch>.exe;dxgi=<impl>"`.
+  - `wined3d`.
+  - `dxmt`: D3D11 on DXMT, and D3D12 on vkd3d-proton, which ships in the same tree.
+  - `dxvk`: only if `lib/wine/dxgi/dxvk/` exists. mach9 doesn't ship it, and its compatdb doesn't know `dxgi=dxvk` yet.
+  - After each run, the script reads the compatdb block that mpbench's own process logged. If that process got a different tree from the one requested, the run is marked as a **backend mismatch**.
+- **Failures:**
+  - Every run has a timeout (`MATRIX_TIMEOUT`, default 900 s), enforced in shell because macOS has no `timeout(1)`.
+  - A crash, a timeout or missing JSON is recorded as that run's result: a stub JSON with a `run` object. The matrix then carries on.
+- **Output** goes to `results/m1-<date>/`:
+  - one `<runtime>-<arch>-<part>.json` per run, where part is `cpu` or a backend
+  - `logs/`
+  - `matrix.tsv`, one row per run, including the skipped ones
+  - `summary.md`. It opens with a **Problems** list: crashes, timeouts, `ordering_errors` > 0 and backend mismatches. Then, for each arch, it has a CPU table and a GPU table from `bench/compare.py --highlight`. In those tables, ordering errors, error/FAIL cells and scenes that didn't run (`**not run**`) are in bold, and a Flags list follows each table.
+- **Knobs:** `MATRIX_RUNTIMES`, `MATRIX_ARCHS`, `MATRIX_BACKENDS`, `MATRIX_FRAMES` (default 600 at 1280x720, as in the baseline), `MATRIX_ARGS` (for example `--d3d12-shaders dxbc`), `MATRIX_DATE`, `MATRIX_OUT`, `MATRIX_PREFIXES`.
+- **Example:** a quick single-runtime check:
+
+  ```bash
+  MATRIX_RUNTIMES=arm64-tso1 MATRIX_ARCHS=x86_64 MATRIX_FRAMES=60 tools/run-matrix.sh work/mach9/dist/wine -
+  ```
+
+`tests/test_matrix_tools.py` covers the orchestration on Linux, using stub `wine` runtimes that emit canned JSON and compatdb lines, and stub `csrutil`/`nvram`/`clang`/`codesign`. The tests cover:
+
+- combinations and skips
+- crash, timeout and no-JSON runs
+- ordering errors
+- backend mismatches
+- the three amfi-check verdicts
+
+Some things can only be verified on the Mac:
+
+- the real AMFI behaviour
+- whether `-x86_64_layout_emulation` is needed for the 4K child
+- the exact compatdb log format, which the backend check parses
+- Rosetta Wine's path layout
+- real mpbench timings
 
 ## Still to do
 
