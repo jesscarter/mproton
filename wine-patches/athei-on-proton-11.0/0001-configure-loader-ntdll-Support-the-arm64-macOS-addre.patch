@@ -1,0 +1,323 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Alexander=20Thei=C3=9Fen?= <alex@theissen.io>
+Date: Thu, 15 Oct 2026 21:23:55 +0800
+Subject: [PATCH 01/16] configure, loader, ntdll: Support the arm64 macOS
+ address space and app bundles.
+
+configure: Use the default 4GB __PAGEZERO for the arm64 macOS loader:
+
+arm64 macOS SIGKILLs executables whose __PAGEZERO is smaller than 4GB.
+
+loader: Support the cross-architecture entitlement and app bundles on arm64 macOS:
+
+With com.apple.developer.cross-architecture-support, the kernel keeps only
+one hard page of the 4GB __PAGEZERO and maps the rest as a replaceable
+PROT_NONE region. Claim it at startup as Wine's low reserved area, before
+anything else can allocate there.
+
+The entitlement also lets the kernel give the process 4K pages at exec
+time, so Wine does not have to merge four Windows pages into one 16K host
+page. The loader re-execs itself with posix_spawn and the 4K page
+attribute before it maps anything, and stops with an error if the page
+size is still not 4K after that exec. Before the exec it checks that it
+can map the low 4GB, which only the entitlement allows, and otherwise exits
+with an error saying the loader must run from the signed app with the
+entitlement. Without that check the exec would kill such a process and
+print nothing.
+
+The kernel slides the loader by a random amount of up to about 80MB above
+4GB and covers the area from 4GB up to the loader with the same kind of
+mapping as the rest of the __PAGEZERO. Claim that area as a reserved area
+too. Wine cannot map anything there otherwise, and an executable at
+0x100000000 without relocations, as old x64 linkers made them, can only
+load there; DirectX's infinst.exe failed with
+STATUS_CONFLICTING_ADDRESSES. For about one start in three the slide
+leaves less than 32MB, too little for most such executables, and the
+loader then execs itself again for a new slide, keeping its 4K pages.
+These execs are counted apart from the one for the page size, so every
+loader tries the same bounded number of slides, whether a shell or ntdll
+started it. If such an exec fails, the loader prints a warning and keeps
+the slide it has.
+
+Restricted entitlements require a provisioning profile, which requires an
+app bundle, so also find ntdll.so when the loader runs from
+<name>.app/Contents/MacOS next to it.
+
+ntdll: Start new Wine processes with 4K pages on arm64 macOS:
+
+A plain exec drops the 4K page size, so every process ntdll started went
+through two execs: one at 16K pages and the loader's own exec to get 4K.
+When the current process has 4K pages, exec the new loader with
+posix_spawn, POSIX_SPAWN_SETEXEC and the 4K page attribute instead, so it
+starts with them and does not exec again for the page size. File
+descriptors, the signal mask and the environment are inherited as with
+execv. A failed spawn returns with errno set, as a failed execv does: a
+plain exec would not help, since the loader would then retry the same exec
+with the same binary. wineserver and other Unix programs are still started
+with the default page size.
+
+The low reserve and the app bundle support originally come from Hadron.
+
+(cherry picked from commit 39d1ebc226a4ef4a028fd1ee3398a9fa023f95d7)
+---
+ configure.ac             |   6 +-
+ dlls/ntdll/unix/loader.c |  23 ++++++
+ loader/main.c            | 159 +++++++++++++++++++++++++++++++++++++++
+ 3 files changed, 187 insertions(+), 1 deletion(-)
+
+diff --git a/configure.ac b/configure.ac
+index 370857c1e5a..5a84b409482 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -947,7 +947,11 @@ case $host_os in
+     AC_SUBST(SECURITY_LIBS,"-framework Security -framework CoreFoundation")
+     AC_SUBST(SYSTEMCONFIGURATION_LIBS,"-framework SystemConfiguration")
+ 
+-    WINELOADER_LDFLAGS="-Wl,-segalign,0x1000,-pagezero_size,0x1000,-sectcreate,__TEXT,__info_plist,loader/wine_info.plist"
++    case $HOST_ARCH in
++      dnl arm64 macOS kills processes whose __PAGEZERO is smaller than 4GB
++      aarch64) WINELOADER_LDFLAGS="-Wl,-sectcreate,__TEXT,__info_plist,loader/wine_info.plist" ;;
++      *) WINELOADER_LDFLAGS="-Wl,-segalign,0x1000,-pagezero_size,0x1000,-sectcreate,__TEXT,__info_plist,loader/wine_info.plist" ;;
++    esac
+ 
+     case $HOST_ARCH in
+       i386) wine_use_preloader=yes ;;
+diff --git a/dlls/ntdll/unix/loader.c b/dlls/ntdll/unix/loader.c
+index f8aa468a3ab..3900b05f7d0 100644
+--- a/dlls/ntdll/unix/loader.c
++++ b/dlls/ntdll/unix/loader.c
+@@ -566,6 +566,29 @@ static void preloader_exec( char **argv, WORD machine )
+ #endif
+     execv( argv[0], argv );
+     free( argv[0] );
++#endif
++#if defined(__APPLE__) && defined(__aarch64__)
++    /* The loader execs itself again to get 4K pages (see loader/main.c), which a plain
++     * exec drops. When this process has them, it runs from an entitled loader, and the
++     * new loader is the same binary, so exec it with them to save that exec. The
++     * exception would be a loader from get_alternate_wineloader, which arm64 does not
++     * ship. A plain exec would not help when this fails: the loader would retry the same
++     * exec with the same binary. So fail like execv, with errno set. */
++    if (sysconf( _SC_PAGESIZE ) == 0x1000)
++    {
++        posix_spawnattr_t attr;
++        int err;
++
++        if (!(err = posix_spawnattr_init( &attr )))
++        {
++            if (!(err = posix_spawnattr_setflags( &attr, POSIX_SPAWN_SETEXEC )) &&
++                !(err = posix_spawnattr_set_4k_page_size_np( &attr )))
++                err = posix_spawn( NULL, argv[1], NULL, &attr, argv + 1, environ );
++            posix_spawnattr_destroy( &attr );
++        }
++        errno = err;
++        return;
++    }
+ #endif
+     execv( argv[1], argv + 1 );
+ }
+diff --git a/loader/main.c b/loader/main.c
+index 2775c078d96..891b8117864 100644
+--- a/loader/main.c
++++ b/loader/main.c
+@@ -20,6 +20,7 @@
+ 
+ #include "config.h"
+ 
++#include <errno.h>
+ #include <fcntl.h>
+ #include <pthread.h>
+ #include <stdio.h>
+@@ -36,6 +37,8 @@
+ #endif
+ #ifdef __APPLE__
+ # include <mach-o/dyld.h>
++# include <mach-o/ldsyms.h>
++# include <spawn.h>
+ #endif
+ 
+ #include "main.h"
+@@ -74,6 +77,44 @@ static void init_reserved_areas(void)
+     }
+ }
+ 
++#elif defined(__APPLE__) && defined(__aarch64__)
++
++/* arm64 macOS normally refuses mappings below 4GB. With the cross-architecture entitlement
++ * the kernel keeps only one hard page of the 4GB __PAGEZERO and maps the rest as a
++ * replaceable PROT_NONE region, which nothing else can have claimed before main() runs.
++ * Turn it into Wine's low reserved area. The entitlement is required: before its 4K page exec
++ * the loader probes this area and exits with an error without it (see exec_with_4k_pages), so
++ * the address check below is only a guard.
++ * The kernel slides the loader by a random amount above 4GB and covers the area from 4GB up
++ * to it with the same kind of replaceable mapping. Wine only maps over such a mapping in a
++ * reserved area, so reserve that area too: executables at 0x100000000 without relocations,
++ * as old x64 linkers made them, can only load there. */
++static struct wine_preload_info low_reserve[] =
++{
++    { (void *)0x10000, 0x100000000 - 0x10000 },  /* 64KB - 4GB */
++    { (void *)0x100000000, 0 },                   /* 4GB - loader, set in init_reserved_areas */
++    { 0, 0 }                                      /* end of list */
++};
++/* ntdll stops at the first entry of size 0, so the 4GB - loader entry, which stays 0 when
++ * it cannot be mapped, must remain the last one before the terminator. */
++
++const __attribute((visibility("default"))) struct wine_preload_info *wine_main_preload_info = NULL;
++
++static void init_reserved_areas(void)
++{
++    char *loader = (char *)((uintptr_t)&_mh_execute_header & ~(uintptr_t)0xffff);
++
++    if (mmap( low_reserve[0].addr, low_reserve[0].size, PROT_NONE,
++              MAP_FIXED | MAP_NORESERVE | MAP_PRIVATE | MAP_ANON, -1, 0 ) != low_reserve[0].addr)
++        return;
++    wine_main_preload_info = low_reserve;
++
++    if (loader > (char *)low_reserve[1].addr &&
++        mmap( low_reserve[1].addr, loader - (char *)low_reserve[1].addr, PROT_NONE,
++              MAP_FIXED | MAP_NORESERVE | MAP_PRIVATE | MAP_ANON, -1, 0 ) == low_reserve[1].addr)
++        low_reserve[1].size = loader - (char *)low_reserve[1].addr;
++}
++
+ #else
+ 
+ /* the preloader will set these variables */
+@@ -168,6 +209,15 @@ static void *try_dlopen( const char *argv0 )
+ 
+     if ((p = remove_tail( dir, "/loader" )))
+         path = build_path( p, "dlls/ntdll/ntdll.so" );
++#ifdef __APPLE__
++    /* the loader can run from an app bundle next to ntdll.so, e.g. wine.app/Contents/MacOS/wine,
++     * so that it can carry entitlements granted by a provisioning profile */
++    else if ((p = remove_tail( dir, ".app/Contents/MacOS" )) && strrchr( p, '/' ))
++    {
++        *strrchr( p, '/' ) = 0;
++        path = build_path( p, "ntdll.so" );
++    }
++#endif
+     else
+         path = build_path( dir, "ntdll.so" );
+ 
+@@ -179,6 +229,112 @@ static void *try_dlopen( const char *argv0 )
+ }
+ 
+ 
++#if defined(__APPLE__) && defined(__aarch64__)
++
++extern char **environ;
++
++static const char exec_marker[] = "__WINE_4K_EXEC";
++#define MIN_LOADER_GAP  0x2000000  /* see exec_with_4k_pages */
++#define MAX_SLIDE_EXECS 8
++
++/* exec the loader with 4K pages and exec_marker set to value; returns an error on failure */
++static int exec_self_4k( char *argv[], const char *value, const char **call )
++{
++    posix_spawnattr_t attr;
++    char *exe;
++    int err;
++
++    errno = 0;
++    *call = "executable path";
++    if (!(exe = (char *)get_self_exe()))
++        return errno ? errno : ENAMETOOLONG;  /* _NSGetExecutablePath sets no errno */
++
++    *call = "posix_spawnattr_init";
++    if (!(err = posix_spawnattr_init( &attr )))
++    {
++        if ((err = posix_spawnattr_setflags( &attr, POSIX_SPAWN_SETEXEC )))
++            *call = "posix_spawnattr_setflags";
++        else if ((err = posix_spawnattr_set_4k_page_size_np( &attr )))
++            *call = "posix_spawnattr_set_4k_page_size_np";
++        else if (setenv( exec_marker, value, 1 ))
++        {
++            *call = "setenv";
++            err = errno;
++        }
++        else
++        {
++            *call = "posix_spawn";
++            err = posix_spawn( NULL, exe, NULL, &attr, argv, environ );
++            unsetenv( exec_marker );
++        }
++        posix_spawnattr_destroy( &attr );
++    }
++    free( exe );
++    return err;
++}
++
++/* Windows code expects 4K pages, and on 16K pages Wine has to merge four of them into one
++ * host page. The kernel grants a process 4K pages at exec time when its binary has the
++ * cross-architecture entitlement, so re-exec the loader with them, before anything is
++ * mapped. A forked child keeps the page size; a plain exec drops it and comes back here.
++ * ntdll starts new Wine processes with 4K pages when it has them, so for the page size this
++ * exec only runs for a loader started from outside Wine, or through a plain exec such as a
++ * Unix spawn. A binary without the entitlement would be killed in that exec, with no
++ * message, so first check that the low 4GB can be mapped, which only the entitlement allows,
++ * and exit with an error saying so otherwise.
++ * With 4K pages, the loader also execs itself again, keeping them, for a new slide when the
++ * kernel put it less than 32MB above 4GB, too close for most executables at 0x100000000 (see
++ * init_reserved_areas). The slide is random up to about 80MB and falls into one of three
++ * bands, the lowest of which ends at 16MB, so that happens for about one start in three.
++ * __WINE_4K_EXEC marks a re-exec'd loader, so that it stops instead of exec'ing again if the
++ * page size did not change, and counts the execs for a new slide, so that every loader tries
++ * at most MAX_SLIDE_EXECS of them. It is removed at once, so no child inherits it. If an exec
++ * for a new slide fails, the loader keeps the slide it has. */
++static void exec_with_4k_pages( char *argv[] )
++{
++    const char *value = getenv( exec_marker ), *call, *reason = NULL;
++    int err = 0, reexec = value != NULL, slide_execs = value ? atoi( value ) : 0;
++    char buffer[16];
++
++    unsetenv( exec_marker );
++    if (sysconf( _SC_PAGESIZE ) == 0x1000)
++    {
++        if (slide_execs >= MAX_SLIDE_EXECS ||
++            (char *)&_mh_execute_header - (char *)0x100000000 >= MIN_LOADER_GAP)
++            return;
++        snprintf( buffer, sizeof(buffer), "%d", slide_execs + 1 );
++        err = exec_self_4k( argv, buffer, &call );
++        fprintf( stderr, "wine: %s for a new loader slide failed: %s, keeping this one\n",
++                 call, strerror( err ));
++        return;
++    }
++
++    errno = 0;
++    if (reexec)
++    {
++        call = "exec with 4K pages";
++        reason = "the page size is still not 4K";
++    }
++    else if (mmap( low_reserve[0].addr, 0x4000, PROT_NONE,
++                   MAP_FIXED | MAP_PRIVATE | MAP_ANON, -1, 0 ) != low_reserve[0].addr)
++    {
++        call = "mmap below 4GB";
++        err = errno;
++    }
++    else
++    {
++        snprintf( buffer, sizeof(buffer), "%d", slide_execs );
++        err = exec_self_4k( argv, buffer, &call );
++    }
++
++    fprintf( stderr, "wine: %s failed: %s\n", call, reason ? reason : strerror( err ));
++    fprintf( stderr, "wine: the loader must run from the signed wine.app "
++             "with the cross-architecture entitlement\n" );
++    exit(1);
++}
++
++#endif
++
+ /**********************************************************************
+  *           main
+  */
+@@ -186,6 +342,9 @@ int main( int argc, char *argv[] )
+ {
+     void *handle;
+ 
++#if defined(__APPLE__) && defined(__aarch64__)
++    exec_with_4k_pages( argv );
++#endif
+     init_reserved_areas();
+ 
+     if ((handle = try_dlopen( get_self_exe() )) ||

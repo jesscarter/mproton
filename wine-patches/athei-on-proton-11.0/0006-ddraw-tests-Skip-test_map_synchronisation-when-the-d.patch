@@ -1,0 +1,103 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Alexander=20Thei=C3=9Fen?= <alex@theissen.io>
+Date: Sat, 17 Oct 2026 09:59:41 +0800
+Subject: [PATCH 06/16] ddraw/tests: Skip test_map_synchronisation() when the
+ draw time can't be estimated.
+
+test_map_synchronisation() sizes its vertex buffer from the difference
+between the time of a draw of 4096 triangles and that of a draw of one
+triangle, each followed by a readback. On Apple GPUs both draws are
+fast and the readbacks dominate (about 2.5 ms and 1 ms), so a delay in
+the second one makes the difference negative. tri_count then wraps to
+about four billion, the vertex buffer size wraps to about 3.9 GB,
+allocating its memory fails, and the test's write of the quads through
+the pointer it got from the lock faults near address 0. The access
+violation ends the process with status 5 (0xc0000005) and loses the
+buffered output after "Max user clip planes", which made it look like
+a silent exit; it happened in 2 to 4 percent of ddraw:ddraw7 runs on
+wined3d's OpenGL backend.
+
+Skip the test when the difference is not positive, or when it is so
+small that the estimate exceeds 0x555555 triangles. wined3d reports
+that number as MaxPrimitiveCount, above which the d3d8 and d3d9
+versions of the test already skip.
+
+(cherry picked from commit 6aff7fb3b547db68922751eb74984fc42b599df3)
+---
+ dlls/ddraw/tests/ddraw4.c | 14 ++++++++++++--
+ dlls/ddraw/tests/ddraw7.c | 14 ++++++++++++--
+ 2 files changed, 24 insertions(+), 4 deletions(-)
+
+diff --git a/dlls/ddraw/tests/ddraw4.c b/dlls/ddraw/tests/ddraw4.c
+index 5c8d19f105a..ac1c510ea25 100644
+--- a/dlls/ddraw/tests/ddraw4.c
++++ b/dlls/ddraw/tests/ddraw4.c
+@@ -16387,6 +16387,7 @@ static void test_map_synchronisation(void)
+     IDirect3DDevice3 *device;
+     BOOL unsynchronised, ret;
+     IDirectDrawSurface4 *rt;
++    LONGLONG estimate;
+     IDirect3D3 *d3d;
+     ULONG refcount;
+     HWND window;
+@@ -16517,9 +16518,17 @@ static void test_map_synchronisation(void)
+ 
+     IDirect3DVertexBuffer_Release(buffer);
+ 
+-    /* Estimate the number of triangles we can draw in 100ms. */
++    /* Estimate the number of triangles we can draw in 100ms. When both draws
++     * are fast compared to the readbacks, the single triangle can take about
++     * as long as all of them, and the difference is just noise. */
+     diff.QuadPart = ts[1].QuadPart - ts[0].QuadPart + ts[1].QuadPart - ts[2].QuadPart;
+-    tri_count = (tri_count * frequency.QuadPart) / (diff.QuadPart * 10);
++    estimate = diff.QuadPart > 0 ? (tri_count * frequency.QuadPart) / (diff.QuadPart * 10) : -1;
++    if (estimate < 0 || estimate > 0x555555)
++    {
++        skip("Failed to estimate the draw time, skipping test.\n");
++        goto done;
++    }
++    tri_count = estimate;
+     tri_count = ((tri_count + 2 + 3) & ~3) - 2;
+     vb_desc.dwNumVertices = tri_count + 2;
+ 
+@@ -16561,6 +16570,7 @@ static void test_map_synchronisation(void)
+         IDirect3DVertexBuffer_Release(buffer);
+     }
+ 
++done:
+     destroy_viewport(device, viewport);
+     IDirectDrawSurface4_Release(rt);
+     IDirect3D3_Release(d3d);
+diff --git a/dlls/ddraw/tests/ddraw7.c b/dlls/ddraw/tests/ddraw7.c
+index 53bbd9b4072..c66b8d89d29 100644
+--- a/dlls/ddraw/tests/ddraw7.c
++++ b/dlls/ddraw/tests/ddraw7.c
+@@ -15948,6 +15948,7 @@ static void test_map_synchronisation(void)
+     BOOL unsynchronised, ret;
+     IDirectDrawSurface7 *rt;
+     IDirectDraw7 *ddraw;
++    LONGLONG estimate;
+     IDirect3D7 *d3d;
+     ULONG refcount;
+     HWND window;
+@@ -16082,9 +16083,18 @@ static void test_map_synchronisation(void)
+ 
+     IDirect3DVertexBuffer7_Release(buffer);
+ 
+-    /* Estimate the number of triangles we can draw in 100ms. */
++    /* Estimate the number of triangles we can draw in 100ms. When both draws
++     * are fast compared to the readbacks, the single triangle can take about
++     * as long as all of them, and the difference is just noise. */
+     diff.QuadPart = ts[1].QuadPart - ts[0].QuadPart + ts[1].QuadPart - ts[2].QuadPart;
+-    tri_count = (tri_count * frequency.QuadPart) / (diff.QuadPart * 10);
++    estimate = diff.QuadPart > 0 ? (tri_count * frequency.QuadPart) / (diff.QuadPart * 10) : -1;
++    if (estimate < 0 || estimate > 0x555555)
++    {
++        skip("Failed to estimate the draw time, skipping test.\n");
++        IDirectDrawSurface7_Release(rt);
++        goto done;
++    }
++    tri_count = estimate;
+     tri_count = ((tri_count + 2 + 3) & ~3) - 2;
+     vb_desc.dwNumVertices = tri_count + 2;
+ 

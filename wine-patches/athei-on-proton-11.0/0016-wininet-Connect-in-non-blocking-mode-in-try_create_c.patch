@@ -1,0 +1,90 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Alexander=20Thei=C3=9Fen?= <alex@theissen.io>
+Date: Sat, 31 Oct 2026 12:56:56 +0800
+Subject: [PATCH 16/16] wininet: Connect in non-blocking mode in
+ try_create_connect_socket().
+
+The FIONBIO values were inverted, so connect() blocked and the select()
+timeout was never reached. A connect to an unreachable host ignored the
+connect timeout and lasted until the OS gave up.
+
+- Set the socket non-blocking for connect() and blocking afterwards
+- Add the socket to select()'s except set, where a failed connect is
+  reported
+- Set is_blocking in create_netconn_socket() to match
+- Split the timeout into seconds and microseconds, as tv_usec overflows
+  above 35 minutes
+
+(cherry picked from commit 2b0bd0fd7b0c936553e0b13ea0d412fd73c72bf3)
+---
+ dlls/wininet/netconnection.c |  1 +
+ dlls/wininet/utility.c       | 22 ++++++++++++----------
+ 2 files changed, 13 insertions(+), 10 deletions(-)
+
+diff --git a/dlls/wininet/netconnection.c b/dlls/wininet/netconnection.c
+index b2ac91848f6..045b35316dc 100644
+--- a/dlls/wininet/netconnection.c
++++ b/dlls/wininet/netconnection.c
+@@ -296,6 +296,7 @@ static DWORD create_netconn_socket(server_t *server, object_header_t *hdr, DWORD
+     assert(server->addr);
+     if ((netconn->socket = create_connect_socket(server->addr, AF_UNSPEC, timeout, hdr, callback_context)) == -1)
+         return ERROR_INTERNET_CANNOT_CONNECT;
++    netconn->is_blocking = TRUE;
+ 
+     flag = 1;
+     if(setsockopt(netconn->socket, IPPROTO_TCP, TCP_NODELAY, (void*)&flag, sizeof(flag)) < 0)
+diff --git a/dlls/wininet/utility.c b/dlls/wininet/utility.c
+index aaac35dda9b..01a7ca1c557 100644
+--- a/dlls/wininet/utility.c
++++ b/dlls/wininet/utility.c
+@@ -97,10 +97,10 @@ BOOL GetAddress(const WCHAR *name, INTERNET_PORT port, server_addr_t **server_ad
+ static int try_create_connect_socket(server_addr_t *addr, int af, DWORD timeout, object_header_t *hdr,
+                                      DWORD_PTR callback_context)
+ {
+-    TIMEVAL timeout_timeval = {0, timeout * 1000};
+-    ULONG blocking;
++    TIMEVAL timeout_timeval = {timeout / 1000, timeout % 1000 * 1000};
++    ULONG nonblocking;
+     socklen_t len;
+-    FD_SET set;
++    FD_SET write_set, except_set;
+     DWORD err;
+     int res;
+     int s;
+@@ -115,8 +115,8 @@ static int try_create_connect_socket(server_addr_t *addr, int af, DWORD timeout,
+     if ((s = socket(addr->addr.ss_family, SOCK_STREAM, 0)) == -1)
+         return -1;
+ 
+-    blocking = 0;
+-    ioctlsocket(s, FIONBIO, &blocking);
++    nonblocking = 1;
++    ioctlsocket(s, FIONBIO, &nonblocking);
+ 
+     if (!connect(s, (struct sockaddr *)&addr->addr, addr->addr_len))
+         goto done;
+@@ -128,9 +128,11 @@ static int try_create_connect_socket(server_addr_t *addr, int af, DWORD timeout,
+         return -1;
+     }
+ 
+-    FD_ZERO(&set);
+-    FD_SET(s, &set);
+-    res = select(s + 1, NULL, &set, NULL, timeout == INFINITE ? NULL : &timeout_timeval);
++    FD_ZERO(&write_set);
++    FD_SET(s, &write_set);
++    FD_ZERO(&except_set);
++    FD_SET(s, &except_set);
++    res = select(s + 1, NULL, &write_set, &except_set, timeout == INFINITE ? NULL : &timeout_timeval);
+     len = sizeof(res);
+     if(!res || res == SOCKET_ERROR || getsockopt(s, SOL_SOCKET, SO_ERROR, (void *)&res, &len) || res)
+     {
+@@ -139,8 +141,8 @@ static int try_create_connect_socket(server_addr_t *addr, int af, DWORD timeout,
+     }
+ 
+ done:
+-    blocking = 1;
+-    ioctlsocket(s, FIONBIO, &blocking);
++    nonblocking = 0;
++    ioctlsocket(s, FIONBIO, &nonblocking);
+     if (hdr)
+         INTERNET_SendCallback(hdr, callback_context, INTERNET_STATUS_CONNECTED_TO_SERVER,
+                               addr->addr_str, strlen(addr->addr_str) + 1);

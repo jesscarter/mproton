@@ -1,0 +1,128 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Alexander=20Thei=C3=9Fen?= <alex@theissen.io>
+Date: Thu, 15 Oct 2026 21:24:17 +0800
+Subject: [PATCH 03/16] ntdll: Load compatdb.so before the first PE code runs.
+
+Port CrossOver's CW Hack 24067 to upstream. The unix side of ntdll
+dlopens <ntdll_dir>/compatdb.so in start_main_thread(), once ntdll, the
+wow64 ntdll and the apiset map are loaded and before
+server_init_process_done() lets the first PE code run. The library's
+initializer applies the rules that match the process: it rewrites the
+PEB environment, which the x86 emulator DLL reads in its
+ProcessInit/BTCpuProcessInit, and it changes how DLLs are found through
+two exports it looks up with dlsym:
+
+- prepend_dll_path() puts a directory in front of the builtin DLL search
+  path.
+- add_load_order_override() adds a WINEDLLOVERRIDES style entry to the
+  load order.
+
+The library carries our own name (compatdb.so) rather than CrossOver's
+cxcompatdb.so. CrossOver also gives KeServiceDescriptorTable default
+visibility under the same hack; compatdb.so does not use it, so that
+part is left out.
+
+(cherry picked from commit 5638e0abf2a08b909e805f7d91ebe21483535b59)
+---
+ dlls/ntdll/unix/loader.c    | 42 +++++++++++++++++++++++++++++++++++++
+ dlls/ntdll/unix/loadorder.c | 20 ++++++++++++++++++
+ 2 files changed, 62 insertions(+)
+
+diff --git a/dlls/ntdll/unix/loader.c b/dlls/ntdll/unix/loader.c
+index 3900b05f7d0..6d08d38b828 100644
+--- a/dlls/ntdll/unix/loader.c
++++ b/dlls/ntdll/unix/loader.c
+@@ -359,6 +359,31 @@ static WORD get_alt_machine( WORD machine )
+     }
+ }
+ 
++/***********************************************************************
++ *           prepend_dll_path  (ntdll.so)
++ *
++ * CW Hack 24067: called by compatdb.so to search a directory for builtin
++ * DLLs before the others.
++ */
++DECLSPEC_EXPORT void prepend_dll_path( const char *path )
++{
++    unsigned int i, count;
++    const char **new_dll_paths;
++    size_t path_len = strlen( path );
++
++    for (count = 0; dll_paths[count]; count++)
++        ;
++
++    if (!(new_dll_paths = calloc( count + 2, sizeof(*new_dll_paths) ))) return;
++    new_dll_paths[0] = path;
++    for (i = 0; dll_paths[i]; i++)
++        new_dll_paths[i + 1] = dll_paths[i];
++
++    free( dll_paths );
++    dll_paths = new_dll_paths;
++    dll_path_maxlen = max( dll_path_maxlen, path_len );
++}
++
+ static void set_dll_path(void)
+ {
+     char *p, *path = getenv( "WINEDLLPATH" ), *be_runtime = getenv( "PROTON_BATTLEYE_RUNTIME" ), *eac_runtime = getenv( "PROTON_EAC_RUNTIME" );
+@@ -2455,6 +2480,22 @@ static void hacks_init(void)
+         process_termination_delay = TRUE;
+ }
+ 
++/***********************************************************************
++ *           load_compatdb
++ *
++ * CW Hack 24067: load compatdb.so, whose initializer applies the rules that
++ * match the process, before the first PE code runs.
++ */
++static void load_compatdb(void)
++{
++    char *name;
++
++    if (asprintf( &name, "%s/compatdb.so", ntdll_dir ) == -1) return;
++    if (!dlopen( name, RTLD_LOCAL | RTLD_LAZY ))
++        WARN( "error loading compatdb.so: %s\n", dlerror() );
++    free( name );
++}
++
+ /***********************************************************************
+  *           start_main_thread
+  */
+@@ -2484,6 +2525,7 @@ static void start_main_thread(void)
+     load_wow64_ntdll( main_image_info.Machine );
+     load_apiset_dll();
+     mallopt( M_PERTURB, 0 );
++    load_compatdb();
+     server_init_process_done();
+ }
+ 
+diff --git a/dlls/ntdll/unix/loadorder.c b/dlls/ntdll/unix/loadorder.c
+index 722190da255..872469b6fac 100644
+--- a/dlls/ntdll/unix/loadorder.c
++++ b/dlls/ntdll/unix/loadorder.c
+@@ -251,6 +251,26 @@ static void init_load_order(void)
+     /* note: we don't free the string because the stored module names point inside it */
+ }
+ 
++/***************************************************************************
++ *	add_load_order_override  (ntdll.so)
++ *
++ * CW Hack 24067: called by compatdb.so to add a WINEDLLOVERRIDES style entry.
++ */
++DECLSPEC_EXPORT void add_load_order_override( const WCHAR *entry )
++{
++    WCHAR *dup;
++
++    if (!init_done) init_load_order();
++
++    dup = calloc( wcslen(entry) + 1, sizeof(WCHAR) );
++    if (!dup) return;
++    wcscpy( dup, entry );
++
++    add_load_order_set( dup );
++    if (env_list.count)
++        qsort( env_list.order, env_list.count, sizeof(env_list.order[0]), cmp_sort_func );
++}
++
+ 
+ /***************************************************************************
+  *	get_env_load_order
