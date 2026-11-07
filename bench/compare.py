@@ -6,6 +6,11 @@
 One column per file, one row per scene. Device rows show the adapter, feature-probe rows show
 PASS/FAIL with passes/s, cpu.pingpong shows its ordering-error count. --relative adds each
 value's ratio to the first column. Version 1 files (gpu.* scene names) are read as gpu11.*.
+
+--highlight (used by tools/run-matrix.sh) marks problems in bold: ordering_errors > 0, error and
+FAIL cells, and scenes that ran in another column but not in this one ("not run"). Files written
+by run-matrix carry a "run" object (status crash/timeout/no-json, exit code, compatdb backend
+check); with --highlight it becomes a "run" row, and a "Flags" list follows the table.
 Standard library only.
 """
 import argparse
@@ -54,6 +59,25 @@ def feature_level(fl):
         return str(fl)
 
 
+def run_status(data):
+    """Text for a run-matrix "run" object, and whether it is a problem."""
+    run = data.get("run")
+    if not run:
+        return "ok", False
+    st = run.get("status", "?")
+    txt = st
+    if st == "crash":
+        txt = f"crash (exit {run.get('exit_code', '?')})"
+    elif st == "timeout":
+        txt = f"timeout ({run.get('seconds', '?')} s)"
+    bad = st != "ok"
+    be = run.get("backend")
+    if be and be.get("check") == "mismatch":
+        txt += f", backend {be.get('got') or 'unknown'} not {be.get('want')}"
+        bad = True
+    return txt, bad
+
+
 def cell(name, r):
     """(text, numeric value or None) for one result row."""
     if r is None:
@@ -91,6 +115,8 @@ def main():
     ap.add_argument("--relative", action="store_true", help="show ratio to the first column")
     ap.add_argument("--scenes", help="comma-separated scene name prefixes to include")
     ap.add_argument("--no-sources", action="store_true", help="omit the list of files/notes under the table")
+    ap.add_argument("--highlight", action="store_true",
+                    help="bold problems (ordering errors, errors, scenes not run) and list them after the table")
     a = ap.parse_args()
 
     loaded = [load(p) for p in a.files]
@@ -113,6 +139,15 @@ def main():
         return s.replace("|", "\\|")
 
     out = ["| scene | " + " | ".join(esc(l) for l in labels) + " |", "|---" * (len(labels) + 1) + "|"]
+    flags = []
+    if a.highlight:
+        texts = []
+        for label, (data, _) in zip(labels, loaded):
+            txt, bad = run_status(data)
+            texts.append(esc(f"**{txt}**" if bad else txt))
+            if bad:
+                flags.append(f"{label}: {txt}")
+        out.append("| run | " + " | ".join(texts) + " |")
     for n in names:
         unit = ""
         for _, rows in loaded:
@@ -126,9 +161,28 @@ def main():
         for i, (txt, v) in enumerate(cells):
             if a.relative and i > 0 and v is not None and base:
                 txt += f" (x{v / base:.2f})"
+            if a.highlight:
+                r = loaded[i][1].get(n)
+                problem = None
+                if r is None:
+                    txt, problem = "not run", "did not run"
+                elif r.get("ordering_errors"):
+                    txt, problem = f"{txt} ⚠", f"{r['ordering_errors']} ordering errors"
+                elif txt.startswith(("error", "FAIL")) or r.get("WRONG_COUNT"):
+                    problem = short(txt, 80)
+                if problem:
+                    txt = f"**{txt}**"
+                    flags.append(f"{labels[i]}: {n} {problem}")
             texts.append(esc(txt))
         out.append(f"| {n}" + (f" ({unit})" if unit else "") + " | " + " | ".join(texts) + " |")
     print("\n".join(out))
+    if a.highlight:
+        print()
+        if flags:
+            print("Flags:")
+            print("\n".join(f"- {esc(f)}" for f in flags))
+        else:
+            print("Flags: none.")
 
     if not a.no_sources:
         print()
