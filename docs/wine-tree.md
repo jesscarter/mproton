@@ -185,6 +185,7 @@ Then run mach9's `bin/build-wine.sh --clean` as usual. `apply.sh` reuses an exis
 |---|---|---|
 | control | athei `5959a04b1af` unmodified | **BUILD OK**, 0 compile errors |
 | mproton (batch 1) | `wine/apply.sh` into an empty dir → `mproton` at `d22816523c` (`wine-11.20-722`), 686 patches, same tree hash (`65cfb518717`) as the branch the series was exported from | **BUILD OK**, 0 compile errors, from scratch |
+| mproton (batch 2) | `wine/apply.sh` → tree `3341584cae9`, 724 patches (batch 2 at `65a5cf0`, before the Mac-side mproton patches 0724/0725 and the `133caa0db14` port); FFmpeg 6.1 and GStreamer in the sysroot | **BUILD OK**, 0 errors (pre-fix tree from scratch, final tree incremental on that build dir; reported by the batch 2 session) |
 
 What the mproton build produced: 754 PE modules in `*/aarch64-windows/` (ARM64X: the 4215 arm64ec objects are linked into them; `ntdll.dll` carries CHPE metadata), 772 in `*/i386-windows/`, and 33 aarch64 ELF unix libs (`ntdll.so`, `win32u.so`, `winex11.so`, `winegstreamer.so`, `amd_ags_x64.so`, …) plus `wine`, `wine-preloader` and `wineserver`.
 
