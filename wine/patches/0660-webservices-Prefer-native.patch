@@ -1,0 +1,25 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Jacek Caban <jacek@codeweavers.com>
+Date: Mon, 8 Mar 2021 16:41:19 +0100
+Subject: [PATCH] webservices: Prefer native.
+
+CW-Bug-Id: #18637
+(cherry picked from commit 39e7eed749a86b58a81d9526dade9c3ede3d91f3)
+mproton-resolved: kept 11.20's version-resource lines next to the --prefer-native flag.
+---
+ dlls/webservices/Makefile.in | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/dlls/webservices/Makefile.in b/dlls/webservices/Makefile.in
+index cfc194738f7..f32a3f966ea 100644
+--- a/dlls/webservices/Makefile.in
++++ b/dlls/webservices/Makefile.in
+@@ -2,6 +2,8 @@ MODULE    = webservices.dll
+ IMPORTLIB = webservices
+ IMPORTS   = winhttp rpcrt4 user32 ws2_32
+ 
++EXTRADLLFLAGS = -Wb,--prefer-native
++
+ VER_FILEDESCRIPTION_STR = "Wine Web Services"
+ VER_PRODUCTVERSION      = 10,0,14393,0
+ 

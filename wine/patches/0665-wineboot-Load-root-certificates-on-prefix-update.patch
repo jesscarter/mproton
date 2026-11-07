@@ -1,0 +1,61 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Fri, 24 Mar 2023 17:32:02 -0600
+Subject: [PATCH] wineboot: Load root certificates on prefix update.
+
+CW-Bug-Id: #22034
+(cherry picked from commit c80b657861d29981579219a682d80eb17229b288)
+mproton-resolved: 11.20's import line has rpcrt4 and ENABLE_ARCHS; only added crypt32 to DELAYIMPORTS.
+---
+ programs/wineboot/Makefile.in |  2 +-
+ programs/wineboot/wineboot.c  | 11 +++++++++++
+ 2 files changed, 12 insertions(+), 1 deletion(-)
+
+diff --git a/programs/wineboot/Makefile.in b/programs/wineboot/Makefile.in
+index 6e0c91dbaf6..ba71e046795 100644
+--- a/programs/wineboot/Makefile.in
++++ b/programs/wineboot/Makefile.in
+@@ -1,6 +1,6 @@
+ MODULE    = wineboot.exe
+ IMPORTS   = uuid rpcrt4 advapi32 ws2_32 kernelbase
+-DELAYIMPORTS = shell32 shlwapi version user32 gdi32 setupapi newdev wininet
++DELAYIMPORTS = shell32 shlwapi version user32 gdi32 setupapi newdev wininet crypt32
+ ENABLE_ARCHS = $(HOST_ARCH)
+ 
+ EXTRADLLFLAGS = -mconsole
+diff --git a/programs/wineboot/wineboot.c b/programs/wineboot/wineboot.c
+index 0805602e3c5..25f0b580e62 100644
+--- a/programs/wineboot/wineboot.c
++++ b/programs/wineboot/wineboot.c
+@@ -80,6 +80,7 @@
+ #include <setupapi.h>
+ #include <wininet.h>
+ #include <newdev.h>
++#include <wincrypt.h>
+ #include "resource.h"
+ 
+ WINE_DEFAULT_DEBUG_CHANNEL(wineboot);
+@@ -1683,6 +1684,15 @@ static void update_win_version(void)
+     }
+ }
+ 
++static void update_root_certs(void)
++{
++    HCERTSTORE store;
++
++    store = CertOpenStore( CERT_STORE_PROV_SYSTEM_REGISTRY_W, 0, 0, CERT_STORE_OPEN_EXISTING_FLAG
++                           | CERT_STORE_READONLY_FLAG | CERT_SYSTEM_STORE_LOCAL_MACHINE, L"Root");
++    CertCloseStore( store, 0 );
++}
++
+ /* execute rundll32 on the wine.inf file if necessary */
+ static void update_wineprefix( BOOL force )
+ {
+@@ -1736,6 +1746,7 @@ static void update_wineprefix( BOOL force )
+         install_root_pnp_devices();
+         update_user_profile();
+         update_win_version();
++        update_root_certs();
+ 
+         TRACE( "wine: configuration in %s has been updated.\n", debugstr_w(prettyprint_configdir()) );
+     }

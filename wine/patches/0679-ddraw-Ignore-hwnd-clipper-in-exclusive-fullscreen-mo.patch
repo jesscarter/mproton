@@ -1,0 +1,45 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Wed, 22 Apr 2026 18:22:16 -0600
+Subject: [PATCH] ddraw: Ignore hwnd clipper in exclusive fullscreen mode.
+
+CW-Bug-Id: #26953
+(cherry picked from commit 4c175582270a837793852a45a821196b0ffb10f5)
+mproton-resolved: 11.20 already skips the clipping window in SetClipper() in exclusive mode (303b7903766, the upstream half of this change), so only the blit-path part is applied. Proton's test updates are left out: 11.20 restructured check_surface_clipper().
+---
+ dlls/ddraw/surface.c | 15 ++++++++-------
+ 1 file changed, 8 insertions(+), 7 deletions(-)
+
+diff --git a/dlls/ddraw/surface.c b/dlls/ddraw/surface.c
+index 88d25b2c9fb..3aaae68d869 100644
+--- a/dlls/ddraw/surface.c
++++ b/dlls/ddraw/surface.c
+@@ -1666,7 +1666,14 @@ static HRESULT ddraw_surface_blt_clipped(struct ddraw_surface *dst_surface, cons
+         SetRectEmpty(&src_rect);
+     }
+ 
+-    if (!dst_surface->clipper)
++    if (dst_surface->clipper && !ddraw_clipper_is_valid(dst_surface->clipper))
++    {
++        FIXME("Attempting to blit with an invalid clipper.\n");
++        return DDERR_INVALIDPARAMS;
++    }
++
++    if (!dst_surface->clipper || (dst_surface->ddraw->cooperative_level & DDSCL_EXCLUSIVE
++            && dst_surface->clipper->window))
+     {
+         if (src_surface && src_surface->surface_desc.ddsCaps.dwCaps & DDSCAPS_PRIMARYSURFACE)
+             hr = ddraw_surface_update_frontbuffer(src_surface, &src_rect, TRUE, 0);
+@@ -1678,12 +1685,6 @@ static HRESULT ddraw_surface_blt_clipped(struct ddraw_surface *dst_surface, cons
+         return hr;
+     }
+ 
+-    if (!ddraw_clipper_is_valid(dst_surface->clipper))
+-    {
+-        FIXME("Attempting to blit with an invalid clipper.\n");
+-        return DDERR_INVALIDPARAMS;
+-    }
+-
+     scale_x = (float)(src_rect.right - src_rect.left) / (float)(dst_rect.right - dst_rect.left);
+     scale_y = (float)(src_rect.bottom - src_rect.top) / (float)(dst_rect.bottom - dst_rect.top);
+ 

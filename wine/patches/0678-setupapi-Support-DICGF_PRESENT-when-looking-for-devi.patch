@@ -1,0 +1,127 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Andrew Eikum <aeikum@codeweavers.com>
+Date: Tue, 29 Oct 2019 09:16:37 -0500
+Subject: [PATCH] setupapi: Support DICGF_PRESENT when looking for devices
+
+CW-Bug-Id: #17243
+(cherry picked from commit 764bff28f1b7ec46dd06fe7394dca753fef887f5)
+mproton-resolved: 11.20 rewrote SetupDiGetClassDevs() on cfgmgr32 (2857fec3c24), and cfgmgr32 ignores CM_GETIDLIST_FILTER_PRESENT for devices. Re-applied Proton's check in the new SETUPDI_EnumerateDevices(): with DIGCF_PRESENT, a device is only returned if one of its interfaces is linked (Proton's is_device_instance_linked(), unchanged).
+---
+ dlls/setupapi/devinst.c | 82 ++++++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 81 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/setupapi/devinst.c b/dlls/setupapi/devinst.c
+index a33903a7125..66aa746a67a 100644
+--- a/dlls/setupapi/devinst.c
++++ b/dlls/setupapi/devinst.c
+@@ -2008,13 +2008,86 @@ static void SETUPDI_EnumerateMatchingInterfaces(struct DeviceInfoSet *set, const
+     free(paths);
+ }
+ 
++/* iterate over all interfaces supported by this device instance. if any of
++ * them are "linked", return TRUE */
++static BOOL is_device_instance_linked(HKEY interfacesKey, const WCHAR *deviceInstance)
++{
++    LONG l;
++    DWORD class_idx = 0, device_idx, len, type;
++    HKEY class_key, device_key, link_key;
++    WCHAR class_keyname[40], device_keyname[MAX_DEVICE_ID_LEN];
++    WCHAR interface_devinstance[MAX_DEVICE_ID_LEN];
++
++    while (1)
++    {
++        len = ARRAY_SIZE(class_keyname);
++        l = RegEnumKeyExW(interfacesKey, class_idx++, class_keyname, &len, NULL, NULL, NULL, NULL);
++        if (l)
++            break;
++
++        l = RegOpenKeyExW(interfacesKey, class_keyname, 0, KEY_READ, &class_key);
++        if (l)
++            continue;
++
++        device_idx = 0;
++        while (1)
++        {
++            len = ARRAY_SIZE(device_keyname);
++            l = RegEnumKeyExW(class_key, device_idx++, device_keyname, &len, NULL, NULL, NULL, NULL);
++            if (l)
++                break;
++
++            l = RegOpenKeyExW(class_key, device_keyname, 0, KEY_READ, &device_key);
++            if (l)
++                continue;
++
++            len = ARRAY_SIZE(interface_devinstance);
++            l = RegQueryValueExW(device_key, L"DeviceInstance", NULL, &type, (BYTE *)interface_devinstance, &len);
++            if (l || type != REG_SZ)
++            {
++                RegCloseKey(device_key);
++                continue;
++            }
++
++            if (lstrcmpiW(interface_devinstance, deviceInstance))
++            {
++                /* not our device instance */
++                RegCloseKey(device_key);
++                continue;
++            }
++
++            l = RegOpenKeyExW(device_key, L"#", 0, KEY_READ, &link_key);
++            if (l)
++            {
++                RegCloseKey(device_key);
++                continue;
++            }
++
++            if (is_linked(link_key))
++            {
++                RegCloseKey(link_key);
++                RegCloseKey(device_key);
++                RegCloseKey(class_key);
++                return TRUE;
++            }
++
++            RegCloseKey(link_key);
++            RegCloseKey(device_key);
++        }
++
++        RegCloseKey(class_key);
++    }
++
++    return FALSE;
++}
++
+ static void SETUPDI_EnumerateDevices(HDEVINFO DeviceInfoSet, const GUID *class,
+         const WCHAR *enum_str, DWORD flags)
+ {
+     WCHAR class_guid[MAX_GUID_STRING_LEN], enum_str2[MAX_DEVICE_ID_LEN];
+     ULONG size, enum_str_len, cm_flags;
+     WCHAR *filter, *ids;
+-    HKEY enum_key;
++    HKEY enum_key, interfaces_key;
+     CONFIGRET cr;
+ 
+     TRACE("%p, %s, %s, %08lx.\n", DeviceInfoSet, debugstr_guid(class), debugstr_w(enum_str), flags);
+@@ -2048,6 +2121,8 @@ static void SETUPDI_EnumerateDevices(HDEVINFO DeviceInfoSet, const GUID *class,
+         free(ids);
+         return;
+     }
++    interfaces_key = (flags & DIGCF_PRESENT)
++            ? SetupDiOpenClassRegKeyExW(NULL, KEY_READ, DIOCR_INTERFACE, NULL, NULL) : NULL;
+ 
+     if (enum_str)
+     {
+@@ -2082,8 +2157,13 @@ static void SETUPDI_EnumerateDevices(HDEVINFO DeviceInfoSet, const GUID *class,
+                 || !guid_from_string_w(class_guid, &dev_class))
+             continue;
+ 
++        /* Only devices with a linked interface are present. */
++        if ((flags & DIGCF_PRESENT) && !is_device_instance_linked(interfaces_key, id))
++            continue;
++
+         create_device(DeviceInfoSet, &dev_class, id, FALSE);
+     }
++    if (interfaces_key && interfaces_key != INVALID_HANDLE_VALUE) RegCloseKey(interfaces_key);
+     RegCloseKey(enum_key);
+     free(ids);
+ }

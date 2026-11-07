@@ -24,7 +24,7 @@ order	commit	status	pass	group	author	subject	note
 408	0582a1718b1	applied	3	Proton integration (steam.exe, proton hooks, lsteamclient, env vars)	Andrew Eikum	HACK: proton: secur32: Return real Unix username from GetUserNameEx(NameDisplay)	winevulkan / steam
 2	d28a166f47d	applied	1	other PE-side game / app fixes	Arkadiusz Hiler	winemenubuilder: Force-disable creating associations.	game fixes
 409	83f3059d293	applied	3	Proton integration (steam.exe, proton hooks, lsteamclient, env vars)	Arkadiusz Hiler	winemenubuilder: Save .desktop files in c:\proton_shortcuts\.	winevulkan / steam
-	2639c49b765	conflict	12	other PE-side game / app fixes	Arkadiusz Hiler	winemenubuilder: User raw exe path in the created .desktop files.	programs/winemenubuilder/winemenubuilder.c
+659	2639c49b765	hand-merged	12	other PE-side game / app fixes	Arkadiusz Hiler	winemenubuilder: User raw exe path in the created .desktop files.	kept 11.20's `args && *args` check; otherwise as Proton.
 3	e6720038449	applied	1	other PE-side game / app fixes	Arkadiusz Hiler	winemenubuilder: Don't create menu entries.	game fixes
 410	30bc930dd08	applied	3	Proton integration (steam.exe, proton hooks, lsteamclient, env vars)	Arkadiusz Hiler	winemenubuilder: Save icons in c:\proton_shortcuts\icons\	winevulkan / steam
 106	9ff235bc1c9	applied	2	prefix / registry defaults (wine.inf, wineboot, fonts)	Arkadiusz Hiler	wine.inf: Don't use winemenubuilder to create filetype associations.	PE side
@@ -332,7 +332,7 @@ order	commit	status	pass	group	author	subject	note
 	65394693ecb	skipped-linux		gamescope / Steam Deck	Esme Povirk	winex11.drv: Do not shape layered windows in Gamescope.	gamescope / Steam Deck
 22	b24ecb4824a	applied	1	other PE-side game / app fixes	Jacek Caban	winecrt0: Provide an exit thunk for memcpy/memmove/memset.	game fixes
 23	082281e42b3	applied	1	other PE-side game / app fixes	Jacek Caban	kernelbase: Ignore LOAD_LIBRARY_SEARCH_SYSTEM32 flags for webservices.dll in LoadLibraryExW.	game fixes
-	39e7eed749a	conflict	12	other PE-side game / app fixes	Jacek Caban	webservices: Prefer native.	dlls/webservices/Makefile.in
+660	39e7eed749a	hand-merged	12	other PE-side game / app fixes	Jacek Caban	webservices: Prefer native.	kept 11.20's version-resource lines next to the --prefer-native flag.
 24	258d6527c40	applied	1	other PE-side game / app fixes	Jacek Caban	HACK: Create HTMLDocument in dedicated thread to work around Gecko threading limitation.	game fixes
 25	336f62e6d39	applied	1	other PE-side game / app fixes	Paul Gofman	mshtml: Use environment variable instead of registry for dedicated thread hack.	game fixes
 26	c8315def4fe	applied	1	other PE-side game / app fixes	Paul Gofman	mshtml: Also enable dedicated thread hack for The Sims 3.	game fixes
@@ -358,13 +358,13 @@ order	commit	status	pass	group	author	subject	note
 	6b70a512459	skipped-linux		winex11.drv (window mgmt, input, XInput2, Vulkan surfaces)	Rémi Bernon	HACK: winex11: Reset focus before mapping a window which will be focused.	winex11.drv (window mgmt, input, XInput2, Vulkan surfaces)
 	b0c0aa2c242	skipped-linux		winex11.drv (window mgmt, input, XInput2, Vulkan surfaces)	Rémi Bernon	HACK: winex11: Try harder to take focus away from Steam.	winex11.drv (window mgmt, input, XInput2, Vulkan surfaces)
 	20bf0d401d6	skipped-linux		winex11.drv (window mgmt, input, XInput2, Vulkan surfaces)	Rémi Bernon	HACK: winex11: Disable host window decorations with Mutter.	winex11.drv (window mgmt, input, XInput2, Vulkan surfaces)
-	fadcf28ba20	conflict	12	networking (ws2_32, nsiproxy, iphlpapi, winhttp, wininet)	Rémi Bernon	winhttp: Move connect end checks out of the loop.	dlls/winhttp/net.c
-	294b122185f	conflict	12	networking (ws2_32, nsiproxy, iphlpapi, winhttp, wininet)	Rémi Bernon	winhttp: Introduce new netconn_negotiate helper.	dlls/winhttp/net.c
-	377075a4df1	conflict	12	networking (ws2_32, nsiproxy, iphlpapi, winhttp, wininet)	Rémi Bernon	winhttp: Handle SEC_I_RENEGOTIATE after DecryptMessage.	dlls/winhttp/net.c
+661	fadcf28ba20	hand-merged	12	networking (ws2_32, nsiproxy, iphlpapi, winhttp, wininet)	Rémi Bernon	winhttp: Move connect end checks out of the loop.	11.20 passes &conn->chain to netconn_verify_cert(); kept that in the moved check.
+662	294b122185f	applied	12	networking (ws2_32, nsiproxy, iphlpapi, winhttp, wininet)	Rémi Bernon	winhttp: Introduce new netconn_negotiate helper.	dlls/winhttp/net.c
+663	377075a4df1	applied	12	networking (ws2_32, nsiproxy, iphlpapi, winhttp, wininet)	Rémi Bernon	winhttp: Handle SEC_I_RENEGOTIATE after DecryptMessage.	dlls/winhttp/net.c
 32	e8dbda3727d	applied	1	other PE-side game / app fixes	Rémi Bernon	secur32: Perform TLS re-handshake after SEC_I_RENEGOTIATE was returned.	game fixes
 33	77dd0d360bc	applied	1	other PE-side game / app fixes	Rémi Bernon	dmime: Implement IDirectMusicTrack_EndPlay for wave track.	game fixes
 34	f390a34139f	applied	1	other PE-side game / app fixes	Rémi Bernon	dmime: Stop previously playing primary segment in PlaySegmentEx.	game fixes
-	46cedf9d9fe	conflict	12	other PE-side game / app fixes	Rémi Bernon	HACK: dmime: Don't send segment end message for secondary segments.	dlls/dmime/dmime_private.h
+664	46cedf9d9fe	hand-merged	12	other PE-side game / app fixes	Rémi Bernon	HACK: dmime: Don't send segment end message for secondary segments.	header context: 11.20 added segment_get_rt_length() above segment_state_create(); change itself as Proton.
 434	b1d568c4f51	applied	4	ntdll unix side (virtual memory, signals, sync, process)	Rémi Bernon	HACK: ntdll: Convert VR_CONFIG_PATH and VR_LOG_PATH environment variables.	core (likely conflict)
 	b94adb1cf20	conflict	12	ntdll unix side (virtual memory, signals, sync, process)	Paul Gofman	ntdll: Increase step after failed map attempt in try_map_free_area().	dlls/ntdll/unix/virtual.c
 	f573dbbd8c2	conflict	12	ntdll unix side (virtual memory, signals, sync, process)	Paul Gofman	ntdll: Increase free ranges view block size on 64 bit.	dlls/ntdll/unix/virtual.c
@@ -385,10 +385,10 @@ order	commit	status	pass	group	author	subject	note
 439	e9d991c4cb1	applied	4	win32u (windows, messages, display, d3dkmt)	Esme Povirk	user32: Handle WM_GETOBJECT in buttons.	core (likely conflict)
 440	c633c15dfa0	applied	4	win32u (windows, messages, display, d3dkmt)	Esme Povirk	user32: Respond to OBJID_QUERYCLASSNAMEIDX in combo boxes.	core (likely conflict)
 	4462ba3a45b	dropped-upstream		other PE-side game / app fixes	Gabriel Ivăncescu	jscript: Use no_gc_traverse for host functions and constructors.	same patch-id upstream
-	129fc2bd2e4	conflict	12	other PE-side game / app fixes	Gabriel Ivăncescu	mshtml: Move cycle collector definitions to jscript.	dlls/jscript/jsdisp.idl dlls/mshtml/mshtml_private.h
+	129fc2bd2e4	dropped-upstream	12	other PE-side game / app fixes	Gabriel Ivăncescu	mshtml: Move cycle collector definitions to jscript.	superseded: wine-11.20 has its own jscript/mshtml cycle collection design (d41a3a76cfd moves the CC IIDs to jsdisp.idl, 2b9ff9e7c4e/a0217f8f289/780a44337f2 make the jscript GC traverse host objects)
 	b2e013018ac	dropped-upstream		other PE-side game / app fixes	Gabriel Ivăncescu	jscript: Replace the addref/release methods for host objects with get_host_disp.	same patch-id upstream
 	486369a15cd	dropped-upstream		other PE-side game / app fixes	Gabriel Ivăncescu	jscript: Use get_host_disp in the vtbl when retrieving the host outer dispatch.	same patch-id upstream
-	083a8f7f275	conflict	12	other PE-side game / app fixes	Gabriel Ivăncescu	jscript: Implement mshtml cycle collection for jscript objects, when available.	dlls/jscript/enumerator.c dlls/jscript/function.c dlls/jscript/jsdisp.idl dlls/mshtml/dispex.c dlls/mshtml/htmlwindow.c
+	083a8f7f275	dropped-upstream	12	other PE-side game / app fixes	Gabriel Ivăncescu	jscript: Implement mshtml cycle collection for jscript objects, when available.	superseded: same as 129fc2bd2e4; 11.20 traverses mshtml objects from the jscript GC instead
 36	8f138bea656	applied	1	other PE-side game / app fixes	Gabriel Ivăncescu	mshtml: Make Collection Enumerators part of the Cycle Collection graph.	game fixes
 37	684bc4f9951	applied	1	other PE-side game / app fixes	Gabriel Ivăncescu	mshtml HACK: Do not expose MutationObserver stub.	game fixes
 38	50678a17fc5	applied	1	other PE-side game / app fixes	Gabriel Ivăncescu	dwmapi: Add DWMWA_NCRENDERING_ENABLED stub for DwmGetWindowAttribute.	game fixes
@@ -396,7 +396,7 @@ order	commit	status	pass	group	author	subject	note
 258	c2cc178a067	applied	2	prefix / registry defaults (wine.inf, wineboot, fonts)	Andrew Eikum	wineboot: On prefix upgrade, update win10 build number	PE side
 259	e1439fd8e89	applied	2	prefix / registry defaults (wine.inf, wineboot, fonts)	Paul Gofman	wine.inf: Set a valid Win10 ProductId.	PE side
 260	5dfe8c98f5b	applied	2	prefix / registry defaults (wine.inf, wineboot, fonts)	Paul Gofman	wineboot: Generate better DigitalProductId.	PE side
-	c80b657861d	conflict	12	prefix / registry defaults (wine.inf, wineboot, fonts)	Paul Gofman	wineboot: Load root certificates on prefix update.	programs/wineboot/Makefile.in
+665	c80b657861d	hand-merged	12	prefix / registry defaults (wine.inf, wineboot, fonts)	Paul Gofman	wineboot: Load root certificates on prefix update.	11.20's import line has rpcrt4 and ENABLE_ARCHS; only added crypt32 to DELAYIMPORTS.
 261	4bc6c30aa64	applied	2	prefix / registry defaults (wine.inf, wineboot, fonts)	Paul Gofman	win32u: Don't load bitmap only TTF fonts without bitmap table.	PE side
 262	aaf09d934a9	applied	2	prefix / registry defaults (wine.inf, wineboot, fonts)	Giovanni Mascellani	HACK: win32u/font: Support font linking for Arial and Courier New.	PE side
 636	e440b71a0f5	hand-merged	10	prefix / registry defaults (wine.inf, wineboot, fonts)	Nikolay Sivov	wine.inf: Add font registry entries.	union with 11.20's font replacement entries
@@ -408,7 +408,7 @@ order	commit	status	pass	group	author	subject	note
 641	84fcfca3003	applied	10	prefix / registry defaults (wine.inf, wineboot, fonts)	Paul Gofman	wine.inf: Substitute Times New Roman for Verdana.	loader/wine.inf.in
 	6769129e0a1	conflict	12	win32u (windows, messages, display, d3dkmt)	Paul Gofman	win32u: Set all glyph load flags in get_load_flags().	dlls/win32u/freetype.c
 264	b905b7888e8	applied	2	prefix / registry defaults (wine.inf, wineboot, fonts)	Paul Gofman	win32u: Store effective AA flags in font_physdev.	PE side
-	c1d74b8e154	conflict	12	prefix / registry defaults (wine.inf, wineboot, fonts)	Paul Gofman	win32u: Use font AA flags when querying glyph outline with GGO_METRICS.	dlls/win32u/freetype.c
+666	c1d74b8e154	hand-merged	12	prefix / registry defaults (wine.inf, wineboot, fonts)	Paul Gofman	win32u: Use font AA flags when querying glyph outline with GGO_METRICS.	athei's freetype.c already picks GGO_BITMAP load flags for GGO_METRICS on NONANTIALIASED_QUALITY fonts (load_format). Ported Proton's change onto that: GGO_METRICS otherwise loads with the DC's aa_flags. Restricted to GGO_METRICS, as the subject says (Proton also applied it to explicit bitmap formats), and the retry now really falls back to the requested format (Proton recomputed the same flags).
 265	7f878b9d3bd	applied	2	prefix / registry defaults (wine.inf, wineboot, fonts)	Paul Gofman	win32u: HACK: Ignore font GASP flags for Alien Swarm Reactive Drop.	PE side
 266	613eb8e2ea7	applied	2	GPU vendor libs (amd_ags, atiadlxx, amdxc, nvapi, dxgi vendor)	Józef Kucia	amd_ags_x64: Import v5.1.1 amd_ags.h.	PE side
 267	47230f194c3	applied	2	GPU vendor libs (amd_ags, atiadlxx, amdxc, nvapi, dxgi vendor)	Józef Kucia	amd_ags_x64: Make amd_ags.h usable with gcc.	PE side
@@ -534,24 +534,24 @@ order	commit	status	pass	group	author	subject	note
 442	9da9aec617c	hand-merged	4	ntdll unix side (virtual memory, signals, sync, process)	Zhiyi Zhang	HACK: ntdll: Replace STATUS_NETWORK_UNREACHABLE with STATUS_SUCCESS in sock_send() for VRChat UDP sockets.	11.20's async_fileio has no io member: use async->handle
 443	cb3c71e66f3	hand-merged	4	win32u (windows, messages, display, d3dkmt)	Zhiyi Zhang	win32u: Implement D3DKMTQueryAdapterInfo WDDM_2_7_CAPS.	use 11.20's typed get_d3dkmt_adapter()
 573	98035cc0b5b	applied	5	GPU vendor libs (amd_ags, atiadlxx, amdxc, nvapi, dxgi vendor)	Paul Gofman	atiadlxx: Get rid of NO_LONG_TYPES.	retry
-	e8e57d39563	conflict	12	other PE-side game / app fixes	Paul Gofman	bcrypt/tests: Add test for DH secret agreement.	dlls/bcrypt/tests/bcrypt.c
-	9fd3d6ef4cf	conflict	12	other PE-side game / app fixes	Paul Gofman	bcrypt: Reimplement DH using libgmp instead of private gnutls functions.	dlls/bcrypt/Makefile.in dlls/bcrypt/bcrypt_internal.h dlls/bcrypt/gnutls.c dlls/bcrypt/tests/bcrypt.c
-	e0ce1e9afb3	conflict	12	other PE-side game / app fixes	Derek Lesho	bcrypt: Add support for calculating secret ecc keys.	dlls/bcrypt/gnutls.c
-	fcf8e23d727	conflict	12	other PE-side game / app fixes	Derek Lesho	bcrypt: Add support for none and OAEP-padded asymmetric key encryption.	dlls/bcrypt/bcrypt_main.c dlls/bcrypt/gnutls.c dlls/bcrypt/tests/bcrypt.c
-	4cf6d8b6f09	conflict	12	other PE-side game / app fixes	Paul Gofman	bcrypt: Add support for none and OAEP padded asymmetric key decryption.	dlls/bcrypt/bcrypt_main.c dlls/bcrypt/gnutls.c dlls/bcrypt/tests/bcrypt.c
-	49a26f3bd8e	conflict	12	other PE-side game / app fixes	Paul Gofman	bcrypt: Support for ECDH_P521 through gcrypt.	dlls/bcrypt/gnutls.c
+	e8e57d39563	dropped-upstream	12	other PE-side game / app fixes	Paul Gofman	bcrypt/tests: Add test for DH secret agreement.	superseded: wine-11.20 replaced the gnutls backend with SymCrypt on the PE side (149bd084066, b77b0a29b9e); Proton's DH secret-agreement test targets its gnutls/libgmp DH; wine-11.20 has its own test_DH
+	9fd3d6ef4cf	dropped-upstream	12	other PE-side game / app fixes	Paul Gofman	bcrypt: Reimplement DH using libgmp instead of private gnutls functions.	superseded: wine-11.20 replaced the gnutls backend with SymCrypt on the PE side (149bd084066, b77b0a29b9e); DH is implemented with SymCrypt
+	e0ce1e9afb3	dropped-upstream	12	other PE-side game / app fixes	Derek Lesho	bcrypt: Add support for calculating secret ecc keys.	superseded: wine-11.20 replaced the gnutls backend with SymCrypt on the PE side (149bd084066, b77b0a29b9e); ECC secret derivation is implemented with SymCrypt
+	fcf8e23d727	dropped-upstream	12	other PE-side game / app fixes	Derek Lesho	bcrypt: Add support for none and OAEP-padded asymmetric key encryption.	superseded: wine-11.20 replaced the gnutls backend with SymCrypt on the PE side (149bd084066, b77b0a29b9e); BCRYPT_PAD_NONE/OAEP encryption is implemented with SymCrypt
+	4cf6d8b6f09	dropped-upstream	12	other PE-side game / app fixes	Paul Gofman	bcrypt: Add support for none and OAEP padded asymmetric key decryption.	superseded: wine-11.20 replaced the gnutls backend with SymCrypt on the PE side (149bd084066, b77b0a29b9e); BCRYPT_PAD_NONE/OAEP decryption is implemented with SymCrypt
+	49a26f3bd8e	dropped-upstream	12	other PE-side game / app fixes	Paul Gofman	bcrypt: Support for ECDH_P521 through gcrypt.	superseded: wine-11.20 replaced the gnutls backend with SymCrypt on the PE side (149bd084066, b77b0a29b9e); ECDH P-521 is implemented with SymCrypt (no gcrypt needed)
 332	06d96b0d448	applied	2	GPU vendor libs (amd_ags, atiadlxx, amdxc, nvapi, dxgi vendor)	Paul Gofman	amd_ags_x64: Get rid of WINE_NO_LONG_TYPES.	PE side
 	edd5fa7c08e	conflict	12	wineserver core	Paul Gofman	ntdll: Implement CPU topology override.	dlls/ntdll/unix/system.c server/protocol.def
 333	272b435e04f	applied	2	audio drivers (winepulse/winealsa) & mmdevapi	Andrew Eikum	mmdevapi: Force PCM format for DeviceFormat property	PE side
-	095fdddb5e1	conflict	12	multimedia (winegstreamer, mf*, media-converter, quartz, wm*)	Andrew Eikum	xaudio2: Prefer native	dlls/xapofx1_1/Makefile.in dlls/xapofx1_3/Makefile.in dlls/xaudio2_9/Makefile.in
+667	095fdddb5e1	hand-merged	12	multimedia (winegstreamer, mf*, media-converter, quartz, wm*)	Andrew Eikum	xaudio2: Prefer native	kept 11.20's version-resource lines next to the --prefer-native flag.
 444	dffefdfc3f7	applied	4	ntdll unix side (virtual memory, signals, sync, process)	Paul Gofman	ntdll: Handle NULL object name buffer in nt_to_unix_file_name_attr().	core (likely conflict)
 445	2105dac8b57	applied	4	wineserver core	Paul Gofman	server: Update system regs from set_thread_context handler only.	core (likely conflict)
 	27d4315e7ba	conflict	12	ntdll unix side (virtual memory, signals, sync, process)	Paul Gofman	ntdll: Update cached debug registers in call_init_thunk().	dlls/ntdll/unix/signal_x86_64.c
 	46008e1ce86	conflict	12	ntdll unix side (virtual memory, signals, sync, process)	Paul Gofman	ntdll: Use cached debug registers in NtGetContextThread() if hw debug breakpoints are disabled.	dlls/ntdll/unix/signal_i386.c dlls/ntdll/unix/signal_x86_64.c
 642	09fbb2c0102	applied	10	prefix / registry defaults (wine.inf, wineboot, fonts)	Paul Gofman	wine.inf: Create package repository for VCLibs.140.	loader/wine.inf.in
-	7b4037421ea	conflict	12	other PE-side game / app fixes	Paul Gofman	kernel32: Implement GetPackagesByPackageFamily().	dlls/kernel32/tests/version.c dlls/kernelbase/version.c include/appmodel.h
-	c18ebc392d1	conflict	12	other PE-side game / app fixes	Paul Gofman	kernel32: Implement PackageFullNameFromId().	dlls/kernelbase/version.c include/appmodel.h
-	8089c27dae7	conflict	12	other PE-side game / app fixes	Paul Gofman	kernel32: Implement GetPackagePath().	dlls/kernel32/kernel32.spec dlls/kernel32/tests/version.c dlls/kernelbase/version.c include/appmodel.h
+668	7b4037421ea	hand-merged	12	other PE-side game / app fixes	Paul Gofman	kernel32: Implement GetPackagesByPackageFamily().	11.20 already has PackageFullNameFromId() (with its own tests) and only a stub GetPackagesByPackageFamily(); replaced the stub with Proton's registry-based implementation and kept both test functions.
+	c18ebc392d1	dropped-upstream	12	other PE-side game / app fixes	Paul Gofman	kernel32: Implement PackageFullNameFromId().	wine-11.20 implements PackageFullNameFromId() (with tests)
+669	8089c27dae7	hand-merged	12	other PE-side game / app fixes	Paul Gofman	kernel32: Implement GetPackagePath().	appmodel.h: kept 11.20's PackageFullNameFromId() prototype next to the new one.
 40	7a0410d4aec	applied	1	other PE-side game / app fixes	Paul Gofman	kernelbase: HACK: Do not expose version info for builtin DLLs for VC redists.	game fixes
 41	16427241f02	applied	1	other PE-side game / app fixes	Paul Gofman	kernel32: Align stack pointer for lstrcpyA() on x64.	game fixes
 446	b68673b3f4c	applied	4	ntdll unix side (virtual memory, signals, sync, process)	Paul Gofman	ntdll: Add stub implementation for NtSetInformationFile(FileAllocationInformation).	core (likely conflict)
@@ -575,7 +575,7 @@ order	commit	status	pass	group	author	subject	note
 54	f65cec8dada	applied	1	other PE-side game / app fixes	Paul Gofman	advapi32: Initialize computer SID from registry.	game fixes
 55	15a94d6bf76	applied	1	other PE-side game / app fixes	Paul Gofman	sechost: Initialize computer SID from registry.	game fixes
 	0031a3b527e	conflict	12	wineserver core	Paul Gofman	server: Initialize local user SID with unique values.	server/main.c
-	e415577be81	conflict	12	other PE-side game / app fixes	Paul Gofman	msvcrt: HACK: Introduce asm wrapper for _isatty on x64.	dlls/msvcrt/file.c
+	e415577be81	dropped-upstream	12	other PE-side game / app fixes	Paul Gofman	msvcrt: HACK: Introduce asm wrapper for _isatty on x64.	superseded: wine-11.20 has the upstream version, 738aac8c6ed "msvcrt: Introduce asm wrapper for _isatty on x64." (same lea of __pioinfo for the Ruby runtime, different padding)
 449	d8bc459248b	applied	4	OpenGL (opengl32 / win32u opengl / wined3d)	Paul Gofman	wined3d: Post WM_ACTIVATEAPP upon receiving WM_SIZE in device_process_message().	core (likely conflict)
 450	4e7cbb10191	applied	4	OpenGL (opengl32 / win32u opengl / wined3d)	Paul Gofman	wined3d: Ignore multiple app activation messages in device_process_message().	core (likely conflict)
 334	16cae6c395d	applied	2	networking (ws2_32, nsiproxy, iphlpapi, winhttp, wininet)	Paul Gofman	ws2_32: HACK Fail 'download-alt.easyanticheat.net' DNS name resolution.	PE side
@@ -643,7 +643,7 @@ order	commit	status	pass	group	author	subject	note
 	8d4ca3d63ac	conflict	12	wineserver core	Erich E. Hoover	server: Convert return of file security masks with generic access mappings. (try 7)	dlls/advapi32/tests/security.c server/file.c
 	4fea7a2368a	conflict	12	wineserver core	Erich E. Hoover	server: Retrieve file security attributes with extended file attributes. (try 7)	server/file.c
 472	b027fdae1bf	applied	4	OpenGL (opengl32 / win32u opengl / wined3d)	Matteo Bruni	kernelbase: HACK: Add --use-gl=swiftshader for Everquest F2P/LaunchPad.exe.	core (likely conflict)
-	0f02fcc46b8	conflict	12	OpenGL (opengl32 / win32u opengl / wined3d)	Paul Gofman	kernelbase, opengl32: HACK: Add --use-angle=gl for Red Tie Runner.	dlls/opengl32/unix_wgl.c
+670	0f02fcc46b8	hand-merged	12	OpenGL (opengl32 / win32u opengl / wined3d)	Paul Gofman	kernelbase, opengl32: HACK: Add --use-angle=gl for Red Tie Runner.	kernelbase part only. The opengl32 part extends Proton's GL vendor override, which lives in code this tree doesn't have (Proton's override_vendor() in unix_wgl.c / winex11); it is an Nvidia-only workaround, irrelevant on macOS.
 	0c3c210cf7b	conflict	12	ntdll unix side (virtual memory, signals, sync, process)	Paul Gofman	ntdll: HACK: Enable WINE_SIMULATE_WRITECOPY for Red Tie Runner.	dlls/ntdll/unix/loader.c
 340	e791ad3c486	applied	2	prefix / registry defaults (wine.inf, wineboot, fonts)	Paul Gofman	wine.inf: Set FLG_HEAP_ENABLE_FREE_CHECK for Crysis 2 Remastered.	PE side
 69	ef00a3fb2c2	applied	1	other PE-side game / app fixes	Alistair Leslie-Hughes	include: Remove interfaces already define in msxml6.idl	game fixes
@@ -676,7 +676,7 @@ order	commit	status	pass	group	author	subject	note
 76	ee5db912d67	applied	1	other PE-side game / app fixes	Paul Gofman	ir50_32: HACK: Don't build dll.	game fixes
 	94b4d6a2131	conflict	12	ntdll unix side (virtual memory, signals, sync, process)	Paul Gofman	ntdll: HACK: Add 2g allocation limit option for FFX/X-2.	dlls/ntdll/unix/loader.c dlls/ntdll/unix/unix_private.h
 77	dd848f580b6	applied	1	other PE-side game / app fixes	Paul Gofman	kernelbase: Workaround forced stack aligment for SignalObjectAndWait().	game fixes
-	a20b0e65ebe	conflict	12	OpenGL (opengl32 / win32u opengl / wined3d)	Arkadiusz Hiler	kernelbase: HACK: Add --use-gl=swiftshader for another game.	dlls/kernelbase/process.c
+671	a20b0e65ebe	applied	12	OpenGL (opengl32 / win32u opengl / wined3d)	Arkadiusz Hiler	kernelbase: HACK: Add --use-gl=swiftshader for another game.	dlls/kernelbase/process.c
 	7c88dbe8048	conflict	12	ntdll unix side (virtual memory, signals, sync, process)	Paul Gofman	ntdll: HACK: Enable WINE_SIMULATE_WRITECOPY for Dinogen Online.	dlls/ntdll/unix/loader.c
 	2bf5a5799fa	conflict	12	ntdll unix side (virtual memory, signals, sync, process)	Paul Gofman	HACK: ntdll: Add WINE_HEAP_ZERO_MEMORY variable to force zeroing allocated memory.	dlls/ntdll/loader.c
 	870373c99ae	conflict	12	ntdll unix side (virtual memory, signals, sync, process)	Zhiyi Zhang	HACK: ntdll: Extend heap zero hack to private heaps.	dlls/ntdll/heap.c dlls/ntdll/loader.c dlls/ntdll/ntdll_misc.h
@@ -701,7 +701,7 @@ order	commit	status	pass	group	author	subject	note
 	cc7e2cbe6af	skipped-linux		winex11.drv (window mgmt, input, XInput2, Vulkan surfaces)	Renato Pereyra	winex11.drv: Apply the GL vendor override for Intel GPUs too	winex11.drv (window mgmt, input, XInput2, Vulkan surfaces)
 581	d5d90537747	applied	5	d3dx / d3dcompiler / ddraw / dxgi PE side	Paul Gofman	kernelbase: HACK: Force angle d3d9 for Antenna.	retry
 582	d913b7f8852	applied	5	d3dx / d3dcompiler / ddraw / dxgi PE side	Paul Gofman	kernelbase: HACK: Force angle d3d9 for A Raven Monologue.	retry
-	c7e869c1f61	conflict	12	d3dx / d3dcompiler / ddraw / dxgi PE side	Paul Gofman	kernelbase: HACK: Force angle d3d9 for Alpha League.	dlls/kernelbase/process.c
+672	c7e869c1f61	applied	12	d3dx / d3dcompiler / ddraw / dxgi PE side	Paul Gofman	kernelbase: HACK: Force angle d3d9 for Alpha League.	dlls/kernelbase/process.c
 	73e9d4a8f7f	conflict	12	ntdll unix side (virtual memory, signals, sync, process)	Zhiyi Zhang	HACK: ntdll: Enable WINE_SIMULATE_WRITECOPY for Hentai Maid Memories.	dlls/ntdll/unix/loader.c
 	a2cf73f6495	conflict	12	ntdll unix side (virtual memory, signals, sync, process)	Paul Gofman	ntdll: HACK: Enable WINE_SIMULATE_WRITECOPY for Lovey-Dovey Lockdown.	dlls/ntdll/unix/loader.c
 	9cf3bab621a	skipped-linux		winex11.drv (window mgmt, input, XInput2, Vulkan surfaces)	Paul Gofman	winex11.drv: HACK: Reduce SM_CYCAPTION on low resolutions.	winex11.drv (window mgmt, input, XInput2, Vulkan surfaces)
@@ -719,7 +719,7 @@ order	commit	status	pass	group	author	subject	note
 84	9387de66eb6	applied	1	other PE-side game / app fixes	Paul Gofman	kernelbase: Force WoW sharing on HKCU/Software key.	game fixes
 85	faef603a0b9	applied	1	other PE-side game / app fixes	Paul Gofman	advapi32/tests: Add tests for WoW shared HKCU/Software key.	game fixes
 	55436bd6d37	conflict	12	wineserver core	Paul Gofman	ntdll: Partially support querying directory entries for '\\Device\\NamedPipe\\'.	server/named_pipe.c server/trace.c
-	13484a23a41	conflict	12	other PE-side game / app fixes	Paul Gofman	gdi32/tests: Add test for text background fill extends with ETO_OPAQUE.	dlls/gdi32/tests/font.c
+673	13484a23a41	hand-merged	12	other PE-side game / app fixes	Paul Gofman	gdi32/tests: Add test for text background fill extends with ETO_OPAQUE.	test-only; inserted the new test function before START_TEST (11.20 added tests at the same spot). Tests aren't compiled by the build check.
 	9ee133cfad6	conflict	12	win32u (windows, messages, display, d3dkmt)	Paul Gofman	win32u: Account for overhang in background fill in NtGdiExtTextOutW().	dlls/gdi32/tests/font.c
 584	c7a6ae475a9	applied	5	other PE-side game / app fixes	Paul Gofman	kernelbase: HACK: Force disable direct composition for Banyu Lintar Angin - Little Storm.	retry
 86	a814afa8315	applied	1	other PE-side game / app fixes	Paul Gofman	d2d1: HACK: Ignore text rendering params for Spell Force 3.	game fixes
@@ -732,8 +732,8 @@ order	commit	status	pass	group	author	subject	note
 585	132cb593336	applied	5	winebus / HID / Steam Input / controllers	Paul Gofman	HACK: wine.inf: Add native,builting override for TDUSC / xinput1_3.	retry
 486	894bafb22c5	applied	4	ntdll unix side (virtual memory, signals, sync, process)	Paul Gofman	ntdll: HACK: Force en-US locale for EAC launcher.	core (likely conflict)
 	0673170e081	conflict	12	ntdll unix side (virtual memory, signals, sync, process)	Paul Gofman	ntdll: HACK: Introduce WINE_HEAP_TOP_DOWN hack.	dlls/ntdll/heap.c dlls/ntdll/loader.c dlls/ntdll/ntdll_misc.h
-	ae6ae2609ef	conflict	12	other PE-side game / app fixes	Paul Gofman	icu: Add stub dll.	configure.ac dlls/icu/Makefile.in dlls/icu/icu.spec
-	99d77fc35dc	conflict	12	other PE-side game / app fixes	Paul Gofman	icu: Forward function to Unicode library v68.	dlls/icu/icu.spec
+	ae6ae2609ef	dropped-upstream	12	other PE-side game / app fixes	Paul Gofman	icu: Add stub dll.	superseded: wine-11.20 has a real icu.dll (plus icuin/icuuc) built on bundled ICU, not a stub
+	99d77fc35dc	dropped-upstream	12	other PE-side game / app fixes	Paul Gofman	icu: Forward function to Unicode library v68.	superseded: forwards to a native ICU v68 from Proton's stub icu.dll; wine-11.20 implements icu.dll itself
 	7e7bf645e29	conflict	12	OpenGL (opengl32 / win32u opengl / wined3d)	Paul Gofman	opengl32: HACK: Do not check for extensions in wglGetProcAddress() for Chromacell.	dlls/opengl32/unix_wgl.c
 487	9a669bcf3be	applied	4	wineserver core	Paul Gofman	ntdll: Fill object pointer in NtQueryInformation( SystemHandleInformation / SystemExtendedHandleInformation ).	core (likely conflict)
 	239de74087d	conflict	12	win32u (windows, messages, display, d3dkmt)	Paul Gofman	win32u: Send message with timeout in send_erase().	dlls/win32u/dce.c
@@ -742,7 +742,7 @@ order	commit	status	pass	group	author	subject	note
 344	1f6a7f3099a	applied	2	d3dx / d3dcompiler / ddraw / dxgi PE side	Paul Gofman	ddraw: HACK: Blit to fullscreen window instead of desktop window in ddraw_surface_update_frontbuffer().	PE side
 586	2138dcb02f9	applied	5	prefix / registry defaults (wine.inf, wineboot, fonts)	Paul Gofman	wine.inf: HACK: Spoof Win7 for msedgewebview2.exe.	retry
 88	2571587414f	applied	1	other PE-side game / app fixes	Paul Gofman	services: HACK: Don't autostart MS Edge updater service.	game fixes
-	f3195627a81	conflict	12	other PE-side game / app fixes	Paul Gofman	opencl: HACK: Build a stub dll if Unix headers are missing.	configure.ac
+674	f3195627a81	hand-merged	12	other PE-side game / app fixes	Paul Gofman	opencl: HACK: Build a stub dll if Unix headers are missing.	11.20 checks OpenCL with WINE_PACKAGE_FLAGS; kept that check (it still sets OPENCL_LIBS/HAVE_CL_CL_H when OpenCL exists), dropped [enable_opencl] so opencl.dll is built as a stub instead of disabled, and cleared OPENCL_LIBS when clGetPlatformInfo isn't found (WINE_PACKAGE_FLAGS defaults it to -lOpenCL). On macOS the OpenCL framework is found, so the real path is built there.
 488	85d55101c55	applied	4	win32u (windows, messages, display, d3dkmt)	Paul Gofman	user32: Reserve more space in kernel_callback_table[].	core (likely conflict)
 587	bb27d047652	applied	5	prefix / registry defaults (wine.inf, wineboot, fonts)	Paul Gofman	wine.inf: Add native,builting override for WRC Generations.	retry
 345	07346d6b546	applied	2	winebus / HID / Steam Input / controllers	Elia Devito	win32u: HACK: Hide a window for Post Mortem.	PE side
@@ -765,9 +765,9 @@ order	commit	status	pass	group	author	subject	note
 	34e74948322	conflict	12	ntdll unix side (virtual memory, signals, sync, process)	Paul Gofman	ntdll: HACK: Add WINE_ALERT_SIMULATE_SCHED_QUANTUM option.	dlls/ntdll/unix/loader.c dlls/ntdll/unix/sync.c dlls/ntdll/unix/unix_private.h
 	57eaadb81a4	conflict	12	ntdll unix side (virtual memory, signals, sync, process)	Paul Gofman	ntdll: HACK: Enable WINE_ALERT_SIMULATE_SCHED_QUANTUM option for Mary Skelter 2.	dlls/ntdll/unix/loader.c
 	c68af94221e	conflict	12	ntdll unix side (virtual memory, signals, sync, process)	KingKrouch	ntdll: HACK: Enable WINE_ALERT_SIMULATE_SCHED_QUANTUM option for more games.	dlls/ntdll/unix/loader.c
-	89d7ee5f985	conflict	12	audio drivers (winepulse/winealsa) & mmdevapi	Paul Gofman	mmdevapi: Round min_period_frames up in client_GetSharedModeEnginePeriod().	dlls/mmdevapi/client.c
-	f5a15b2201f	conflict	12	audio drivers (winepulse/winealsa) & mmdevapi	Paul Gofman	winepulse.drv: Move pulse_release_stream() below.	dlls/winepulse.drv/pulse.c
-	e4848caf5c3	conflict	12	audio drivers (winepulse/winealsa) & mmdevapi	Paul Gofman	winepulse.drv: Process streams timer updates from PA main loop.	dlls/winepulse.drv/pulse.c
+675	89d7ee5f985	hand-merged	12	audio drivers (winepulse/winealsa) & mmdevapi	Paul Gofman	mmdevapi: Round min_period_frames up in client_GetSharedModeEnginePeriod().	11.20 computes the periods with MulDiv(); kept that for the default period and applied Proton's round-up for the minimum and the default >= minimum clamp.
+	f5a15b2201f	skipped-linux	12	audio drivers (winepulse/winealsa) & mmdevapi	Paul Gofman	winepulse.drv: Move pulse_release_stream() below.	winepulse.drv (PulseAudio) is not built on macOS (mach9 uses winecoreaudio); 11.20 reworked the pulse timer thread, so this needs a port that only Linux would use
+	e4848caf5c3	skipped-linux	12	audio drivers (winepulse/winealsa) & mmdevapi	Paul Gofman	winepulse.drv: Process streams timer updates from PA main loop.	winepulse.drv (PulseAudio) is not built on macOS; depends on f5a15b2201f
 347	1956ac8d1f5	applied	2	prefix / registry defaults (wine.inf, wineboot, fonts)	Paul Gofman	wineboot: Preserve dxvk-specific NVAPI enablement variables.	PE side
 588	94f41e28244	applied	5	other PE-side game / app fixes	Paul Gofman	kernelbase: HACK: Force disable direct composition for Willful.	retry
 491	5cb652404cd	applied	4	win32u (windows, messages, display, d3dkmt)	Paul Gofman	user32/tests: Add tests for NULL invalidated rect with window resize.	core (likely conflict)
@@ -805,7 +805,7 @@ order	commit	status	pass	group	author	subject	note
 349	c850f93f725	applied	2	prefix / registry defaults (wine.inf, wineboot, fonts)	Bernhard Kölbl	win32u: Explicitly check for font family bits.	PE side
 350	65738183e69	applied	2	multimedia (winegstreamer, mf*, media-converter, quartz, wm*)	Rémi Bernon	winedmo: Always use upper case AV1 fourcc in media types.	PE side
 351	c3b5f10412c	applied	2	multimedia (winegstreamer, mf*, media-converter, quartz, wm*)	Bernhard Kölbl	winedmo: Explicily set HEVC mf GUID.	PE side
-	b6f7c600d36	conflict	12	other PE-side game / app fixes	Zhiyi Zhang	msctf: Use list to keep thread managers.	dlls/msctf/threadmgr.c
+676	b6f7c600d36	hand-merged	12	other PE-side game / app fixes	Zhiyi Zhang	msctf: Use list to keep thread managers.	11.20 added the ITfFnReconversion/ITfFunctionProvider code at the spot where Proton inserts TF_GetThreadMgr(); kept both.
 	1145107c124	skipped-linux		winex11.drv (window mgmt, input, XInput2, Vulkan surfaces)	Zhiyi Zhang	winex11.drv: Properly check if the desktop window is fullscreen on multi-monitor systems.	winex11.drv (window mgmt, input, XInput2, Vulkan surfaces)
 	96399e5bc05	skipped-linux		winex11.drv (window mgmt, input, XInput2, Vulkan surfaces)	Zhiyi Zhang	HACK: winex11.drv: Make Tidy Cauldron game window resizable on KWin.	winex11.drv (window mgmt, input, XInput2, Vulkan surfaces)
 	1b13baed34b	skipped-linux		winex11.drv (window mgmt, input, XInput2, Vulkan surfaces)	Zhiyi Zhang	HACK: winex11.drv: Update _NET_WM_FULLSCREEN_MONITORS after a window is mapped on Mutter.	winex11.drv (window mgmt, input, XInput2, Vulkan surfaces)
@@ -817,7 +817,7 @@ order	commit	status	pass	group	author	subject	note
 	d8a27b4712e	skipped-linux		winex11.drv (window mgmt, input, XInput2, Vulkan surfaces)	Paul Gofman	winex11.drv: Present GL image to surface if non-ULW surface exists.	winex11.drv (window mgmt, input, XInput2, Vulkan surfaces)
 	989d5b4db2a	skipped-linux		winex11.drv (window mgmt, input, XInput2, Vulkan surfaces)	Paul Gofman	winex11.drv: Offscreen 3d rendering for SLWA layered windows.	winex11.drv (window mgmt, input, XInput2, Vulkan surfaces)
 96	4d48bdaf965	applied	1	other PE-side game / app fixes	Rémi Bernon	devenum: Register IEEE float for Direct Sound default device.	game fixes
-	30eff977093	conflict	12	multimedia (winegstreamer, mf*, media-converter, quartz, wm*)	Rémi Bernon	dsound: Initialize primary buffer with device's channel layout	dlls/dsound/dsound.c dlls/dsound/primary.c
+677	30eff977093	hand-merged	12	multimedia (winegstreamer, mf*, media-converter, quartz, wm*)	Rémi Bernon	dsound: Initialize primary buffer with device's channel layout	moved 11.20's DSOUND_ParseSpeakerConfig() (which adds the 7.1 layouts) to primary.c instead of Proton's older 5.1-only copy.
 352	14d3bdbb42c	applied	2	d3dx / d3dcompiler / ddraw / dxgi PE side	Rémi Bernon	ddraw: Remove topmost from the previous window when releasing exclusive cooperative level.	PE side
 495	31d70e4e5db	applied	4	ntdll unix side (virtual memory, signals, sync, process)	Rémi Bernon	ntdll: Keep more LFH block groups alive.	core (likely conflict)
 	4098c1293e4	dropped-upstream		multimedia (winegstreamer, mf*, media-converter, quartz, wm*)	Rémi Bernon	mf: Discard end of presentation on IMFMediaSession_Stop.	same patch-id upstream
@@ -844,15 +844,15 @@ order	commit	status	pass	group	author	subject	note
 	916718b3156	dropped-upstream		d3dx / d3dcompiler / ddraw / dxgi PE side	Connor McAdams	d3dx11: Implement D3DX11CreateTextureFromResource{A,W}().	same patch-id upstream
 	ab808a6de3f	dropped-upstream		d3dx / d3dcompiler / ddraw / dxgi PE side	Connor McAdams	d3dx9: Properly handle DXT textures with premultiplied alpha.	same author+subject upstream: c8a59256d7a
 	fd312628f0c	dropped-upstream		d3dx / d3dcompiler / ddraw / dxgi PE side	Connor McAdams	d3dx9/tests: Add tests for D3DX_FILTER_SRGB flags.	same author+subject upstream: 61634061289
-	1bd0c7edb54	conflict	12	d3dx / d3dcompiler / ddraw / dxgi PE side	Connor McAdams	d3dx9: Handle D3DX_FILTER_SRGB flags.	dlls/d3dx9_36/d3dx_helpers.c dlls/d3dx9_36/d3dx_helpers.h dlls/d3dx9_36/tests/surface.c
+	1bd0c7edb54	dropped-upstream	12	d3dx / d3dcompiler / ddraw / dxgi PE side	Connor McAdams	d3dx9: Handle D3DX_FILTER_SRGB flags.	superseded: wine-11.20 handles D3DX_FILTER_SRGB_IN/OUT (CONV_FLAG_SRGB_IN/OUT with the exact sRGB curve, not gamma 2.2)
 	a6d93c800b3	dropped-upstream		d3dx / d3dcompiler / ddraw / dxgi PE side	Connor McAdams	d3dx10/tests: Add tests for D3DX10LoadTextureFromTexture().	same author+subject upstream: 01bede4c2c8
-	b123817064e	conflict	12	d3dx / d3dcompiler / ddraw / dxgi PE side	Connor McAdams	d3dx10: Implement D3DX10LoadTextureFromTexture().	dlls/d3dx10_43/tests/d3dx10.c dlls/d3dx10_43/texture.c
-	b8cb280c21b	conflict	12	d3dx / d3dcompiler / ddraw / dxgi PE side	Connor McAdams	d3dx10: Add support for sRGB formats.	dlls/d3dx10_43/tests/d3dx10.c
-	2ff0c5e7209	conflict	12	d3dx / d3dcompiler / ddraw / dxgi PE side	Connor McAdams	d3dx10: Implement D3DX10FilterTexture().	dlls/d3dx10_43/tests/d3dx10.c dlls/d3dx10_43/texture.c
-	0c7d34d3fac	conflict	12	d3dx / d3dcompiler / ddraw / dxgi PE side	Connor McAdams	d3dx10: Add D3DX10CreateAsyncShaderResourceViewProcessor() stub.	dlls/d3dx10_43/tests/d3dx10.c
-	c7b2ce3ab42	conflict	12	d3dx / d3dcompiler / ddraw / dxgi PE side	Connor McAdams	d3dx10: Implement D3DX10CreateAsyncShaderResourceViewProcessor().	dlls/d3dx10_43/async.c dlls/d3dx10_43/tests/d3dx10.c
-	60a9a91b179	conflict	12	d3dx / d3dcompiler / ddraw / dxgi PE side	Connor McAdams	d3dx10: Implement D3DX10CreateShaderResourceViewFrom{File,Memory,Resource}().	dlls/d3dx10_43/texture.c
-	8448f7cdff1	conflict	12	d3dx / d3dcompiler / ddraw / dxgi PE side	Connor McAdams	d3dx10: Add stubs for D3DX10SaveTextureTo{Memory,File}().	dlls/d3dx10_43/tests/d3dx10.c
+	b123817064e	dropped-upstream	12	d3dx / d3dcompiler / ddraw / dxgi PE side	Connor McAdams	d3dx10: Implement D3DX10LoadTextureFromTexture().	superseded: wine-11.20 implements D3DX10LoadTextureFromTexture() upstream (different code, same author); later d3dx10 ports use it
+681	b8cb280c21b	hand-merged	12	d3dx / d3dcompiler / ddraw / dxgi PE side	Connor McAdams	d3dx10: Add support for sRGB formats.	code applied as is (it builds on 11.20's D3DX_FILTER_SRGB_IN/OUT handling). Proton's test hunk only removes todo_hr from format-conversion tests that 11.20's test file doesn't have; left out.
+680	2ff0c5e7209	hand-merged	12	d3dx / d3dcompiler / ddraw / dxgi PE side	Connor McAdams	d3dx10: Implement D3DX10FilterTexture().	11.20 has its own (upstream) D3DX10LoadTextureFromTexture() and staging helpers instead of the Proton code this was built on. Rewrote it on 11.20's d3d10_load_texture_from_texture(), the same call 11.20 uses for mip generation: each level below src_level is filtered from the one above. Proton's test is left out (it needs test helpers from the superseded b123817064e).
+682	0c7d34d3fac	hand-merged	12	d3dx / d3dcompiler / ddraw / dxgi PE side	Connor McAdams	d3dx10: Add D3DX10CreateAsyncShaderResourceViewProcessor() stub.	test hunks left out (11.20 rewrote the d3dx10 texture tests they extend); the stub itself applies as is.
+683	c7b2ce3ab42	hand-merged	12	d3dx / d3dcompiler / ddraw / dxgi PE side	Connor McAdams	d3dx10: Implement D3DX10CreateAsyncShaderResourceViewProcessor().	11.20 moved D3DX10CompileFromMemory() out of async.c (to d3dx9_36/d3dx10_compiler.c), so the copy in this hunk's context is dropped; test hunks left out.
+684	60a9a91b179	hand-merged	12	d3dx / d3dcompiler / ddraw / dxgi PE side	Connor McAdams	d3dx10: Implement D3DX10CreateShaderResourceViewFrom{File,Memory,Resource}().	the new functions sit where 11.20 now has its own texture-loading helpers (init_d3d10_box() etc.); placed them before those and dropped the superseded Proton struct definitions from the conflict. They use create_texture()/load_file()/d3dx_load_resource_*(), which 11.20 still has. Test hunks left out.
+685	8448f7cdff1	hand-merged	12	d3dx / d3dcompiler / ddraw / dxgi PE side	Connor McAdams	d3dx10: Add stubs for D3DX10SaveTextureTo{Memory,File}().	test hunks left out (they build on test helpers from Proton's superseded d3dx10 texture tests); the stubs apply as is.
 	e3bf5801d01	conflict	12	d3dx / d3dcompiler / ddraw / dxgi PE side	Connor McAdams	d3dx10: Add partial support for saving to DDS files in D3DX10SaveTextureToMemory().	dlls/d3dx10_43/tests/d3dx10.c dlls/d3dx10_43/texture.c
 	2ed12ec865c	conflict	12	d3dx / d3dcompiler / ddraw / dxgi PE side	Connor McAdams	d3dx10: Add support for saving DXT10 DDS files in D3DX10SaveTextureToMemory().	dlls/d3dx10_43/tests/d3dx10.c dlls/d3dx10_43/texture.c dlls/d3dx9_36/d3dx_helpers.c
 	347bd52e55f	conflict	12	d3dx / d3dcompiler / ddraw / dxgi PE side	Connor McAdams	d3dx10/tests: Add tests for saving textures to non-DDS file formats.	dlls/d3dx10_43/tests/d3dx10.c
@@ -871,9 +871,9 @@ order	commit	status	pass	group	author	subject	note
 	ed581161c2a	conflict	12	d3dx / d3dcompiler / ddraw / dxgi PE side	Connor McAdams	d3dx10: Implement D3DX10SaveTextureToFile{A,W}().	dlls/d3dx10_43/tests/d3dx10.c dlls/d3dx10_43/texture.c
 	e2c3789375c	conflict	12	d3dx / d3dcompiler / ddraw / dxgi PE side	Connor McAdams	d3dx11: Implement D3DX11SaveTextureTo{File,Memory}().	dlls/d3dx11_43/texture.c
 374	5a82fd04ecd	hand-merged	2	d3dx / d3dcompiler / ddraw / dxgi PE side	Connor McAdams	d3dx11: Implement D3DX11CreateThreadPump().	11.20's texture.c no longer includes initguid.h, so define the IIDs async.c uses here
-	764bff28f1b	conflict	12	other PE-side game / app fixes	Andrew Eikum	setupapi: Support DICGF_PRESENT when looking for devices	dlls/setupapi/devinst.c
+678	764bff28f1b	hand-merged	12	other PE-side game / app fixes	Andrew Eikum	setupapi: Support DICGF_PRESENT when looking for devices	11.20 rewrote SetupDiGetClassDevs() on cfgmgr32 (2857fec3c24), and cfgmgr32 ignores CM_GETIDLIST_FILTER_PRESENT for devices. Re-applied Proton's check in the new SETUPDI_EnumerateDevices(): with DIGCF_PRESENT, a device is only returned if one of its interfaces is linked (Proton's is_device_instance_linked(), unchanged).
 	1c95e6c0b50	conflict	12	winebus / HID / Steam Input / controllers	Connor McAdams	setupapi: Use HID device instance ID when checking winebus devices for presence.	dlls/setupapi/devinst.c
-	13a018bc07b	conflict	12	other PE-side game / app fixes	Connor McAdams	setupapi: Remove devices without any present interfaces from the device info list.	dlls/setupapi/devinst.c
+	13a018bc07b	dropped-upstream	12	other PE-side game / app fixes	Connor McAdams	setupapi: Remove devices without any present interfaces from the device info list.	superseded: in wine-11.20 SetupDiGetClassDevs(DIGCF_DEVICEINTERFACE) creates devices only from CM_Get_Device_Interface_List() paths, which already honours DIGCF_PRESENT (f9b51de6234), so devices without present interfaces are never added
 375	309fd946431	applied	2	audio drivers (winepulse/winealsa) & mmdevapi	Connor McAdams	mmdevapi/tests: Add property store tests for more variant types.	PE side
 376	bd7e90c83fd	applied	2	audio drivers (winepulse/winealsa) & mmdevapi	Connor McAdams	mmdevapi: Add support for storing VT_BOOL properties.	PE side
 377	486fe0fb0ed	applied	2	audio drivers (winepulse/winealsa) & mmdevapi	Connor McAdams	mmdevapi: Add support for storing VT_CLSID properties.	PE side
@@ -1256,11 +1256,11 @@ order	commit	status	pass	group	author	subject	note
 	45bddf86494	dropped-upstream		other PE-side game / app fixes	Jinoh Kang	Revert "kernelbase: Replace FileAllInformation with FileStatInformation in GetFileInformationByHandle().".	same patch-id upstream
 	ab182d6f28a	dropped-upstream		ARM64 / ARM64EC / FEX / WoW64	Brendan Shanks	server: On ARM64, only list 32-bit ARM as a supported architecture if the CPU supports it.	cherry-picked from e11b4cd1c9e
 	2537ca1b788	dropped-upstream		d3dx / d3dcompiler / ddraw / dxgi PE side	Paul Gofman	ddraw/tests: Add tests for clipper in exclusive fullscreen mode.	same author+subject upstream: b6a992482b8
-	4c175582270	conflict	12	d3dx / d3dcompiler / ddraw / dxgi PE side	Paul Gofman	ddraw: Ignore hwnd clipper in exclusive fullscreen mode.	dlls/ddraw/tests/ddraw1.c dlls/ddraw/tests/ddraw2.c dlls/ddraw/tests/ddraw4.c dlls/ddraw/tests/ddraw7.c
+679	4c175582270	hand-merged	12	d3dx / d3dcompiler / ddraw / dxgi PE side	Paul Gofman	ddraw: Ignore hwnd clipper in exclusive fullscreen mode.	11.20 already skips the clipping window in SetClipper() in exclusive mode (303b7903766, the upstream half of this change), so only the blit-path part is applied. Proton's test updates are left out: 11.20 restructured check_surface_clipper().
 393	3db12c747d3	applied	2	GPU vendor libs (amd_ags, atiadlxx, amdxc, nvapi, dxgi vendor)	Paul Gofman	amd_ags_x64: Fail device creation for Crimson Desert.	PE side
 610	913494390e6	applied	5	GPU vendor libs (amd_ags, atiadlxx, amdxc, nvapi, dxgi vendor)	Paul Gofman	amd_ags_x64: Query and advertise supported d3d12 extensions.	retry
 	66e6df045d5	dropped-upstream		other PE-side game / app fixes	Paul Gofman	msctf: Return stub interface from ThreadMgr_GetFunctionProvider().	same author+subject upstream: a9f1edc8742
-	17f7a76dc56	conflict	12	other PE-side game / app fixes	Paul Gofman	msctf: HACK: Stub ITfFnReconversion function.	dlls/msctf/threadmgr.c
+	17f7a76dc56	dropped-upstream	12	other PE-side game / app fixes	Paul Gofman	msctf: HACK: Stub ITfFnReconversion function.	superseded: wine-11.20 has an ITfFnReconversion stub returned from ITfFunctionProvider::GetFunction (605b577219e)
 	cec419ab380	dropped-reverted		ntdll unix side (virtual memory, signals, sync, process)	Paul Gofman	Revert "ntdll: Do not open directory file when setting the same directory path."	reverted in Proton by/with 33ff26b0423
 	d81627a6ebf	dropped-upstream		ntdll unix side (virtual memory, signals, sync, process)	Paul Gofman	ntdll: Only take PEB lock to update PEB data in RtlSetCurrentDirectory_U().	same author+subject upstream: 13c79337d21
 514	ca347a43c9a	applied	4	ntdll unix side (virtual memory, signals, sync, process)	Paul Gofman	fixup! ntdll: HACK: Force en-US locale for EAC launcher.	core (likely conflict)
@@ -1315,7 +1315,7 @@ order	commit	status	pass	group	author	subject	note
 612	1aa0943fb0d	applied	5	GPU vendor libs (amd_ags, atiadlxx, amdxc, nvapi, dxgi vendor)	Rémi Bernon	fixup! atiadlxx: Query adapter config at context creation.	retry
 	7dde2609baf	dropped-upstream		other PE-side game / app fixes	Paul Gofman	imm32/tests: Flush events in test_ImmSetCompositionWindow().	same author+subject upstream: 52ef5356917
 	bee62551c9c	dropped-upstream		other PE-side game / app fixes	Paul Gofman	imm32/tests: Add tests for resetting in-composition state.	same author+subject upstream: 82cb77662ff
-	acd2f9f92fd	conflict	12	other PE-side game / app fixes	Paul Gofman	imm32: Strip off tralining zero in ImeSetCompositionString().	dlls/imm32/ime.c dlls/imm32/tests/imm32.c
+	acd2f9f92fd	dropped-upstream	12	other PE-side game / app fixes	Paul Gofman	imm32: Strip off tralining zero in ImeSetCompositionString().	superseded: wine-11.20's ImeSetCompositionString() already strips trailing zeros (all of them) and ends the composition on an empty string
 	946d1e67d32	dropped-upstream		other PE-side game / app fixes	Paul Gofman	imm32: Clear in-composition state when empty composition string is set.	same author+subject upstream: de304dae0ba
 	0b8a86cf3b8	dropped-upstream		other PE-side game / app fixes	Paul Gofman	imm32: Reset composition string when deactivating context.	same patch-id upstream
 	a75c78b4079	conflict	12	ntdll unix side (virtual memory, signals, sync, process)	Paul Gofman	fixup! ntdll: Implement CPU topology override.	dlls/ntdll/unix/system.c
