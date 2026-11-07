@@ -1,0 +1,34 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arkadiusz Hiler <ahiler@codeweavers.com>
+Date: Mon, 28 Apr 2025 16:55:09 +0300
+Subject: [PATCH] winedmo: Create h264-used and placeholder-video-used tag
+ files.
+
+CW-Bug-Id: #25280
+(cherry picked from commit 0f1a6d8dc3b2bb792cdea06f8e5476770b03c8ef)
+---
+ dlls/winedmo/unix_demuxer_mediaconv.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/dlls/winedmo/unix_demuxer_mediaconv.c b/dlls/winedmo/unix_demuxer_mediaconv.c
+index 3bc1ed8972b..fd89d0e5e56 100644
+--- a/dlls/winedmo/unix_demuxer_mediaconv.c
++++ b/dlls/winedmo/unix_demuxer_mediaconv.c
+@@ -199,6 +199,8 @@ int mediaconv_demuxer_open( AVFormatContext **ctx, struct stream_context *contex
+         for (i = 0; i < (*ctx)->nb_streams; i++)
+         {
+             par = (*ctx)->streams[i]->codecpar;
++            if (par->codec_id && !strcmp("h264", avcodec_get_name(par->codec_id)))
++                    create_placeholder_file("h264-used");
+             if (!par->codec_id) FIXME( "Ignoring unknown codec on stream %u\n", i );
+             else if (!avcodec_find_decoder( par->codec_id )) break;
+         }
+@@ -275,6 +277,8 @@ int mediaconv_demuxer_open( AVFormatContext **ctx, struct stream_context *contex
+         const char *blank_path;
+         int ret;
+ 
++        create_placeholder_file("placeholder-video-used");
++
+         if (!(blank_path = getenv( "MEDIACONV_BLANK_VIDEO_FILE" ))) return AVERROR(ENOENT);
+         if (!(*ctx = avformat_alloc_context())) return AVERROR(ENOMEM);
+         if ((ret = avio_open( &(*ctx)->pb, blank_path, AVIO_FLAG_READ )) < 0)

@@ -1,0 +1,23 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Thu, 11 Dec 2025 11:03:20 +0100
+Subject: [PATCH] HACK: winedmo: Assume that AV1 decoder is available.
+
+CW-Bug-Id: #26348
+(cherry picked from commit 948361d64d332d44151bdc6ca4b7c88c1a0d5943)
+---
+ dlls/winedmo/unix_demuxer_mediaconv.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/dlls/winedmo/unix_demuxer_mediaconv.c b/dlls/winedmo/unix_demuxer_mediaconv.c
+index 5577770db2c..8c076acf9c7 100644
+--- a/dlls/winedmo/unix_demuxer_mediaconv.c
++++ b/dlls/winedmo/unix_demuxer_mediaconv.c
+@@ -202,6 +202,7 @@ int mediaconv_demuxer_open( AVFormatContext **ctx, struct stream_context *contex
+             if (par->codec_id && !strcmp("h264", avcodec_get_name(par->codec_id)))
+                     create_placeholder_file("h264-used");
+             if (!par->codec_id) FIXME( "Ignoring unknown codec on stream %u\n", i );
++            else if (par->codec_id == AV_CODEC_ID_AV1) continue;
+             else if (par->codec_id == AV_CODEC_ID_PNG) continue;
+             else if (par->codec_id != AV_CODEC_ID_OPUS && !avcodec_find_decoder( par->codec_id )) break;
+         }

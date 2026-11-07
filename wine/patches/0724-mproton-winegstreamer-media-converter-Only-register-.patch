@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: jess <jessica.welsh.carter@gmail.com>
 Date: Sat, 7 Nov 2026 15:48:52 -0500
-Subject: [PATCH 686/687] mproton: winegstreamer/media-converter: Only register
+Subject: [PATCH 724/725] mproton: winegstreamer/media-converter: Only register
  the audio converters when opusdec and capssetter exist.
 
 protonaudioconverter (audio/x-wma -> audio/x-opus) and protonaudioconverterbin
@@ -16,12 +16,12 @@ The video converter and protondemuxer are unaffected.
  1 file changed, 28 insertions(+), 7 deletions(-)
 
 diff --git a/dlls/winegstreamer/media-converter/lib.c b/dlls/winegstreamer/media-converter/lib.c
-index cd10ea6d220..52420b633e4 100644
+index 3b0dff962bd..543c40226b1 100644
 --- a/dlls/winegstreamer/media-converter/lib.c
 +++ b/dlls/winegstreamer/media-converter/lib.c
-@@ -305,6 +305,16 @@ void dump_fozdb_close(struct dump_fozdb *db)
-     }
- }
+@@ -452,6 +452,16 @@ int discard_transcoded_streams(struct fozdb *dump_db, struct fozdb *read_db)
+ 
+ #ifndef _WINEDMO
  
 +static bool element_factory_exists(const char *name)
 +{
@@ -36,7 +36,7 @@ index cd10ea6d220..52420b633e4 100644
  bool media_converter_init(void)
  {
      GST_DEBUG_CATEGORY_INIT(media_converter_debug,
-@@ -316,16 +326,27 @@ bool media_converter_init(void)
+@@ -463,16 +473,27 @@ bool media_converter_init(void)
          return false;
      }
  

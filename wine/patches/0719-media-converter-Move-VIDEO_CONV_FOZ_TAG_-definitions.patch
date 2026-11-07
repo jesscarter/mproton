@@ -1,0 +1,69 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arkadiusz Hiler <ahiler@codeweavers.com>
+Date: Sat, 23 May 2026 02:19:51 +0300
+Subject: [PATCH] media-converter: Move VIDEO_CONV_FOZ_TAG_ definitions to a
+ header.
+
+(cherry picked from commit d6ce736340e3856f2c3e2c19c03029b96a30eb45)
+---
+ dlls/winedmo/unix_demuxer_mediaconv.c                | 7 -------
+ dlls/winegstreamer/media-converter/media-converter.h | 8 ++++++++
+ dlls/winegstreamer/media-converter/videoconv.c       | 8 --------
+ 3 files changed, 8 insertions(+), 15 deletions(-)
+
+diff --git a/dlls/winedmo/unix_demuxer_mediaconv.c b/dlls/winedmo/unix_demuxer_mediaconv.c
+index 8c076acf9c7..c86ea267ddf 100644
+--- a/dlls/winedmo/unix_demuxer_mediaconv.c
++++ b/dlls/winedmo/unix_demuxer_mediaconv.c
+@@ -36,13 +36,6 @@ WINE_DEFAULT_DEBUG_CHANNEL(dmo);
+ #define HASH_CHUNK_SIZE (8 * 1024 * 1024) /* 8 MB. */
+ #define HASH_STRIDE     (HASH_CHUNK_SIZE * 6)
+ 
+-#define VIDEO_CONV_FOZ_TAG_VIDEODATA 0
+-#define VIDEO_CONV_FOZ_TAG_OGVDATA   1
+-#define VIDEO_CONV_FOZ_TAG_STREAM    2
+-#define VIDEO_CONV_FOZ_TAG_MKVDATA   3
+-#define VIDEO_CONV_FOZ_TAG_CODEC     4
+-#define VIDEO_CONV_FOZ_NUM_TAGS      5
+-
+ static pthread_mutex_t fozdb_lock = PTHREAD_MUTEX_INITIALIZER;
+ static struct fozdb *dump_db, *read_db;
+ static int fozdb_users;
+diff --git a/dlls/winegstreamer/media-converter/media-converter.h b/dlls/winegstreamer/media-converter/media-converter.h
+index 827d23c125b..66e8f687f94 100644
+--- a/dlls/winegstreamer/media-converter/media-converter.h
++++ b/dlls/winegstreamer/media-converter/media-converter.h
+@@ -52,6 +52,14 @@ GST_DEBUG_CATEGORY_EXTERN(media_converter_debug);
+ 
+ typedef int (*data_read_callback)(void *data_reader, uint8_t *buffer, size_t size, size_t *read_size);
+ 
++#define VIDEO_CONV_FOZ_TAG_VIDEODATA        0
++#define VIDEO_CONV_FOZ_TAG_OGVDATA          1
++#define VIDEO_CONV_FOZ_TAG_STREAM           2
++#define VIDEO_CONV_FOZ_TAG_MKVDATA          3
++#define VIDEO_CONV_FOZ_TAG_CODEC            4
++#define VIDEO_CONV_FOZ_TAG_ORIGINAL_ENTRIES 5
++#define VIDEO_CONV_FOZ_NUM_TAGS             6
++
+ /* Changing this will invalidate the cache. You MUST clear it. */
+ #define HASH_SEED 0x4AA61F63
+ 
+diff --git a/dlls/winegstreamer/media-converter/videoconv.c b/dlls/winegstreamer/media-converter/videoconv.c
+index b88c78804eb..01082f400ae 100644
+--- a/dlls/winegstreamer/media-converter/videoconv.c
++++ b/dlls/winegstreamer/media-converter/videoconv.c
+@@ -66,14 +66,6 @@
+ #define HASH_CHUNK_SIZE (8 * 1024 * 1024) /* 8 MB. */
+ #define HASH_STRIDE     (HASH_CHUNK_SIZE * 6)
+ 
+-#define VIDEO_CONV_FOZ_TAG_VIDEODATA        0
+-#define VIDEO_CONV_FOZ_TAG_OGVDATA          1
+-#define VIDEO_CONV_FOZ_TAG_STREAM           2
+-#define VIDEO_CONV_FOZ_TAG_MKVDATA          3
+-#define VIDEO_CONV_FOZ_TAG_CODEC            4
+-#define VIDEO_CONV_FOZ_TAG_ORIGINAL_ENTRIES 5
+-#define VIDEO_CONV_FOZ_NUM_TAGS             6
+-
+ #define DURATION_NONE (UINT64_MAX)
+ 
+ struct pad_reader

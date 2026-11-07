@@ -1,0 +1,27 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Conor McCarthy <cmccarthy@codeweavers.com>
+Date: Wed, 6 Aug 2025 23:18:26 +1000
+Subject: [PATCH] winedmo: HACK: Do not check for opus decoder support.
+
+Opus is not supported in the ffmpeg build distributed with this, but it
+is supported in GStreamer.
+
+CW-Bug-Id: #25767
+(cherry picked from commit 2389039f129efbd14d3df5111a043c7df4c101bd)
+---
+ dlls/winedmo/unix_demuxer_mediaconv.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/dlls/winedmo/unix_demuxer_mediaconv.c b/dlls/winedmo/unix_demuxer_mediaconv.c
+index fd89d0e5e56..063f8db2043 100644
+--- a/dlls/winedmo/unix_demuxer_mediaconv.c
++++ b/dlls/winedmo/unix_demuxer_mediaconv.c
+@@ -202,7 +202,7 @@ int mediaconv_demuxer_open( AVFormatContext **ctx, struct stream_context *contex
+             if (par->codec_id && !strcmp("h264", avcodec_get_name(par->codec_id)))
+                     create_placeholder_file("h264-used");
+             if (!par->codec_id) FIXME( "Ignoring unknown codec on stream %u\n", i );
+-            else if (!avcodec_find_decoder( par->codec_id )) break;
++            else if (par->codec_id != AV_CODEC_ID_OPUS && !avcodec_find_decoder( par->codec_id )) break;
+         }
+         if (i == (*ctx)->nb_streams) return 0;
+ 

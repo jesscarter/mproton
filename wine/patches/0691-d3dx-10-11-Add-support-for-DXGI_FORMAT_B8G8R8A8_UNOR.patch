@@ -1,0 +1,112 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Connor McAdams <cmcadams@codeweavers.com>
+Date: Tue, 13 Jan 2026 13:57:00 -0500
+Subject: [PATCH] d3dx{10,11}: Add support for DXGI_FORMAT_B8G8R8A8_UNORM_SRGB.
+
+Signed-off-by: Connor McAdams <cmcadams@codeweavers.com>
+
+CW-Bug-Id: #20442
+CW-Bug-Id: #23084
+CW-Bug-Id: #23301
+(cherry picked from commit e15ba9d19d1e2f2f643fad60b9dbd8314179274d)
+---
+ dlls/d3dx10_43/tests/d3dx10.c | 2 ++
+ dlls/d3dx10_43/texture.c      | 1 +
+ dlls/d3dx11_43/tests/d3dx11.c | 1 +
+ dlls/d3dx11_43/texture.c      | 1 +
+ dlls/d3dx9_36/d3dx_helpers.c  | 3 +++
+ dlls/d3dx9_36/d3dx_helpers.h  | 1 +
+ 6 files changed, 9 insertions(+)
+
+diff --git a/dlls/d3dx10_43/tests/d3dx10.c b/dlls/d3dx10_43/tests/d3dx10.c
+index 0ab087225f3..79bc2a2e5d5 100644
+--- a/dlls/d3dx10_43/tests/d3dx10.c
++++ b/dlls/d3dx10_43/tests/d3dx10.c
+@@ -5329,9 +5329,11 @@ static void test_get_image_info(void)
+ #if D3DX10_SDK_VERSION >= 40
+     check_dds_dxt10_format(DXGI_FORMAT_B8G8R8X8_UNORM, DXGI_FORMAT_B8G8R8X8_UNORM, FALSE);
+     check_dds_dxt10_format(DXGI_FORMAT_B8G8R8A8_UNORM, DXGI_FORMAT_B8G8R8A8_UNORM, FALSE);
++    check_dds_dxt10_format(DXGI_FORMAT_B8G8R8A8_UNORM_SRGB, DXGI_FORMAT_B8G8R8A8_UNORM_SRGB, FALSE);
+ #else
+     todo_wine check_dds_dxt10_format_unsupported(DXGI_FORMAT_B8G8R8X8_UNORM, E_FAIL);
+     todo_wine check_dds_dxt10_format_unsupported(DXGI_FORMAT_B8G8R8A8_UNORM, E_FAIL);
++    todo_wine check_dds_dxt10_format_unsupported(DXGI_FORMAT_B8G8R8A8_UNORM_SRGB, E_FAIL);
+ #endif
+ 
+     /* D3DX10GetImageInfoFromResource tests */
+diff --git a/dlls/d3dx10_43/texture.c b/dlls/d3dx10_43/texture.c
+index b8d7e8dcd9e..1bf145e6b39 100644
+--- a/dlls/d3dx10_43/texture.c
++++ b/dlls/d3dx10_43/texture.c
+@@ -111,6 +111,7 @@ static DXGI_FORMAT dxgi_format_from_d3dx_pixel_format_id(enum d3dx_pixel_format_
+         case D3DX_PIXEL_FORMAT_R8G8B8A8_UNORM_SRGB:     return DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+         case D3DX_PIXEL_FORMAT_R8G8B8A8_UNORM:          return DXGI_FORMAT_R8G8B8A8_UNORM;
+         case D3DX_PIXEL_FORMAT_B8G8R8A8_UNORM:          return DXGI_FORMAT_B8G8R8A8_UNORM;
++        case D3DX_PIXEL_FORMAT_B8G8R8A8_UNORM_SRGB:     return DXGI_FORMAT_B8G8R8A8_UNORM_SRGB;
+         case D3DX_PIXEL_FORMAT_B8G8R8X8_UNORM:          return DXGI_FORMAT_B8G8R8X8_UNORM;
+         case D3DX_PIXEL_FORMAT_R10G10B10A2_UNORM:       return DXGI_FORMAT_R10G10B10A2_UNORM;
+         case D3DX_PIXEL_FORMAT_R16G16B16A16_UNORM:      return DXGI_FORMAT_R16G16B16A16_UNORM;
+diff --git a/dlls/d3dx11_43/tests/d3dx11.c b/dlls/d3dx11_43/tests/d3dx11.c
+index 6668e8e4d0b..5ee3e56d832 100644
+--- a/dlls/d3dx11_43/tests/d3dx11.c
++++ b/dlls/d3dx11_43/tests/d3dx11.c
+@@ -4666,6 +4666,7 @@ static void test_get_image_info(void)
+     check_dds_dxt10_format(DXGI_FORMAT_R8G8_UNORM, DXGI_FORMAT_R8G8_UNORM, FALSE);
+     check_dds_dxt10_format(DXGI_FORMAT_B8G8R8X8_UNORM, DXGI_FORMAT_B8G8R8X8_UNORM, FALSE);
+     check_dds_dxt10_format(DXGI_FORMAT_B8G8R8A8_UNORM, DXGI_FORMAT_B8G8R8A8_UNORM, FALSE);
++    check_dds_dxt10_format(DXGI_FORMAT_B8G8R8A8_UNORM_SRGB, DXGI_FORMAT_B8G8R8A8_UNORM_SRGB, FALSE);
+ 
+     /* D3DX11GetImageInfoFromResource tests */
+ 
+diff --git a/dlls/d3dx11_43/texture.c b/dlls/d3dx11_43/texture.c
+index 86508395a11..2c06dfefe19 100644
+--- a/dlls/d3dx11_43/texture.c
++++ b/dlls/d3dx11_43/texture.c
+@@ -110,6 +110,7 @@ static DXGI_FORMAT dxgi_format_from_d3dx_pixel_format_id(enum d3dx_pixel_format_
+         case D3DX_PIXEL_FORMAT_R8G8B8A8_UNORM_SRGB:     return DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+         case D3DX_PIXEL_FORMAT_R8G8B8A8_UNORM:          return DXGI_FORMAT_R8G8B8A8_UNORM;
+         case D3DX_PIXEL_FORMAT_B8G8R8A8_UNORM:          return DXGI_FORMAT_B8G8R8A8_UNORM;
++        case D3DX_PIXEL_FORMAT_B8G8R8A8_UNORM_SRGB:     return DXGI_FORMAT_B8G8R8A8_UNORM_SRGB;
+         case D3DX_PIXEL_FORMAT_B8G8R8X8_UNORM:          return DXGI_FORMAT_B8G8R8X8_UNORM;
+         case D3DX_PIXEL_FORMAT_R10G10B10A2_UNORM:       return DXGI_FORMAT_R10G10B10A2_UNORM;
+         case D3DX_PIXEL_FORMAT_R16G16B16A16_UNORM:      return DXGI_FORMAT_R16G16B16A16_UNORM;
+diff --git a/dlls/d3dx9_36/d3dx_helpers.c b/dlls/d3dx9_36/d3dx_helpers.c
+index 18d7fc6bf72..fb61d24c77c 100644
+--- a/dlls/d3dx9_36/d3dx_helpers.c
++++ b/dlls/d3dx9_36/d3dx_helpers.c
+@@ -93,6 +93,7 @@ static const struct pixel_format_desc formats[] =
+     /* format                                    bpc               shifts             bpp blocks   alpha type   rgb type     flags */
+     {D3DX_PIXEL_FORMAT_B8G8R8_UNORM,             { 0,  8,  8,  8}, { 0, 16,  8,  0},  3, 1, 1,  3, CTYPE_EMPTY, CTYPE_UNORM, 0           },
+     {D3DX_PIXEL_FORMAT_B8G8R8A8_UNORM,           { 8,  8,  8,  8}, {24, 16,  8,  0},  4, 1, 1,  4, CTYPE_UNORM, CTYPE_UNORM, 0           },
++    {D3DX_PIXEL_FORMAT_B8G8R8A8_UNORM_SRGB,      { 8,  8,  8,  8}, {24, 16,  8,  0},  4, 1, 1,  4, CTYPE_UNORM, CTYPE_UNORM, FMT_FLAG_DXGI|FMT_FLAG_SRGB},
+     {D3DX_PIXEL_FORMAT_B8G8R8X8_UNORM,           { 0,  8,  8,  8}, { 0, 16,  8,  0},  4, 1, 1,  4, CTYPE_EMPTY, CTYPE_UNORM, 0           },
+     {D3DX_PIXEL_FORMAT_R8G8B8A8_UNORM,           { 8,  8,  8,  8}, {24,  0,  8, 16},  4, 1, 1,  4, CTYPE_UNORM, CTYPE_UNORM, 0           },
+     {D3DX_PIXEL_FORMAT_R8G8B8A8_UNORM_SRGB,      { 8,  8,  8,  8}, {24,  0,  8, 16},  4, 1, 1,  4, CTYPE_UNORM, CTYPE_UNORM, FMT_FLAG_DXGI|FMT_FLAG_SRGB},
+@@ -423,6 +424,7 @@ enum d3dx_pixel_format_id d3dx_pixel_format_id_from_dxgi_format(uint32_t format)
+         case DXGI_FORMAT_R8G8B8A8_UNORM:           return D3DX_PIXEL_FORMAT_R8G8B8A8_UNORM;
+         case DXGI_FORMAT_R8G8B8A8_UNORM_SRGB:      return D3DX_PIXEL_FORMAT_R8G8B8A8_UNORM_SRGB;
+         case DXGI_FORMAT_B8G8R8A8_UNORM:           return D3DX_PIXEL_FORMAT_B8G8R8A8_UNORM;
++        case DXGI_FORMAT_B8G8R8A8_UNORM_SRGB:      return D3DX_PIXEL_FORMAT_B8G8R8A8_UNORM_SRGB;
+         case DXGI_FORMAT_B8G8R8X8_UNORM:           return D3DX_PIXEL_FORMAT_B8G8R8X8_UNORM;
+         case DXGI_FORMAT_B5G6R5_UNORM:             return D3DX_PIXEL_FORMAT_B5G6R5_UNORM;
+         case DXGI_FORMAT_B5G5R5A1_UNORM:           return D3DX_PIXEL_FORMAT_B5G5R5A1_UNORM;
+@@ -472,6 +474,7 @@ static DXGI_FORMAT dxgi_format_from_d3dx_pixel_format_id(enum d3dx_pixel_format_
+         case D3DX_PIXEL_FORMAT_R8G8B8A8_UNORM_SRGB:     return DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+         case D3DX_PIXEL_FORMAT_R8G8B8A8_UNORM:          return DXGI_FORMAT_R8G8B8A8_UNORM;
+         case D3DX_PIXEL_FORMAT_B8G8R8A8_UNORM:          return DXGI_FORMAT_B8G8R8A8_UNORM;
++        case D3DX_PIXEL_FORMAT_B8G8R8A8_UNORM_SRGB:     return DXGI_FORMAT_B8G8R8A8_UNORM_SRGB;
+         case D3DX_PIXEL_FORMAT_B8G8R8X8_UNORM:          return DXGI_FORMAT_B8G8R8X8_UNORM;
+         case D3DX_PIXEL_FORMAT_B5G6R5_UNORM:            return DXGI_FORMAT_B5G6R5_UNORM;
+         case D3DX_PIXEL_FORMAT_B5G5R5A1_UNORM:          return DXGI_FORMAT_B5G5R5A1_UNORM;
+diff --git a/dlls/d3dx9_36/d3dx_helpers.h b/dlls/d3dx9_36/d3dx_helpers.h
+index ff948892d3f..2d2c6bdbc0c 100644
+--- a/dlls/d3dx9_36/d3dx_helpers.h
++++ b/dlls/d3dx9_36/d3dx_helpers.h
+@@ -173,6 +173,7 @@ enum d3dx_pixel_format_id
+ {
+     D3DX_PIXEL_FORMAT_B8G8R8_UNORM,
+     D3DX_PIXEL_FORMAT_B8G8R8A8_UNORM,
++    D3DX_PIXEL_FORMAT_B8G8R8A8_UNORM_SRGB,
+     D3DX_PIXEL_FORMAT_B8G8R8X8_UNORM,
+     D3DX_PIXEL_FORMAT_R8G8B8A8_UNORM,
+     D3DX_PIXEL_FORMAT_R8G8B8A8_UNORM_SRGB,

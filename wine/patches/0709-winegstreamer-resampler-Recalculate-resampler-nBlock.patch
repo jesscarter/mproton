@@ -1,0 +1,55 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Fri, 16 Aug 2024 14:22:56 +0200
+Subject: [PATCH] winegstreamer/resampler: Recalculate resampler nBlockAlign
+ and avgBytesPerSec values.
+
+CW-Bug-Id: #20833
+(cherry picked from commit d76ee46d465cf4e8766d6895158d3740268b7e86)
+mproton-resolved: 11.20 replaced winegstreamer's resampler with an FFmpeg (libswresample) one in resampledmo, whose IMFTransform Set{Input,Output}Type() convert the MF type to a DMO type and pass it to the IMediaObject side. Proton's recalculation of nBlockAlign and nAvgBytesPerSec is done there on the converted WAVEFORMATEX, so the MF path behaves like Proton's (block size and input/output buffer sizes from bits * channels) and the DMO path is unchanged.
+---
+ dlls/resampledmo/resampler.c | 17 +++++++++++++++++
+ 1 file changed, 17 insertions(+)
+
+diff --git a/dlls/resampledmo/resampler.c b/dlls/resampledmo/resampler.c
+index e04940c0ad3..ea1033d8f5c 100644
+--- a/dlls/resampledmo/resampler.c
++++ b/dlls/resampledmo/resampler.c
+@@ -621,6 +621,19 @@ static HRESULT WINAPI transform_GetOutputAvailableType(IMFTransform *iface, DWOR
+     return hr;
+ }
+ 
++/* Recalculate nBlockAlign and nAvgBytesPerSec from the sample size and channel
++ * count, instead of trusting the values of the MF media type. */
++static void fixup_wave_format_alignment(DMO_MEDIA_TYPE *type)
++{
++    WAVEFORMATEX *wfx;
++
++    if (!IsEqualGUID(&type->formattype, &FORMAT_WaveFormatEx) || type->cbFormat < sizeof(*wfx))
++        return;
++    wfx = (WAVEFORMATEX *)type->pbFormat;
++    wfx->nBlockAlign = wfx->wBitsPerSample * wfx->nChannels / 8;
++    wfx->nAvgBytesPerSec = wfx->nSamplesPerSec * wfx->nBlockAlign;
++}
++
+ static HRESULT WINAPI transform_SetInputType(IMFTransform *iface, DWORD id, IMFMediaType *type, DWORD flags)
+ {
+     DWORD dmo_flags = flags & MFT_SET_TYPE_TEST_ONLY ? DMO_SET_TYPEF_TEST_ONLY : 0;
+@@ -632,6 +645,8 @@ static HRESULT WINAPI transform_SetInputType(IMFTransform *iface, DWORD id, IMFM
+ 
+     if (type && FAILED(hr = MFInitAMMediaTypeFromMFMediaType(type, FORMAT_WaveFormatEx, (AM_MEDIA_TYPE *)&tmp)))
+         return hr;
++    if (type)
++        fixup_wave_format_alignment(&tmp);
+     hr = MF_RESULT_FROM_DMO(IMediaObject_SetInputType(&impl->IMediaObject_iface, id, mt, dmo_flags));
+     MoFreeMediaType(&tmp);
+     return hr;
+@@ -648,6 +663,8 @@ static HRESULT WINAPI transform_SetOutputType(IMFTransform *iface, DWORD id, IMF
+ 
+     if (type && FAILED(hr = MFInitAMMediaTypeFromMFMediaType(type, FORMAT_WaveFormatEx, (AM_MEDIA_TYPE *)&tmp)))
+         return hr;
++    if (type)
++        fixup_wave_format_alignment(&tmp);
+     hr = MF_RESULT_FROM_DMO(IMediaObject_SetOutputType(&impl->IMediaObject_iface, id, mt, dmo_flags));
+     MoFreeMediaType(&tmp);
+     return hr;

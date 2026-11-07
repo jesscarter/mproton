@@ -23,3 +23,8 @@ e4848caf5c3	skipped-linux	winepulse.drv (PulseAudio) is not built on macOS; depe
 acd2f9f92fd	dropped-upstream	superseded: wine-11.20's ImeSetCompositionString() already strips trailing zeros (all of them) and ends the composition on an empty string
 1bd0c7edb54	dropped-upstream	superseded: wine-11.20 handles D3DX_FILTER_SRGB_IN/OUT (CONV_FLAG_SRGB_IN/OUT with the exact sRGB curve, not gamma 2.2)
 b123817064e	dropped-upstream	superseded: wine-11.20 implements D3DX10LoadTextureFromTexture() upstream (different code, same author); later d3dx10 ports use it
+347bd52e55f	conflict	test-only: adds d3dx10 tests for saving to non-DDS formats on top of the D3DX10SaveTexture* tests, which the series doesn't carry (they need test helpers 11.20 replaced); the code it tests is ported (df77a666b2b)
+b2083eb3adb	dropped-upstream	superseded: wine-11.20's session_shutdown_current_topology() already shuts the stream sink down whether or not the node has an IMFActivate (plain if, not else if)
+6ff63e51e04	dropped-upstream	superseded: wine-11.20 rewrote the sample grabber request accounting (7488a4b8944 "Ensure we always have four requests outstanding/satisfied", 314dffeaa38 removed sample_count); a seek re-requests up to MAX_SAMPLE_QUEUE_LENGTH
+193a76753e1	dropped-upstream	superseded: wine-11.20 replaced winegstreamer's resampler with an FFmpeg one in resampledmo, which already keeps the input/output formats as WAVEFORMATEX(TENSIBLE); the follow-up d76ee46d465 is ported onto it
+60c7e66a137	conflict	removes the GL context creation that 80eb9f6e2bd (OpenGL WMReader pipeline, OpenGL group, conflict) adds to winegstreamer/unixlib.c; port together with that commit

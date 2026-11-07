@@ -6,12 +6,12 @@ The mproton Wine tree is athei's macOS ARM64 Wine (`athei/wine` `arm64-patched`,
 
 ## TL;DR
 
-- **The series:** 687 patches in [`wine/patches/`](../wine/patches), on athei `5959a04b1af` ([`wine/base.ref`](../wine/base.ref)). `wine/apply.sh <dir>` clones athei and applies them as commits on branch `mproton`.
-- **Proton's 1454 commits:** 635 applied cleanly, 47 applied with a hand merge or a port, 413 dropped as already upstream in 11.20 (or superseded), 22 dropped because Proton reverts them itself, 134 skipped as Linux-only, 3 skipped as generated-file deletions, and **200 not carried yet** because they don't apply on the 11.20 base. Per-commit status: [Every Proton commit](#every-proton-commit) and [`wine/series.tsv`](../wine/series.tsv).
+- **The series:** 725 patches in [`wine/patches/`](../wine/patches), on athei `5959a04b1af` ([`wine/base.ref`](../wine/base.ref)). `wine/apply.sh <dir>` clones athei and applies them as commits on branch `mproton`.
+- **Proton's 1454 commits:** 652 applied cleanly, 68 applied with a hand merge or a port, 416 dropped as already upstream in 11.20 (or superseded), 22 dropped because Proton reverts them itself, 134 skipped as Linux-only, 3 skipped as generated-file deletions, and **159 not carried yet** because they don't apply on the 11.20 base. Per-commit status: [Every Proton commit](#every-proton-commit) and [`wine/series.tsv`](../wine/series.tsv).
 - **Linux build:** `wine/apply.sh` into a fresh directory, then `configure` and a full `make` for aarch64 Linux with PE arches `aarch64,arm64ec,i386` (llvm-mingw 20261020): **0 errors**. A control build of unmodified athei with the same setup also has 0 errors. See [Linux verification](#linux-verification).
 - **Darwin build blockers from the triage:** #4 (libdrm in `amd_ags_x64`) and #5 (`<linux/limits.h>` in protontts) are fixed with configure checks and a portable header, not `#ifdef __APPLE__`. #1 to #3 and #6 don't occur, because the code that had them (fsync/ntsync, the glibc `mallopt` hack, the win32u fshack) isn't in the series.
 - **`__APPLE__`:** the series adds no `__APPLE__` code. One Proton hunk lands inside an existing Mach-only branch (a 5-line stub in `ntdll/unix/process.c`). That stub, plus every unix-side change in the series, has only been compiled for Linux.
-- **The biggest gaps:** the 200 commits that don't apply on 11.20. They include all of the fullscreen hack, most of Proton's `virtual.c` work (`WINE_SIMULATE_WRITECOPY`, address-space limits), the winegstreamer/media-converter chain, touch and rawinput, and part of the controller work. See [Not carried](#not-carried-and-why).
+- **The biggest gaps:** the 200 commits that don't apply on 11.20. They include all of the fullscreen hack, most of Proton's `virtual.c` work (`WINE_SIMULATE_WRITECOPY`, address-space limits), the OpenGL WMReader pipeline, touch and rawinput, and part of the controller work. See [Not carried](#not-carried-and-why).
 
 ## Layout
 
@@ -90,6 +90,8 @@ Nothing in the series adds `__APPLE__` code. These are the places where it could
    `dlls/amd_ags_x64/unixlib.c`, `dlls/crypt32/unixlib.c`, `dlls/msv1_0/unixlib.c`, `dlls/ntdll/unix/debug.c`, `dlls/ntdll/unix/env.c`, `dlls/ntdll/unix/file.c`, `dlls/ntdll/unix/loader.c`, `dlls/ntdll/unix/loadorder.c`, `dlls/ntdll/unix/process.c`, `dlls/ntdll/unix/registry.c`, `dlls/ntdll/unix/security.c`, `dlls/ntdll/unix/signal_i386.c`, `dlls/ntdll/unix/signal_x86_64.c`, `dlls/ntdll/unix/socket.c`, `dlls/ntdll/unix/sync.c`, `dlls/ntdll/unix/system.c`, `dlls/ntdll/unix/thread.c`, `dlls/ntdll/unix/unix_private.h`, `dlls/ntdll/unix/virtual.c`, `dlls/opencl/unix_private.h`, `dlls/opencl/unix_thunks.c`, `dlls/opencl/unix_wrappers.c`, `dlls/opengl32/unix_wgl.c`, `dlls/protontts/unixlib.c`, `dlls/win32u/d3dkmt.c`, `dlls/win32u/dce.c`, `dlls/win32u/font.c`, `dlls/win32u/freetype.c`, `dlls/win32u/input.c`, `dlls/win32u/message.c`, `dlls/win32u/rawinput.c`, `dlls/win32u/scroll.c`, `dlls/win32u/sysparams.c`, `dlls/win32u/win32u_private.h`, `dlls/win32u/window.c`, `dlls/windows.media.speech/unixlib.c`, `dlls/winebus.sys/bus_udev.c`, `dlls/winebus.sys/main.c`, `dlls/winedmo/unix_demuxer.c`, `dlls/winedmo/unix_media_type.c`, `dlls/winegstreamer/unixlib.c`, `dlls/winegstreamer/wg_format.c`, `dlls/winegstreamer/wg_media_type.c`, `dlls/winegstreamer/wg_parser.c`, `dlls/winegstreamer/wg_transform.c`, `loader/main.c`, `server/change.c`, `server/file.c`, `server/file.h`, `server/handle.c`, `server/main.c`, `server/mapping.c`, `server/object.c`, `server/object.h`, `server/process.c`, `server/protocol.def`, `server/queue.c`, `server/registry.c`, `server/request.c`, `server/security.h`, `server/sock.c`, `server/thread.c`, `server/token.c`, `server/window.c`
 
    </details>
+
+   Batch 2 adds these unix-side files (compiled for aarch64 Linux only, with GStreamer 1.24 and FFmpeg 6.1 from Ubuntu): `dlls/winegstreamer/wg_parser.c`, `wg_media_type.c`, `wg_task_pool.c` (new), `unix_private.h`, `media-converter/{fossilize,lib,murmur3,videoconv}.c` and `media-converter.h` (also built into winedmo now), `dlls/winedmo/unix_demuxer.c`, `unix_demuxer_mediaconv.c` (new), `unix_media_type.c`, `unix_private.h`, `libavcodec/pcm_byte_order_reverse_bsf.c` (new). The winedmo ones are only compiled when configure finds FFmpeg.
 4. **`configure` from Autoconf 2.71** with Proton's new checks (Vosk, Piper, libdrm/libdrm_amdgpu, `-D__STDC__` for the PE compilers).
 5. **`tools/makedep.c`**, which has four hand-merged Proton changes. It's a build tool, so it runs on the Mac.
 
@@ -107,26 +109,23 @@ Things that compile but need a Mac to tell whether they work:
 | triage group | not carried |
 |---|---:|
 | ntdll unix side (virtual memory, signals, sync, process) | 52 |
-| multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | 33 |
 | win32u (windows, messages, display, d3dkmt) | 21 |
 | fullscreen hack (fshack, win32u/opengl32 side) | 21 |
 | OpenGL (opengl32 / win32u opengl / wined3d) | 20 |
 | winebus / HID / Steam Input / controllers | 16 |
 | wineserver core | 15 |
-| d3dx / d3dcompiler / ddraw / dxgi PE side | 10 |
 | winevulkan / win32u Vulkan / OpenXR / vrclient | 6 |
 | ARM64 / ARM64EC / FEX / WoW64 | 4 |
 | other PE-side game / app fixes | 1 |
+| multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | 1 |
+| d3dx / d3dcompiler / ddraw / dxgi PE side | 1 |
 | Proton integration (steam.exe, proton hooks, lsteamclient, env vars) | 1 |
 
 What that means in practice:
 
 - **Fullscreen hack (21):** all conflict with athei's winemac/win32u OpenGL-on-EGL work. The triage planned to gate it off on macOS first anyway (winemac has its own scaling), so its absence is the intended starting state.
 - **ntdll `virtual.c` and `loader.c` (52):** `WINE_SIMULATE_WRITECOPY` and its ~15 per-game enables, the 2 GB / `PROTON_LIMIT_ADDRESS_SPACE` limits, heap hacks, `WINE_RAM_REPORTING_BIAS`, the PE link map for GDB. This is athei's W^X / 4K-page / FEX memory code, and these need porting by someone who can test on a Mac.
-- **Multimedia (33):** the mf session changes, the audio decoder rename and the Vorbis/Opus decoders, the media-converter demuxer, the D3D11 video processor. They conflict with 11.20's winegstreamer/winedmo rework. Without them, the media-converter (Proton's video transcoding path) is not wired in.
-- **win32u + wineserver (35):** touch/pointer input, rawinput absolute mouse, layered-window game hacks, NtFlushKey, file security xattrs, CPU topology override.
-- **winebus/xinput (15):** Steam Input virtual-controller handling and SDL tweaks. hidraw/udev parts are Linux-only anyway.
-- **d3dx (10):** the rest of Connor McAdams' d3dx10/d3dx11 texture work: D3DX10SaveTextureToMemory/ToFile (DDS, DXT10 DDS, other file formats), D3DX11LoadTextureFromTexture/FilterTexture/SaveTexture*, and two DXGI formats. See [Porting the conflicts](#porting-the-conflicts).
+- **Multimedia (1) and d3dx (1):** a winegstreamer commit that only removes code from the OpenGL WMReader pipeline (OpenGL group), and a test-only d3dx10 commit. See [Porting the conflicts](#porting-the-conflicts).
 - The other high-confidence groups (networking, audio, prefix, Proton integration except `PROTON_LIMIT_ADDRESS_SPACE`, other PE-side fixes) are done: see [Porting the conflicts](#porting-the-conflicts). The one left in "other PE-side" is Proton's pdh stub, which 11.20 supersedes.
 
 ## Porting the conflicts
@@ -142,7 +141,20 @@ Following [`wine/PORTING.md`](../wine/PORTING.md), the `conflict` commits are be
 - **Tests:** test hunks that extend tests 11.20 rewrote were left out (mostly d3dx10), as each note says. Tests aren't compiled by the build check (`--disable-tests`).
 - **Build:** an incremental build after the batch, then a from-scratch build through `wine/apply.sh`: 0 errors (see [Linux verification](#linux-verification)). The build caught one porting bug: `WINE_PACKAGE_FLAGS` leaves `OPENCL_LIBS=-lOpenCL` even when OpenCL isn't found, so the opencl port clears it.
 
-**Next:** the rest of d3dx (10), then multimedia (33). For the d3dx10 save functions, the d3dx9 helper hunks apply cleanly; the d3dx10 part has to be written on 11.20's staging helpers, because Proton's version uses its own `struct d3d10_texture` code that 11.20 replaced.
+**Batch 2 (2026-11-07): d3dx and multimedia, 43 commits.** 200 → 159 `conflict`.
+
+- **d3dx (10):** 9 carried. The d3dx10 save chain (D3DX10SaveTextureToMemory DDS / DXT10 DDS / other formats, SaveTextureToFile) is rewritten on 11.20's `d3dx_texture_info` and staging-resource helpers; the d3dx9 helper hunks apply as is. The d3dx11 commits (LoadTextureFromTexture, FilterTexture, SaveTextureTo*) apply as is: they bring their own helpers, and 11.20 (and upstream master) still only stub them. Test hunks are left out, as in batch 1. `347bd52e55f` is test-only (it extends the save tests the series doesn't carry) and stays `conflict` with that note.
+- **Multimedia (33):** 29 carried, 3 superseded, 1 left.
+  - mf session keeps the allocated output sample; qasf registers the ASF Reader media type (in a new `rsrc.rc`, since 11.20 dropped qasf's `version.rc`).
+  - winegstreamer (GStreamer paths): capssetter colorimetry hack, `wg_task_pool`, URI media source with uridecodebin (VRChat-style streaming), no protonvideoconvert retry for web URIs, NV12 and 4:2 planar alignment fixes, the `aac_decoder` → `audio_decoder` rename with the Vorbis and Opus decoders (msauddecmft's carried Vorbis hack needs it), Okayunyumu format hacks, quartz_parser raw conversions.
+  - 11.20 moved the video processor and resampler to FFmpeg-based PE DLLs (`msvproc`, `resampledmo`, built on the bundled `libs/ffmpeg`). Proton's D3D11 video-processor blit, its colour range and the `IMFVideoProcessorControl` stub are ported into `msvproc` (D3D11 first, swscale as the fallback, where Proton fell back to GStreamer). The resampler block-align fix goes into `resampledmo`'s MF type conversion.
+  - winedmo: the media-converter demuxer and its 10 follow-ups (tag files, Opus/PNG/AV1 hacks, big-endian PCM bitstream filter, transcoded-stream bookkeeping). The port fixes a double free in Proton's `mediaconv_demuxer_open()` that every file with an undecodable codec hits when no Proton fozdb or `MEDIACONV_BLANK_VIDEO_FILE` is set, which is the default on macOS.
+  - Superseded (`dropped-upstream`): the mf stream-sink shutdown fix and the sample-grabber seek fix (11.20 has both, rewritten), and the resampler WAVEFORMATEX rework (11.20's FFmpeg resampler).
+  - Left (`conflict`): `60c7e66a137` only removes GL-context code that the OpenGL WMReader commit `80eb9f6e2bd` adds; port it with that commit (OpenGL group). Two Okayunyumu hunks that extend that commit's `enable_opengl` game list are left out for the same reason.
+- **Nothing is skipped as Linux-only here.** The GStreamer paths build against the sysroot's GStreamer (1.24); athei's bundle ships 1.28. winedmo's media-converter needs unix-side FFmpeg: whether mach9's build has it decides whether that path exists on macOS. Without FFmpeg, winedmo's unix side is the stub and MF falls back to the GStreamer handlers.
+- **Build:** this build check also had FFmpeg in the sysroot (Ubuntu's 6.1), so winedmo's unix side and the media-converter demuxer were compiled for the first time. See [Linux verification](#linux-verification).
+
+**Next:** win32u + wineserver (36), then winebus/xinput (16). See [`wine/PORTING.md`](../wine/PORTING.md).
 
 ## Using it with mach9
 
@@ -186,18 +198,18 @@ Generated by `wine/scripts/status-tables.py wine/series.tsv`. Links go to the Pr
 
 | status | commits |
 |---|---:|
-| applied | 635 |
-| hand-merged | 47 |
-| dropped-upstream | 413 |
+| applied | 652 |
+| hand-merged | 68 |
+| dropped-upstream | 416 |
 | dropped-reverted | 22 |
 | skipped-linux | 134 |
 | skipped-generated | 3 |
-| conflict | 200 |
+| conflict | 159 |
 | **total** | **1454** |
 
 | group | applied | hand-merged | dropped-upstream | dropped-reverted | skipped-linux | skipped-generated | conflict |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | 146 | 3 | 136 |  |  |  | 33 |
+| multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | 160 | 18 | 139 |  |  |  | 1 |
 | other PE-side game / app fixes | 102 | 11 | 76 | 2 |  |  | 1 |
 | ntdll unix side (virtual memory, signals, sync, process) | 32 | 3 | 36 | 4 |  | 1 | 52 |
 | GPU vendor libs (amd_ags, atiadlxx, amdxc, nvapi, dxgi vendor) | 112 |  |  |  |  |  |  |
@@ -206,7 +218,7 @@ Generated by `wine/scripts/status-tables.py wine/series.tsv`. Links go to the Pr
 | prefix / registry defaults (wine.inf, wineboot, fonts) | 57 | 3 | 7 |  |  |  |  |
 | win32u (windows, messages, display, d3dkmt) | 25 | 3 | 10 |  |  |  | 21 |
 | OpenGL (opengl32 / win32u opengl / wined3d) | 15 | 1 | 17 |  |  |  | 20 |
-| d3dx / d3dcompiler / ddraw / dxgi PE side | 18 | 8 | 16 |  |  |  | 10 |
+| d3dx / d3dcompiler / ddraw / dxgi PE side | 21 | 14 | 16 |  |  |  | 1 |
 | wineserver core | 17 | 1 | 8 |  |  |  | 15 |
 | speech / TTS (windows.media.speech, protontts, Vosk, Piper) | 21 | 2 | 15 |  |  |  |  |
 | ARM64 / ARM64EC / FEX / WoW64 | 9 | 1 | 6 | 10 | 2 |  | 4 |
@@ -222,7 +234,7 @@ Generated by `wine/scripts/status-tables.py wine/series.tsv`. Links go to the Pr
 | audio drivers (winepulse/winealsa) & mmdevapi | 6 | 1 | 2 |  | 2 |  |  |
 | winewayland.drv |  |  | 1 |  | 6 |  |  |
 
-<details><summary><b>Applied cleanly</b> (635)</summary>
+<details><summary><b>Applied cleanly</b> (652)</summary>
 
 | # | Proton commit | group | subject | note |
 |---:|---|---|---|---|
@@ -861,10 +873,27 @@ Generated by `wine/scripts/status-tables.py wine/series.tsv`. Links go to the Pr
 | 663 | [`377075a4df1`](https://github.com/ValveSoftware/wine/commit/377075a4df1) | networking (ws2_32, nsiproxy, iphlpapi, winhttp, wininet) | winhttp: Handle SEC_I_RENEGOTIATE after DecryptMessage. | dlls/winhttp/net.c |
 | 671 | [`a20b0e65ebe`](https://github.com/ValveSoftware/wine/commit/a20b0e65ebe) | OpenGL (opengl32 / win32u opengl / wined3d) | kernelbase: HACK: Add --use-gl=swiftshader for another game. | dlls/kernelbase/process.c |
 | 672 | [`c7e869c1f61`](https://github.com/ValveSoftware/wine/commit/c7e869c1f61) | d3dx / d3dcompiler / ddraw / dxgi PE side | kernelbase: HACK: Force angle d3d9 for Alpha League. | dlls/kernelbase/process.c |
+| 691 | [`e15ba9d19d1`](https://github.com/ValveSoftware/wine/commit/e15ba9d19d1) | d3dx / d3dcompiler / ddraw / dxgi PE side | d3dx{10,11}: Add support for DXGI_FORMAT_B8G8R8A8_UNORM_SRGB. | dlls/d3dx9_36/d3dx_helpers.c |
+| 692 | [`21e624ea64f`](https://github.com/ValveSoftware/wine/commit/21e624ea64f) | d3dx / d3dcompiler / ddraw / dxgi PE side | d3dx{10,11}: Add support for DXGI_FORMAT_R11G11B10_FLOAT. | dlls/d3dx9_36/d3dx_helpers.c |
+| 694 | [`e2c3789375c`](https://github.com/ValveSoftware/wine/commit/e2c3789375c) | d3dx / d3dcompiler / ddraw / dxgi PE side | d3dx11: Implement D3DX11SaveTextureTo{File,Memory}(). | dlls/d3dx11_43/texture.c |
+| 700 | [`f6ae465013f`](https://github.com/ValveSoftware/wine/commit/f6ae465013f) | multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | winegstreamer: Don't try protonvideoconvert if URI has a web scheme. | dlls/winegstreamer/wg_parser.c |
+| 705 | [`b2a834d2913`](https://github.com/ValveSoftware/wine/commit/b2a834d2913) | multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | HACK: winegstreamer: Expose Opus decoding support. | dlls/winegstreamer/aac_decoder.c |
+| 706 | [`1d9c6e885e3`](https://github.com/ValveSoftware/wine/commit/1d9c6e885e3) | multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | winegstreamer: HACK: Add support for &gt; 2 opus channels. | dlls/winegstreamer/wg_media_type.c |
+| 711 | [`a9ee089454d`](https://github.com/ValveSoftware/wine/commit/a9ee089454d) | multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | winegstreamer/video_processor: Support colorspace range in the D3D11 video processor. | dlls/msvproc/video_processor.c |
+| 714 | [`0f1a6d8dc3b`](https://github.com/ValveSoftware/wine/commit/0f1a6d8dc3b) | multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | winedmo: Create h264-used and placeholder-video-used tag files. | dlls/winedmo/unix_demuxer_mediaconv.c |
+| 715 | [`2389039f129`](https://github.com/ValveSoftware/wine/commit/2389039f129) | multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | winedmo: HACK: Do not check for opus decoder support. | dlls/winedmo/unix_demuxer_mediaconv.c |
+| 716 | [`4fddbd162f8`](https://github.com/ValveSoftware/wine/commit/4fddbd162f8) | multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | winedmo: Handle PCM audio big-endian formats. | dlls/winedmo/Makefile.in dlls/winedmo/unix_private.h |
+| 717 | [`ba7c395311e`](https://github.com/ValveSoftware/wine/commit/ba7c395311e) | multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | HACK: winedmo: Ignore missing PNG decoders. | dlls/winedmo/unix_demuxer_mediaconv.c |
+| 718 | [`948361d64d3`](https://github.com/ValveSoftware/wine/commit/948361d64d3) | multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | HACK: winedmo: Assume that AV1 decoder is available. | dlls/winedmo/unix_demuxer_mediaconv.c |
+| 719 | [`d6ce736340e`](https://github.com/ValveSoftware/wine/commit/d6ce736340e) | multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | media-converter: Move VIDEO_CONV_FOZ_TAG_ definitions to a header. | dlls/winedmo/unix_demuxer_mediaconv.c |
+| 720 | [`e262f97e796`](https://github.com/ValveSoftware/wine/commit/e262f97e796) | multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | media-converter: Move mark_transcoded_stream() to lib.c. | dlls/winegstreamer/media-converter/lib.c dlls/winegstreamer/media-converter/media-converter.h |
+| 721 | [`d051cb54e92`](https://github.com/ValveSoftware/wine/commit/d051cb54e92) | multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | winedmo/media-converter: Use mark_transcoded_stream(). | dlls/winedmo/unix_demuxer_mediaconv.c |
+| 722 | [`b0351fe293a`](https://github.com/ValveSoftware/wine/commit/b0351fe293a) | multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | winegstreamer/media-converter: Factor videoconv stream discarding into helper function. | dlls/winegstreamer/media-converter/lib.c dlls/winegstreamer/media-converter/media-converter.h |
+| 723 | [`3999811509e`](https://github.com/ValveSoftware/wine/commit/3999811509e) | multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | winedmo: Discard transcoded streams from the dump db. | dlls/winedmo/unix_demuxer_mediaconv.c |
 
 </details>
 
-<details><summary><b>Applied with a hand merge</b> (47)</summary>
+<details><summary><b>Applied with a hand merge</b> (68)</summary>
 
 | # | Proton commit | group | subject | note |
 |---:|---|---|---|---|
@@ -915,14 +944,37 @@ Generated by `wine/scripts/status-tables.py wine/series.tsv`. Links go to the Pr
 | 683 | [`c7b2ce3ab42`](https://github.com/ValveSoftware/wine/commit/c7b2ce3ab42) | d3dx / d3dcompiler / ddraw / dxgi PE side | d3dx10: Implement D3DX10CreateAsyncShaderResourceViewProcessor(). | 11.20 moved D3DX10CompileFromMemory() out of async.c (to d3dx9_36/d3dx10_compiler.c), so the copy in this hunk's context is dropped; test hunks left out. |
 | 684 | [`60a9a91b179`](https://github.com/ValveSoftware/wine/commit/60a9a91b179) | d3dx / d3dcompiler / ddraw / dxgi PE side | d3dx10: Implement D3DX10CreateShaderResourceViewFrom{File,Memory,Resource}(). | the new functions sit where 11.20 now has its own texture-loading helpers (init_d3d10_box() etc.); placed them before those and dropped the superseded Proton struct definitions from the conflict. They use create_texture()/load_file()/d3dx_load_resource_*(), which 11.20 still has. Test hunks left out. |
 | 685 | [`8448f7cdff1`](https://github.com/ValveSoftware/wine/commit/8448f7cdff1) | d3dx / d3dcompiler / ddraw / dxgi PE side | d3dx10: Add stubs for D3DX10SaveTextureTo{Memory,File}(). | test hunks left out (they build on test helpers from Proton's superseded d3dx10 texture tests); the stubs apply as is. |
+| 686 | [`e3bf5801d01`](https://github.com/ValveSoftware/wine/commit/e3bf5801d01) | d3dx / d3dcompiler / ddraw / dxgi PE side | d3dx10: Add partial support for saving to DDS files in D3DX10SaveTextureToMemory(). | 11.20 replaced Proton's struct d3d10_texture helpers with d3dx_texture_info and the d3d10 staging-resource helpers, so D3DX10SaveTextureToMemory() is rewritten on those: each subresource is copied into a CPU-readable staging texture, mapped, and converted into the DDS image's pixels. The cube-map flag comes from the texture desc (d3dx_texture_info has none). The d3dx9 helper hunks apply as is. Proton's test changes are left out: they edit save tests that the series doesn't carry (batch 1 left them out with the stub commit). |
+| 687 | [`2ed12ec865c`](https://github.com/ValveSoftware/wine/commit/2ed12ec865c) | d3dx / d3dcompiler / ddraw / dxgi PE side | d3dx10: Add support for saving DXT10 DDS files in D3DX10SaveTextureToMemory(). | The d3dx_helpers.c hunks apply as is. The d3dx10 hunk (dropping the texture-array check) is applied to the rewritten D3DX10SaveTextureToMemory() from e3bf5801d01; the subresource loop there already walks every array layer. Test changes are left out (the save tests aren't carried). |
+| 688 | [`df77a666b2b`](https://github.com/ValveSoftware/wine/commit/df77a666b2b) | d3dx / d3dcompiler / ddraw / dxgi PE side | d3dx10: Add support for saving textures to non-DDS file formats. | The d3dx9 helper hunks (d3dx_save_pixels_to_memory() taking a destination format, WIC encoding moved to util.c) apply as is. The d3dx10 side is written on 11.20's helpers: a new d3dx10_save_texture_to_image_file() copies subresource 0 into a staging texture, maps it, and encodes it with d3dx_save_pixels_to_memory(); d3dx10_get_save_format_for_file_format() is Proton's. Test changes are left out (the save tests aren't carried). |
+| 689 | [`046d8148368`](https://github.com/ValveSoftware/wine/commit/046d8148368) | d3dx / d3dcompiler / ddraw / dxgi PE side | d3dx11: Implement D3DX11LoadTextureFromTexture(). | The d3dx11 code applies as is (it brings its own d3dx_d3d11_texture helpers; 11.20 and upstream master still only have the stub). The test hunk is left out: it conflicts with 11.20's rewritten readback helpers in tests/d3dx11.c (compare_float(), the float4 readback), and tests aren't built by the Linux check. |
+| 690 | [`aebaaafc346`](https://github.com/ValveSoftware/wine/commit/aebaaafc346) | d3dx / d3dcompiler / ddraw / dxgi PE side | d3dx11: Implement D3DX11FilterTexture(). | The d3dx11 code applies as is. The test hunk is left out: it extends the D3DX11LoadTextureFromTexture() tests, which 046d8148368's port leaves out. |
+| 693 | [`ed581161c2a`](https://github.com/ValveSoftware/wine/commit/ed581161c2a) | d3dx / d3dcompiler / ddraw / dxgi PE side | d3dx10: Implement D3DX10SaveTextureToFile{A,W}(). | The code applies as is on top of the ported D3DX10SaveTextureToMemory(). The test hunk is left out (it extends the save tests the series doesn't carry). |
+| 695 | [`4b32c8027b9`](https://github.com/ValveSoftware/wine/commit/4b32c8027b9) | multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | mf/session: Keep previously allocated sample with the transform streams. | 11.20 added fields to struct transform_stream (raw_audio, block alignment, samples_independent), so the context moved; the change itself is the same: the new allocated_sample field, its release in transform_stream_drop_events(), reuse in transform_get_external_output_sample() and keeping the sample on MF_E_TRANSFORM_NEED_MORE_INPUT in transform_node_pull_samples(). |
+| 696 | [`06e7989b5f5`](https://github.com/ValveSoftware/wine/commit/06e7989b5f5) | multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | qasf: Register ASF Reader filter media type. | 11.20 removed qasf's version.rc (version info now comes from VER_PRODUCTVERSION in Makefile.in), so the WINE_REGISTRY resource for qasf.rgs goes in a new rsrc.rc, added to SOURCES, like winegstreamer's. |
+| 697 | [`aed70985a03`](https://github.com/ValveSoftware/wine/commit/aed70985a03) | multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | HACK: winegstreamer/wg_parser: Use capssetter to ignore non-default YUV color spaces. | 11.20 puts a videoconvert in front of deinterlace (to fixate the framerate). The capssetter still goes first in the chain, before that videoconvert, which is also where Proton's own tree has it now. |
+| 698 | [`eb6aa9d9dab`](https://github.com/ValveSoftware/wine/commit/eb6aa9d9dab) | multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | winegstreamer: Introduce and use a new wg_task_pool helper. | The conflict was the OpenGL parser-context setup that 80eb9f6e2bd (OpenGL group, not carried) adds in wg_parser_create(); the task pool is created without it. Also initializes the GError pointer passed to gst_task_pool_prepare() to NULL, which GLib requires (Proton passes it uninitialized), and frees it. |
+| 699 | [`4d9083e70bc`](https://github.com/ValveSoftware/wine/commit/4d9083e70bc) | multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | HACK: winegstreamer: Implement URI media source with uridecodebin. | Only gst_private.h conflicted: 11.20 moved the video processor to msvproc, so video_processor_create() is gone from the context and only gstreamer_scheme_handler_create() is added. The rest applies as is on 11.20's object_context/media_source_create(). Also releases the placeholder byte stream in scheme_handler_BeginCreateObject() once the context holds it (Proton leaks one per URL). |
+| 701 | [`c53c923bd3d`](https://github.com/ValveSoftware/wine/commit/c53c923bd3d) | multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | winegstreamer: HACK: Fix media source NV12 output alignment. | 11.20 added has_initial_gap and get_buffer_called to the wg_parser_stream bool fields; fix_nv12 is added after them. The rest applies as is. |
+| 702 | [`3d7861b04ae`](https://github.com/ValveSoftware/wine/commit/3d7861b04ae) | multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | winegstreamer: HACK: Add alignment fix for 4:2 planar video. | Same struct-field context as c53c923bd3d: fix_nv12 becomes fix_align after 11.20's has_initial_gap/get_buffer_called fields. The rest applies as is. |
+| 703 | [`94af7660fbb`](https://github.com/ValveSoftware/wine/commit/94af7660fbb) | multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | winegstreamer: Rename aac_decoder to audio_decoder. | 11.20 moved color_convert.c out of winegstreamer, so only the aac_decoder.c line of SOURCES changes. transform_ProcessMessage(), which 11.20 rewrote, also gets the struct rename. |
+| 704 | [`3fee8f8e973`](https://github.com/ValveSoftware/wine/commit/3fee8f8e973) | multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | HACK: winegstreamer/audio_decoder: Expose a vorbis audio decoder. | Only the class_objects context differed: 11.20 moved the video processor to msvproc, so CLSID_wg_video_processor is no longer listed. The GStreamer audio decoder is what msauddecmft's carried Vorbis hack (d96440f340d) creates. |
+| 707 | [`8fceab6c218`](https://github.com/ValveSoftware/wine/commit/8fceab6c218) | multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | HACK: winegstreamer: Add media formats hacks for Okayunyumu. | The two init_stream()/reinit_stream() hunks add the game to the enable_opengl list of 80eb9f6e2bd (OpenGL WMReader pipeline, OpenGL group, not carried), so they're left out; the media-format hacks in video_decoder.c, wma_decoder.c and the other wm_reader.c places apply as is. |
+| 708 | [`bae09b9161a`](https://github.com/ValveSoftware/wine/commit/bae09b9161a) | multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | HACK: winegstreamer/quartz_parser: Allow conversions between raw formats in the parser. | Only context: 11.20's parser_create() takes UINT32 flags instead of BOOL output_compressed. The new decodebin_parser_source_get_media_type() wrapper goes before it; the rest applies as is. |
+| 709 | [`d76ee46d465`](https://github.com/ValveSoftware/wine/commit/d76ee46d465) | multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | winegstreamer/resampler: Recalculate resampler nBlockAlign and avgBytesPerSec values. | 11.20 replaced winegstreamer's resampler with an FFmpeg (libswresample) one in resampledmo, whose IMFTransform Set{Input,Output}Type() convert the MF type to a DMO type and pass it to the IMediaObject side. Proton's recalculation of nBlockAlign and nAvgBytesPerSec is done there on the converted WAVEFORMATEX, so the MF path behaves like Proton's (block size and input/output buffer sizes from bits * channels) and the DMO path is unchanged. |
+| 710 | [`a603bd2142f`](https://github.com/ValveSoftware/wine/commit/a603bd2142f) | multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | winegstreamer: Support hardware buffer conversion with D3D11 video processor. | 11.20 replaced winegstreamer's GStreamer video processor with an FFmpeg (libswscale) one in dlls/msvproc. Ported there: Proton's D3D11 helpers (video_processor_get_d3d11_resource() .. video_processor_process_output_d3d11()) are added as is, since msvproc also keeps input_type/output_type as IMFMediaType. ProcessInput() now keeps the input sample; ProcessOutput() tries the D3D11 video processor blit first and, where Proton fell back to wg_transform, falls back to msvproc's swscale path (the old ProcessInput() body, now video_processor_push_sample()). Unlike Proton, an output-sample allocation failure keeps the input sample queued instead of dropping it, and the queued sample is released in video_processor_cleanup(). |
+| 712 | [`9facd953714`](https://github.com/ValveSoftware/wine/commit/9facd953714) | multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | winegstreamer: Add stub implementation for IMFVideoProcessorControl to video_processor. | Applied to 11.20's FFmpeg video processor in dlls/msvproc (it replaced winegstreamer's): the interface is added next to the queued input_sample of the a603bd2142f port, and the vtbl and stubs go before msvproc's class factory instead of video_processor_create(). The QueryInterface() and lpVtbl hunks apply as is. |
+| 713 | [`ddc98478406`](https://github.com/ValveSoftware/wine/commit/ddc98478406) | multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | HACK: winedmo/media-converter: Implement media converter demuxer. | 11.20 reordered demuxer_destroy() to free the stream filters before the format context; that order is kept, with params-&gt;context taken from the new demuxer-&gt;stream_context, since the media-converter path replaces the AVIOContext. 11.20's new MP4 stream-name parsing reads the stream context the same way. Fixes in Proton's code: mediaconv_demuxer_open() now clears *ctx after freeing it (otherwise, with no transcoded entry and no MEDIACONV_BLANK_VIDEO_FILE, the default outside Proton, demuxer_create()'s failure path freed the context a second time), frees its hash buffer, and the operator precedence in demuxer_create()'s 'if ((ret = mediaconv_demuxer_open(...) &lt; 0))' is fixed so the error code is logged. |
 
 </details>
 
-<details><summary><b>Dropped: already upstream (or superseded) in wine-11.20</b> (413)</summary>
+<details><summary><b>Dropped: already upstream (or superseded) in wine-11.20</b> (416)</summary>
 
 | Proton commit | group | subject | note |
 |---|---|---|---|
 | [`5b8cb810c67`](https://github.com/ValveSoftware/wine/commit/5b8cb810c67) | winevulkan / win32u Vulkan / OpenXR / vrclient | winevulkan: Add vk.xml / video.xml version 1.4.325. | superseded: athei/11.20 generates from vk.xml 1.4.363 (make_vulkan downloads it); Proton's in-tree 1.4.325 copy would downgrade the spec |
+| [`b2083eb3adb`](https://github.com/ValveSoftware/wine/commit/b2083eb3adb) | multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | mf: Don't make stream sink shutdown dependent on IMFActivate presence in node. | superseded: wine-11.20's session_shutdown_current_topology() already shuts the stream sink down whether or not the node has an IMFActivate (plain if, not else if) |
+| [`193a76753e1`](https://github.com/ValveSoftware/wine/commit/193a76753e1) | multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | winegstreamer/resampler: Use WAVEFORMATEX for input/output media types. | superseded: wine-11.20 replaced winegstreamer's resampler with an FFmpeg one in resampledmo, which already keeps the input/output formats as WAVEFORMATEX(TENSIBLE); the follow-up d76ee46d465 is ported onto it |
 | [`be051c83ce1`](https://github.com/ValveSoftware/wine/commit/be051c83ce1) | winebus / HID / Steam Input / controllers | xinput1_3: Introduce a new open_device_at_index helper. | same author+subject upstream: bb7935f0e79 |
 | [`59647a33ccc`](https://github.com/ValveSoftware/wine/commit/59647a33ccc) | winex11.drv (window mgmt, input, XInput2, Vulkan surfaces) | winex11: Keep track of mouse device and pointer button mappings. | same author+subject upstream: ee8f27409eb |
 | [`7d23a1219bf`](https://github.com/ValveSoftware/wine/commit/7d23a1219bf) | win32u (windows, messages, display, d3dkmt) | win32u: Better handle flags for mouse in pointer messages. | same author+subject upstream: b94237cd348 |
@@ -944,6 +996,7 @@ Generated by `wine/scripts/status-tables.py wine/series.tsv`. Links go to the Pr
 | [`49a26f3bd8e`](https://github.com/ValveSoftware/wine/commit/49a26f3bd8e) | other PE-side game / app fixes | bcrypt: Support for ECDH_P521 through gcrypt. | superseded: wine-11.20 replaced the gnutls backend with SymCrypt on the PE side (149bd084066, b77b0a29b9e); ECDH P-521 is implemented with SymCrypt (no gcrypt needed) |
 | [`c18ebc392d1`](https://github.com/ValveSoftware/wine/commit/c18ebc392d1) | other PE-side game / app fixes | kernel32: Implement PackageFullNameFromId(). | wine-11.20 implements PackageFullNameFromId() (with tests) |
 | [`e415577be81`](https://github.com/ValveSoftware/wine/commit/e415577be81) | other PE-side game / app fixes | msvcrt: HACK: Introduce asm wrapper for _isatty on x64. | superseded: wine-11.20 has the upstream version, 738aac8c6ed "msvcrt: Introduce asm wrapper for _isatty on x64." (same lea of __pioinfo for the Ruby runtime, different padding) |
+| [`6ff63e51e04`](https://github.com/ValveSoftware/wine/commit/6ff63e51e04) | multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | mf: Initialise the grabber sample count when setting state after a seek. | superseded: wine-11.20 rewrote the sample grabber request accounting (7488a4b8944 "Ensure we always have four requests outstanding/satisfied", 314dffeaa38 removed sample_count); a seek re-requests up to MAX_SAMPLE_QUEUE_LENGTH |
 | [`ae6ae2609ef`](https://github.com/ValveSoftware/wine/commit/ae6ae2609ef) | other PE-side game / app fixes | icu: Add stub dll. | superseded: wine-11.20 has a real icu.dll (plus icuin/icuuc) built on bundled ICU, not a stub |
 | [`99d77fc35dc`](https://github.com/ValveSoftware/wine/commit/99d77fc35dc) | other PE-side game / app fixes | icu: Forward function to Unicode library v68. | superseded: forwards to a native ICU v68 from Proton's stub icu.dll; wine-11.20 implements icu.dll itself |
 | [`c1937396073`](https://github.com/ValveSoftware/wine/commit/c1937396073) | other PE-side game / app fixes | kernelbase: Add stub for GetIntegratedDisplaySize(). | same patch-id upstream |
@@ -1518,35 +1571,13 @@ Generated by `wine/scripts/status-tables.py wine/series.tsv`. Links go to the Pr
 
 </details>
 
-<details><summary><b>Not carried: conflicts with the wine-11.20 / athei base</b> (200)</summary>
+<details><summary><b>Not carried: conflicts with the wine-11.20 / athei base</b> (159)</summary>
 
 | Proton commit | group | subject | note |
 |---|---|---|---|
 | [`85ffc3a79a3`](https://github.com/ValveSoftware/wine/commit/85ffc3a79a3) | winebus / HID / Steam Input / controllers | dinput: Don't apply G920 mapping when used through windows.gaming.input. | dlls/dinput/joystick_hid.c |
-| [`aed70985a03`](https://github.com/ValveSoftware/wine/commit/aed70985a03) | multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | HACK: winegstreamer/wg_parser: Use capssetter to ignore non-default YUV color spaces. | dlls/winegstreamer/wg_parser.c |
-| [`b2083eb3adb`](https://github.com/ValveSoftware/wine/commit/b2083eb3adb) | multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | mf: Don't make stream sink shutdown dependent on IMFActivate presence in node. | dlls/mf/session.c |
-| [`4b32c8027b9`](https://github.com/ValveSoftware/wine/commit/4b32c8027b9) | multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | mf/session: Keep previously allocated sample with the transform streams. | dlls/mf/session.c |
-| [`06e7989b5f5`](https://github.com/ValveSoftware/wine/commit/06e7989b5f5) | multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | qasf: Register ASF Reader filter media type. | dlls/tiptsf/tiptsf.idl |
-| [`a603bd2142f`](https://github.com/ValveSoftware/wine/commit/a603bd2142f) | multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | winegstreamer: Support hardware buffer conversion with D3D11 video processor. | dlls/msvproc/video_processor.c |
-| [`a9ee089454d`](https://github.com/ValveSoftware/wine/commit/a9ee089454d) | multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | winegstreamer/video_processor: Support colorspace range in the D3D11 video processor. | dlls/msvproc/video_processor.c |
-| [`193a76753e1`](https://github.com/ValveSoftware/wine/commit/193a76753e1) | multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | winegstreamer/resampler: Use WAVEFORMATEX for input/output media types. | dlls/winegstreamer/resampler.c |
-| [`d76ee46d465`](https://github.com/ValveSoftware/wine/commit/d76ee46d465) | multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | winegstreamer/resampler: Recalculate resampler nBlockAlign and avgBytesPerSec values. | dlls/winegstreamer/resampler.c |
-| [`94af7660fbb`](https://github.com/ValveSoftware/wine/commit/94af7660fbb) | multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | winegstreamer: Rename aac_decoder to audio_decoder. | dlls/winegstreamer/Makefile.in |
-| [`3fee8f8e973`](https://github.com/ValveSoftware/wine/commit/3fee8f8e973) | multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | HACK: winegstreamer/audio_decoder: Expose a vorbis audio decoder. | dlls/winegstreamer/mfplat.c |
-| [`ddc98478406`](https://github.com/ValveSoftware/wine/commit/ddc98478406) | multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | HACK: winedmo/media-converter: Implement media converter demuxer. | dlls/winedmo/unix_demuxer.c |
 | [`80eb9f6e2bd`](https://github.com/ValveSoftware/wine/commit/80eb9f6e2bd) | OpenGL (opengl32 / win32u opengl / wined3d) | HACK: winegstreamer/wm_reader: Use OpenGL video processing pipeline for WMReader. | dlls/winegstreamer/gst_private.h dlls/winegstreamer/main.c dlls/winegstreamer/media_source.c dlls/winegstreamer/quartz_parser.c dlls/winegstreamer/unixlib.h dlls/winegstreamer/wm_reader.c |
-| [`eb6aa9d9dab`](https://github.com/ValveSoftware/wine/commit/eb6aa9d9dab) | multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | winegstreamer: Introduce and use a new wg_task_pool helper. | dlls/winegstreamer/wg_parser.c |
-| [`b2a834d2913`](https://github.com/ValveSoftware/wine/commit/b2a834d2913) | multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | HACK: winegstreamer: Expose Opus decoding support. | dlls/winegstreamer/aac_decoder.c |
-| [`4d9083e70bc`](https://github.com/ValveSoftware/wine/commit/4d9083e70bc) | multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | HACK: winegstreamer: Implement URI media source with uridecodebin. | dlls/winegstreamer/gst_private.h |
-| [`bae09b9161a`](https://github.com/ValveSoftware/wine/commit/bae09b9161a) | multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | HACK: winegstreamer/quartz_parser: Allow conversions between raw formats in the parser. | dlls/winegstreamer/quartz_parser.c |
 | [`18b446c6ebc`](https://github.com/ValveSoftware/wine/commit/18b446c6ebc) | OpenGL (opengl32 / win32u opengl / wined3d) | HACK: winegstreamer/wm_reader: Disable OpenGL pipeline for KiriKiri games. | dlls/winegstreamer/wm_reader.c |
-| [`0f1a6d8dc3b`](https://github.com/ValveSoftware/wine/commit/0f1a6d8dc3b) | multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | winedmo: Create h264-used and placeholder-video-used tag files. | dlls/winedmo/unix_demuxer_mediaconv.c |
-| [`9facd953714`](https://github.com/ValveSoftware/wine/commit/9facd953714) | multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | winegstreamer: Add stub implementation for IMFVideoProcessorControl to video_processor. | dlls/msvproc/video_processor.c |
-| [`f6ae465013f`](https://github.com/ValveSoftware/wine/commit/f6ae465013f) | multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | winegstreamer: Don't try protonvideoconvert if URI has a web scheme. | dlls/winegstreamer/wg_parser.c |
-| [`2389039f129`](https://github.com/ValveSoftware/wine/commit/2389039f129) | multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | winedmo: HACK: Do not check for opus decoder support. | dlls/winedmo/unix_demuxer_mediaconv.c |
-| [`1d9c6e885e3`](https://github.com/ValveSoftware/wine/commit/1d9c6e885e3) | multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | winegstreamer: HACK: Add support for &gt; 2 opus channels. | dlls/winegstreamer/wg_media_type.c |
-| [`c53c923bd3d`](https://github.com/ValveSoftware/wine/commit/c53c923bd3d) | multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | winegstreamer: HACK: Fix media source NV12 output alignment. | dlls/winegstreamer/wg_parser.c |
-| [`8fceab6c218`](https://github.com/ValveSoftware/wine/commit/8fceab6c218) | multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | HACK: winegstreamer: Add media formats hacks for Okayunyumu. | dlls/winegstreamer/wm_reader.c |
 | [`5687f5ab368`](https://github.com/ValveSoftware/wine/commit/5687f5ab368) | winebus / HID / Steam Input / controllers | winebus: Enable SDL input logging when hid channel is enabled. | dlls/winebus.sys/bus_sdl.c |
 | [`64ca68c68d6`](https://github.com/ValveSoftware/wine/commit/64ca68c68d6) | winebus / HID / Steam Input / controllers | xinput1_3: Move controller_(destroy\|disable) code around. | dlls/xinput1_3/main.c |
 | [`59e1f60bc14`](https://github.com/ValveSoftware/wine/commit/59e1f60bc14) | winebus / HID / Steam Input / controllers | HACK: xinput1_3: Check Steam overlay presence and disconnect controllers when enabled. | dlls/xinput1_3/main.c |
@@ -1619,8 +1650,6 @@ Generated by `wine/scripts/status-tables.py wine/series.tsv`. Links go to the Pr
 | [`7c88dbe8048`](https://github.com/ValveSoftware/wine/commit/7c88dbe8048) | ntdll unix side (virtual memory, signals, sync, process) | ntdll: HACK: Enable WINE_SIMULATE_WRITECOPY for Dinogen Online. | dlls/ntdll/unix/loader.c |
 | [`2bf5a5799fa`](https://github.com/ValveSoftware/wine/commit/2bf5a5799fa) | ntdll unix side (virtual memory, signals, sync, process) | HACK: ntdll: Add WINE_HEAP_ZERO_MEMORY variable to force zeroing allocated memory. | dlls/ntdll/loader.c |
 | [`870373c99ae`](https://github.com/ValveSoftware/wine/commit/870373c99ae) | ntdll unix side (virtual memory, signals, sync, process) | HACK: ntdll: Extend heap zero hack to private heaps. | dlls/ntdll/heap.c dlls/ntdll/loader.c dlls/ntdll/ntdll_misc.h |
-| [`4fddbd162f8`](https://github.com/ValveSoftware/wine/commit/4fddbd162f8) | multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | winedmo: Handle PCM audio big-endian formats. | dlls/winedmo/Makefile.in dlls/winedmo/unix_private.h |
-| [`6ff63e51e04`](https://github.com/ValveSoftware/wine/commit/6ff63e51e04) | multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | mf: Initialise the grabber sample count when setting state after a seek. | dlls/mf/samplegrabber.c |
 | [`2d465f6f52b`](https://github.com/ValveSoftware/wine/commit/2d465f6f52b) | OpenGL (opengl32 / win32u opengl / wined3d) | opengl32: HACK: Fixup shaders for Cossacks 3. | dlls/opengl32/thunks.c |
 | [`a955c350413`](https://github.com/ValveSoftware/wine/commit/a955c350413) | OpenGL (opengl32 / win32u opengl / wined3d) | opengl32: HACK: Fixup shaders for Joe Danger 2: The Movie. | dlls/opengl32/wgl.c |
 | [`133c6f3e551`](https://github.com/ValveSoftware/wine/commit/133c6f3e551) | OpenGL (opengl32 / win32u opengl / wined3d) | opengl32: HACK: Fixup shaders for Joe Danger. | dlls/opengl32/wgl.c |
@@ -1649,16 +1678,7 @@ Generated by `wine/scripts/status-tables.py wine/series.tsv`. Links go to the Pr
 | [`3398c7a38a4`](https://github.com/ValveSoftware/wine/commit/3398c7a38a4) | ntdll unix side (virtual memory, signals, sync, process) | ntdll: HACK: Also simulate async file read and IO cancellation for Immortals Fenyx Rising. | dlls/ntdll/unix/loader.c |
 | [`7f8f044448e`](https://github.com/ValveSoftware/wine/commit/7f8f044448e) | winevulkan / win32u Vulkan / OpenXR / vrclient | vrclient: vulkan-1: Prefer builtin. | dlls/vulkan-1/Makefile.in |
 | [`758caa78e85`](https://github.com/ValveSoftware/wine/commit/758caa78e85) | ntdll unix side (virtual memory, signals, sync, process) | ntdll: HACK: Restore wine_nt_to_unix_file_name() as Unix call. | dlls/ntdll/ntdll.spec |
-| [`e3bf5801d01`](https://github.com/ValveSoftware/wine/commit/e3bf5801d01) | d3dx / d3dcompiler / ddraw / dxgi PE side | d3dx10: Add partial support for saving to DDS files in D3DX10SaveTextureToMemory(). | dlls/d3dx10_43/tests/d3dx10.c dlls/d3dx10_43/texture.c |
-| [`2ed12ec865c`](https://github.com/ValveSoftware/wine/commit/2ed12ec865c) | d3dx / d3dcompiler / ddraw / dxgi PE side | d3dx10: Add support for saving DXT10 DDS files in D3DX10SaveTextureToMemory(). | dlls/d3dx10_43/tests/d3dx10.c dlls/d3dx10_43/texture.c dlls/d3dx9_36/d3dx_helpers.c |
-| [`347bd52e55f`](https://github.com/ValveSoftware/wine/commit/347bd52e55f) | d3dx / d3dcompiler / ddraw / dxgi PE side | d3dx10/tests: Add tests for saving textures to non-DDS file formats. | dlls/d3dx10_43/tests/d3dx10.c |
-| [`df77a666b2b`](https://github.com/ValveSoftware/wine/commit/df77a666b2b) | d3dx / d3dcompiler / ddraw / dxgi PE side | d3dx10: Add support for saving textures to non-DDS file formats. | dlls/d3dx10_43/tests/d3dx10.c dlls/d3dx10_43/texture.c dlls/d3dx9_36/d3dx_helpers.h |
-| [`046d8148368`](https://github.com/ValveSoftware/wine/commit/046d8148368) | d3dx / d3dcompiler / ddraw / dxgi PE side | d3dx11: Implement D3DX11LoadTextureFromTexture(). | dlls/d3dx11_43/tests/d3dx11.c |
-| [`aebaaafc346`](https://github.com/ValveSoftware/wine/commit/aebaaafc346) | d3dx / d3dcompiler / ddraw / dxgi PE side | d3dx11: Implement D3DX11FilterTexture(). | dlls/d3dx11_43/tests/d3dx11.c dlls/d3dx11_43/texture.c |
-| [`e15ba9d19d1`](https://github.com/ValveSoftware/wine/commit/e15ba9d19d1) | d3dx / d3dcompiler / ddraw / dxgi PE side | d3dx{10,11}: Add support for DXGI_FORMAT_B8G8R8A8_UNORM_SRGB. | dlls/d3dx9_36/d3dx_helpers.c |
-| [`21e624ea64f`](https://github.com/ValveSoftware/wine/commit/21e624ea64f) | d3dx / d3dcompiler / ddraw / dxgi PE side | d3dx{10,11}: Add support for DXGI_FORMAT_R11G11B10_FLOAT. | dlls/d3dx9_36/d3dx_helpers.c |
-| [`ed581161c2a`](https://github.com/ValveSoftware/wine/commit/ed581161c2a) | d3dx / d3dcompiler / ddraw / dxgi PE side | d3dx10: Implement D3DX10SaveTextureToFile{A,W}(). | dlls/d3dx10_43/tests/d3dx10.c dlls/d3dx10_43/texture.c |
-| [`e2c3789375c`](https://github.com/ValveSoftware/wine/commit/e2c3789375c) | d3dx / d3dcompiler / ddraw / dxgi PE side | d3dx11: Implement D3DX11SaveTextureTo{File,Memory}(). | dlls/d3dx11_43/texture.c |
+| [`347bd52e55f`](https://github.com/ValveSoftware/wine/commit/347bd52e55f) | d3dx / d3dcompiler / ddraw / dxgi PE side | d3dx10/tests: Add tests for saving textures to non-DDS file formats. | test-only: adds d3dx10 tests for saving to non-DDS formats on top of the D3DX10SaveTexture* tests, which the series doesn't carry (they need test helpers 11.20 replaced); the code it tests is ported (df77a666b2b) |
 | [`1c95e6c0b50`](https://github.com/ValveSoftware/wine/commit/1c95e6c0b50) | winebus / HID / Steam Input / controllers | setupapi: Use HID device instance ID when checking winebus devices for presence. | dlls/setupapi/devinst.c |
 | [`958ab120581`](https://github.com/ValveSoftware/wine/commit/958ab120581) | winebus / HID / Steam Input / controllers | winepulse.drv: Create container ID from udev if possible. | dlls/winepulse.drv/Makefile.in |
 | [`a0b2e8c6d7e`](https://github.com/ValveSoftware/wine/commit/a0b2e8c6d7e) | ntdll unix side (virtual memory, signals, sync, process) | ntdll: HACK: Enable WINE_SIMULATE_WRITECOPY for DCS World. | dlls/ntdll/unix/loader.c |
@@ -1680,7 +1700,6 @@ Generated by `wine/scripts/status-tables.py wine/series.tsv`. Links go to the Pr
 | [`f23f4e2c664`](https://github.com/ValveSoftware/wine/commit/f23f4e2c664) | fullscreen hack (fshack, win32u/opengl32 side) | fshack: win32u: Always use sampling path for multisampled drawables in blit_framebuffer_surface(). | dlls/win32u/opengl.c |
 | [`3590f588202`](https://github.com/ValveSoftware/wine/commit/3590f588202) | fullscreen hack (fshack, win32u/opengl32 side) | fshack: opengl32, win32u: Update draw and read buffers when switching between drawables. | dlls/opengl32/unix_wgl.c dlls/win32u/opengl.c |
 | [`889a48f4108`](https://github.com/ValveSoftware/wine/commit/889a48f4108) | fullscreen hack (fshack, win32u/opengl32 side) | fshack: win32u: Recreate GL framebuffers and their storage only when needed. | dlls/win32u/opengl.c include/wine/opengl_driver.h |
-| [`ba7c395311e`](https://github.com/ValveSoftware/wine/commit/ba7c395311e) | multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | HACK: winedmo: Ignore missing PNG decoders. | dlls/winedmo/unix_demuxer_mediaconv.c |
 | [`537a7f81db4`](https://github.com/ValveSoftware/wine/commit/537a7f81db4) | OpenGL (opengl32 / win32u opengl / wined3d) | win32u: HACK: Allow drawables with different format in win32u_wglMakeContextCurrentARB() for SWKOTOR. | dlls/win32u/opengl.c |
 | [`8f04b950c03`](https://github.com/ValveSoftware/wine/commit/8f04b950c03) | fullscreen hack (fshack, win32u/opengl32 side) | fshack: opengl32: Blit from framebuffer surface draw buffer in glBlit[Named]Framebuffer[EXT](). | dlls/opengl32/make_opengl dlls/opengl32/unix_thunks.c dlls/opengl32/unix_thunks.h dlls/opengl32/unix_wgl.c |
 | [`6abeb17272e`](https://github.com/ValveSoftware/wine/commit/6abeb17272e) | fullscreen hack (fshack, win32u/opengl32 side) | fshack: win32u, opengl: Only call resolve_default_fbo() before readback. | dlls/opengl32/unix_wgl.c dlls/win32u/opengl.c |
@@ -1692,7 +1711,7 @@ Generated by `wine/scripts/status-tables.py wine/series.tsv`. Links go to the Pr
 | [`c394539d9b9`](https://github.com/ValveSoftware/wine/commit/c394539d9b9) | fullscreen hack (fshack, win32u/opengl32 side) | fshack: win32u: Share last FB surface attachments state between shared contexts. | dlls/win32u/opengl.c include/wine/opengl_driver.h |
 | [`ecc4d2729f5`](https://github.com/ValveSoftware/wine/commit/ecc4d2729f5) | fullscreen hack (fshack, win32u/opengl32 side) | fshack: opengl32: Factor out is_wine_reserved_texture(). | dlls/opengl32/make_opengl dlls/opengl32/unix_private.h dlls/opengl32/unix_thunks.c dlls/opengl32/unix_wgl.c |
 | [`21651f4830d`](https://github.com/ValveSoftware/wine/commit/21651f4830d) | fullscreen hack (fshack, win32u/opengl32 side) | fshack, opengl32: Avoid allocating and freeing 64k textures at context creation. | dlls/opengl32/unix_wgl.c dlls/win32u/opengl.c include/wine/opengl_driver.h |
-| [`60c7e66a137`](https://github.com/ValveSoftware/wine/commit/60c7e66a137) | multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | winegstreamer: Remove explicit creation of GLContext. | dlls/winegstreamer/unixlib.c |
+| [`60c7e66a137`](https://github.com/ValveSoftware/wine/commit/60c7e66a137) | multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | winegstreamer: Remove explicit creation of GLContext. | removes the GL context creation that 80eb9f6e2bd (OpenGL WMReader pipeline, OpenGL group, conflict) adds to winegstreamer/unixlib.c; port together with that commit |
 | [`54fdf0f2e71`](https://github.com/ValveSoftware/wine/commit/54fdf0f2e71) | win32u (windows, messages, display, d3dkmt) | win32u: Create surface for SLWA layered windows. | dlls/win32u/dce.c dlls/win32u/window.c |
 | [`c3202e9d9f6`](https://github.com/ValveSoftware/wine/commit/c3202e9d9f6) | OpenGL (opengl32 / win32u opengl / wined3d) | HACK: win32u: Avoid loading EGL if WINE_USE_EGL=0. | dlls/win32u/opengl.c |
 | [`f02b1d5b6c1`](https://github.com/ValveSoftware/wine/commit/f02b1d5b6c1) | fullscreen hack (fshack, win32u/opengl32 side) | fshack: win32u: Do not keep old drawable as window unused if it was replaced. | dlls/win32u/opengl.c |
@@ -1707,12 +1726,7 @@ Generated by `wine/scripts/status-tables.py wine/series.tsv`. Links go to the Pr
 | [`e2a368054fc`](https://github.com/ValveSoftware/wine/commit/e2a368054fc) | ntdll unix side (virtual memory, signals, sync, process) | ntdll: HACK: Enable WINE_SIMULATE_WRITECOPY for Puppeteer : Control. | dlls/ntdll/unix/loader.c |
 | [`47e476af949`](https://github.com/ValveSoftware/wine/commit/47e476af949) | winevulkan / win32u Vulkan / OpenXR / vrclient | winevulkan: Convert Wine-specific function pointers to format matching 1.4.339+ schemas. | dlls/winevulkan/winevk.xml |
 | [`acda8ed2ebb`](https://github.com/ValveSoftware/wine/commit/acda8ed2ebb) | ntdll unix side (virtual memory, signals, sync, process) | ntdll: HACK: Add process exit delay for DCS World CEF processes. | dlls/ntdll/unix/loader.c dlls/ntdll/unix/process.c dlls/ntdll/unix/unix_private.h |
-| [`948361d64d3`](https://github.com/ValveSoftware/wine/commit/948361d64d3) | multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | HACK: winedmo: Assume that AV1 decoder is available. | dlls/winedmo/unix_demuxer_mediaconv.c |
 | [`2f70bfd4d0f`](https://github.com/ValveSoftware/wine/commit/2f70bfd4d0f) | winebus / HID / Steam Input / controllers | amend! HACK: winebus: Disable SDL2.30 new behavior for the SDL unix backend. | dlls/winebus.sys/bus_sdl.c |
-| [`d6ce736340e`](https://github.com/ValveSoftware/wine/commit/d6ce736340e) | multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | media-converter: Move VIDEO_CONV_FOZ_TAG_ definitions to a header. | dlls/winedmo/unix_demuxer_mediaconv.c |
-| [`e262f97e796`](https://github.com/ValveSoftware/wine/commit/e262f97e796) | multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | media-converter: Move mark_transcoded_stream() to lib.c. | dlls/winegstreamer/media-converter/lib.c dlls/winegstreamer/media-converter/media-converter.h |
-| [`d051cb54e92`](https://github.com/ValveSoftware/wine/commit/d051cb54e92) | multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | winedmo/media-converter: Use mark_transcoded_stream(). | dlls/winedmo/unix_demuxer_mediaconv.c |
-| [`3d7861b04ae`](https://github.com/ValveSoftware/wine/commit/3d7861b04ae) | multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | winegstreamer: HACK: Add alignment fix for 4:2 planar video. | dlls/winegstreamer/wg_parser.c |
 | [`d5651633f3a`](https://github.com/ValveSoftware/wine/commit/d5651633f3a) | fullscreen hack (fshack, win32u/opengl32 side) | fixup! fshack: win32u: Support vulkan scaling according to fake resolution. | dlls/win32u/vulkan.c |
 | [`9305c8e3c2c`](https://github.com/ValveSoftware/wine/commit/9305c8e3c2c) | ntdll unix side (virtual memory, signals, sync, process) | ntdll: HACK: Enable WINE_SIMULATE_WRITECOPY for Portal Worlds. | dlls/ntdll/unix/loader.c |
 | [`ab39667a111`](https://github.com/ValveSoftware/wine/commit/ab39667a111) | fullscreen hack (fshack, win32u/opengl32 side) | win32u, opengl32: fshack: Use SRGB framebuffer if target default FBO is SRGB capable. | dlls/opengl32/unix_wgl.c dlls/win32u/opengl.c |
@@ -1720,8 +1734,6 @@ Generated by `wine/scripts/status-tables.py wine/series.tsv`. Links go to the Pr
 | [`9af748e9df5`](https://github.com/ValveSoftware/wine/commit/9af748e9df5) | ntdll unix side (virtual memory, signals, sync, process) | ntdll: Add tests for PROCESS_PARAMS_IMAGE_KEY_MISSING flag. | dlls/ntdll/tests/info.c |
 | [`a75c78b4079`](https://github.com/ValveSoftware/wine/commit/a75c78b4079) | ntdll unix side (virtual memory, signals, sync, process) | fixup! ntdll: Implement CPU topology override. | dlls/ntdll/unix/system.c |
 | [`b9ee57ddd32`](https://github.com/ValveSoftware/wine/commit/b9ee57ddd32) | fullscreen hack (fshack, win32u/opengl32 side) | opengl32: fshack: Use fixed big number for gamma_ramp UBO name on compatibility profiles. | dlls/opengl32/unix_wgl.c |
-| [`b0351fe293a`](https://github.com/ValveSoftware/wine/commit/b0351fe293a) | multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | winegstreamer/media-converter: Factor videoconv stream discarding into helper function. | dlls/winegstreamer/media-converter/lib.c dlls/winegstreamer/media-converter/media-converter.h |
-| [`3999811509e`](https://github.com/ValveSoftware/wine/commit/3999811509e) | multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | winedmo: Discard transcoded streams from the dump db. | dlls/winedmo/unix_demuxer_mediaconv.c |
 
 </details>
 

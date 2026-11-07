@@ -1,0 +1,131 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Conor McCarthy <cmccarthy@codeweavers.com>
+Date: Fri, 10 Jan 2025 16:16:42 +1000
+Subject: [PATCH] winedmo: Handle PCM audio big-endian formats.
+
+CW-Bug-Id: #24614
+(cherry picked from commit 4fddbd162f89fbe1e3a3973738290583c3f7995e)
+
+mproton-resolved: Proton's libavcodec/pcm_byte_order_reverse_bsf.c defines its own AVBitStreamFilter (.filter/.init) and reads AVBSFContext.internal, which only works with FFmpeg before 5.1; with the public headers of FFmpeg 6.1 (Ubuntu) or 7 (Homebrew) it doesn't compile. Rewritten on the public API instead: big-endian PCM streams get the null bitstream filter with par_out->codec_id set to the little-endian codec (what Proton's filter init did), and demuxer_filter_packet() reverses the sample bytes of each packet in place (av_packet_make_writable()), so the file is gone. The unix_media_type.c hunk applies as is.
+---
+ dlls/winedmo/unix_demuxer.c    | 72 +++++++++++++++++++++++++++++++++-
+ dlls/winedmo/unix_media_type.c |  2 +
+ 2 files changed, 73 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/winedmo/unix_demuxer.c b/dlls/winedmo/unix_demuxer.c
+index c09fc6bc1ad..57f7d9b4915 100644
+--- a/dlls/winedmo/unix_demuxer.c
++++ b/dlls/winedmo/unix_demuxer.c
+@@ -37,6 +37,7 @@ static inline const char *debugstr_averr( int err )
+ struct stream
+ {
+     AVBSFContext *filter;
++    unsigned int byte_swap; /* bytes per sample to reverse, for big-endian PCM */
+     BOOL eos;
+ };
+ 
+@@ -104,6 +105,58 @@ NTSTATUS demuxer_check( void *arg )
+     return STATUS_SUCCESS;
+ }
+ 
++static BOOL codec_is_big_endian_pcm(enum AVCodecID codec_id)
++{
++    switch (codec_id)
++    {
++    case AV_CODEC_ID_PCM_S16BE:
++    case AV_CODEC_ID_PCM_S24BE:
++    case AV_CODEC_ID_PCM_S32BE:
++    case AV_CODEC_ID_PCM_S64BE:
++    case AV_CODEC_ID_PCM_F32BE:
++    case AV_CODEC_ID_PCM_F64BE:
++        return TRUE;
++    default:
++        return FALSE;
++    }
++}
++
++static enum AVCodecID little_endian_pcm_codec_id( enum AVCodecID codec_id )
++{
++    switch (codec_id)
++    {
++    case AV_CODEC_ID_PCM_S16BE: return AV_CODEC_ID_PCM_S16LE;
++    case AV_CODEC_ID_PCM_S24BE: return AV_CODEC_ID_PCM_S24LE;
++    case AV_CODEC_ID_PCM_S32BE: return AV_CODEC_ID_PCM_S32LE;
++    case AV_CODEC_ID_PCM_S64BE: return AV_CODEC_ID_PCM_S64LE;
++    case AV_CODEC_ID_PCM_F32BE: return AV_CODEC_ID_PCM_F32LE;
++    case AV_CODEC_ID_PCM_F64BE: return AV_CODEC_ID_PCM_F64LE;
++    default: return codec_id;
++    }
++}
++
++static int pcm_packet_reverse_byte_order( AVPacket *packet, unsigned int bytes_per_sample )
++{
++    uint8_t *data, *end, tmp;
++    unsigned int i;
++    int ret;
++
++    if ((ret = av_packet_make_writable( packet )) < 0) return ret;
++
++    end = packet->data + packet->size - packet->size % bytes_per_sample;
++    for (data = packet->data; data < end; data += bytes_per_sample)
++    {
++        for (i = 0; i < bytes_per_sample / 2; ++i)
++        {
++            tmp = data[i];
++            data[i] = data[bytes_per_sample - i - 1];
++            data[bytes_per_sample - i - 1] = tmp;
++        }
++    }
++
++    return 0;
++}
++
+ static NTSTATUS demuxer_create_streams( struct demuxer *demuxer )
+ {
+     UINT i;
+@@ -126,6 +179,18 @@ static NTSTATUS demuxer_create_streams( struct demuxer *demuxer )
+                 continue;
+             }
+         }
++        else if (codec_is_big_endian_pcm(par->codec_id) && par->bits_per_coded_sample > 0
++                && !(par->bits_per_coded_sample % 8))
++        {
++            /* WAVEFORMATEX does not contain endianness info, so this needs to be converted here:
++             * the stream is exposed as little-endian and demuxer_filter_packet() swaps the samples. */
++            av_bsf_get_null_filter( &stream->filter );
++            avcodec_parameters_copy( stream->filter->par_in, par );
++            avcodec_parameters_copy( stream->filter->par_out, par );
++            stream->filter->par_out->codec_id = little_endian_pcm_codec_id( par->codec_id );
++            stream->byte_swap = par->bits_per_coded_sample / 8;
++            continue;
++        }
+ 
+         av_bsf_get_null_filter( &stream->filter );
+         avcodec_parameters_copy( stream->filter->par_in, demuxer->ctx->streams[i]->codecpar );
+@@ -341,7 +406,12 @@ static NTSTATUS demuxer_filter_packet( struct demuxer *demuxer, AVPacket **packe
+         if (!(stream = demuxer->last_stream)) ret = 0;
+         else
+         {
+-            if (!(ret = av_bsf_receive_packet( stream->filter, *packet ))) return STATUS_SUCCESS;
++            if (!(ret = av_bsf_receive_packet( stream->filter, *packet )))
++            {
++                if (stream->byte_swap > 1 && (ret = pcm_packet_reverse_byte_order( *packet, stream->byte_swap )) < 0)
++                    WARN( "Failed to reverse PCM byte order, error %s.\n", debugstr_averr( ret ) );
++                return STATUS_SUCCESS;
++            }
+             if (ret == AVERROR_EOF) stream->eos = TRUE;
+             if (!ret || ret == AVERROR_EOF || ret == AVERROR(EAGAIN)) ret = 0;
+             else WARN( "Failed to read packet from filter, error %s.\n", debugstr_averr( ret ) );
+diff --git a/dlls/winedmo/unix_media_type.c b/dlls/winedmo/unix_media_type.c
+index 0a8f68c3836..df8d5a24d57 100644
+--- a/dlls/winedmo/unix_media_type.c
++++ b/dlls/winedmo/unix_media_type.c
+@@ -194,6 +194,8 @@ static NTSTATUS audio_format_from_codec_params( const AVCodecParameters *params,
+ 
+     format_tag = wave_format_tag_from_codec_id( params->codec_id );
+     if (params->codec_id == AV_CODEC_ID_OPUS) format_tag = WAVE_FORMAT_OPUS;
++    /* Big-endian PCM in native Windows is given the usual WAVE_FORMAT_PCM tag. */
++    else if (params->codec_id == AV_CODEC_ID_PCM_S16BE) format_tag = WAVE_FORMAT_PCM;
+ 
+     if (format_tag == WAVE_FORMAT_EXTENSIBLE || format_tag >> 16 || (channels > 2 && channel_mask != 0) ||
+         params->codec_id == AV_CODEC_ID_VORBIS)

@@ -1,0 +1,525 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Connor McAdams <cmcadams@codeweavers.com>
+Date: Mon, 12 Jan 2026 14:00:30 -0500
+Subject: [PATCH] d3dx10: Add partial support for saving to DDS files in
+ D3DX10SaveTextureToMemory().
+
+Add support for saving DDS files with non-DXT10 DDS headers.
+
+Signed-off-by: Connor McAdams <cmcadams@codeweavers.com>
+
+CW-Bug-Id: #20442
+CW-Bug-Id: #23084
+CW-Bug-Id: #23301
+(cherry picked from commit e3bf5801d01db61bfe03a6612616823be0a16f59)
+mproton-resolved: 11.20 replaced Proton's struct d3d10_texture helpers with d3dx_texture_info and the d3d10 staging-resource helpers, so D3DX10SaveTextureToMemory() is rewritten on those: each subresource is copied into a CPU-readable staging texture, mapped, and converted into the DDS image's pixels. The cube-map flag comes from the texture desc (d3dx_texture_info has none). The d3dx9 helper hunks apply as is. Proton's test changes are left out: they edit save tests that the series doesn't carry (batch 1 left them out with the stub commit).
+---
+ dlls/d3dx10_43/texture.c      | 166 +++++++++++++++++++++++++++++++++-
+ dlls/d3dx9_36/d3dx9_private.h |   2 +
+ dlls/d3dx9_36/d3dx_helpers.c  | 141 +++++++++++++++++++++--------
+ dlls/d3dx9_36/d3dx_helpers.h  |   6 +-
+ dlls/d3dx9_36/texture.c       |  18 +---
+ dlls/d3dx9_36/util.c          |  17 ++++
+ 6 files changed, 293 insertions(+), 57 deletions(-)
+
+diff --git a/dlls/d3dx10_43/texture.c b/dlls/d3dx10_43/texture.c
+index 72854fad8dc..8275c59789e 100644
+--- a/dlls/d3dx10_43/texture.c
++++ b/dlls/d3dx10_43/texture.c
+@@ -1642,10 +1642,172 @@ HRESULT WINAPI D3DX10SaveTextureToFileA(ID3D10Resource *texture, D3DX10_IMAGE_FI
+     return E_NOTIMPL;
+ }
+ 
++static void d3dx10_buffer_destroy(struct d3dx_buffer *d3dx_buffer)
++{
++    ID3D10Blob *buffer_iface = (ID3D10Blob *)d3dx_buffer->buffer_iface;
++
++    if (buffer_iface)
++        ID3D10Blob_Release(buffer_iface);
++    d3dx_buffer->buffer_iface = d3dx_buffer->buffer_data = NULL;
++}
++
++static HRESULT d3dx10_buffer_create(unsigned int size, struct d3dx_buffer *buffer)
++{
++    ID3D10Blob *buffer_iface;
++    HRESULT hr;
++
++    hr = D3D10CreateBlob(size, &buffer_iface);
++    if (FAILED(hr))
++        return hr;
++
++    buffer->buffer_iface = buffer_iface;
++    buffer->buffer_data = ID3D10Blob_GetBufferPointer(buffer_iface);
++    return S_OK;
++}
++
++static const struct d3dx_buffer_wrapper d3dx10_buffer_wrapper =
++{
++    d3dx10_buffer_create,
++    d3dx10_buffer_destroy,
++    10,
++};
++
++static HRESULT d3dx10_create_dds_file_blob(const struct pixel_format_desc *fmt_desc, enum d3dx_resource_type d3dx_rtype,
++        const struct volume *size, uint32_t mip_levels, uint32_t layers, ID3D10Blob **dst_buffer)
++{
++    struct d3dx_buffer buffer;
++    HRESULT hr;
++
++    *dst_buffer = NULL;
++    hr = d3dx_create_dds_file_blob(fmt_desc->format, NULL, d3dx_rtype, size, mip_levels, layers, &d3dx10_buffer_wrapper,
++            &buffer);
++    if (SUCCEEDED(hr))
++        *dst_buffer = (ID3D10Blob *)buffer.buffer_iface;
++
++    return hr;
++}
++
++static BOOL d3d10_resource_is_cube_texture(ID3D10Resource *rsrc)
++{
++    D3D10_TEXTURE2D_DESC desc;
++    ID3D10Texture2D *tex_2d;
++
++    if (FAILED(ID3D10Resource_QueryInterface(rsrc, &IID_ID3D10Texture2D, (void **)&tex_2d)))
++        return FALSE;
++    ID3D10Texture2D_GetDesc(tex_2d, &desc);
++    ID3D10Texture2D_Release(tex_2d);
++    return !!(desc.MiscFlags & D3D10_RESOURCE_MISC_TEXTURECUBE);
++}
++
++/* Copies each subresource of the texture into the pixels of an image laid out
++ * the same way (layers, then mip levels), through a CPU-readable staging
++ * resource. */
++static HRESULT d3dx_image_from_d3d10_texture(struct d3dx_image *image, struct d3dx_texture_info *info,
++        ID3D10Resource *texture)
++{
++    const struct pixel_format_desc *dst_fmt = get_d3dx_pixel_format_info(image->format);
++    ID3D10Resource *staging = NULL;
++    ID3D10Device *device = NULL;
++    unsigned int i, j;
++    HRESULT hr;
++
++    ID3D10Resource_GetDevice(texture, &device);
++    hr = d3d10_staging_resource_from_d3dx_texture_info(device, info, FALSE, &staging);
++    if (FAILED(hr))
++        goto exit;
++
++    for (i = 0; i < image->layer_count; ++i)
++    {
++        for (j = 0; j < image->mip_levels; ++j)
++        {
++            struct d3dx_pixels src_pixels, dst_pixels;
++            struct d3dx_subresource_data sub_rsrc;
++            struct volume level_size = info->size;
++
++            hr = d3dx_image_get_pixels(image, i, j, &dst_pixels);
++            if (FAILED(hr))
++                goto exit;
++
++            ID3D10Device_CopySubresourceRegion(device, staging, 0, 0, 0, 0, texture, i * info->levels + j, NULL);
++            hr = d3dx_subresource_data_from_d3d10_staging_resource_map(staging, info->resource_type, FALSE, &sub_rsrc);
++            if (FAILED(hr))
++                goto exit;
++
++            d3dx_get_mip_level_size(&level_size, j);
++            d3dx_pixels_init(sub_rsrc.data, sub_rsrc.row_pitch, sub_rsrc.slice_pitch, NULL, info->fmt->format, 0, 0,
++                    level_size.width, level_size.height, 0, level_size.depth, &src_pixels);
++            hr = d3dx_load_pixels_from_pixels(&dst_pixels, dst_fmt, &src_pixels, info->fmt, D3DX10_FILTER_NONE, 0);
++            d3d10_staging_resource_unmap(staging, info->resource_type);
++            if (FAILED(hr))
++            {
++                WARN("Failed with hr %#lx.\n", hr);
++                goto exit;
++            }
++        }
++    }
++
++exit:
++    if (staging)
++        ID3D10Resource_Release(staging);
++    if (device)
++        ID3D10Device_Release(device);
++    return hr;
++}
++
+ HRESULT WINAPI D3DX10SaveTextureToMemory(ID3D10Resource *texture, D3DX10_IMAGE_FILE_FORMAT format, ID3D10Blob **buffer,
+         UINT flags)
+ {
+-    FIXME("texture %p, format %u, buffer %p, flags %#x stub!\n", texture, format, buffer, flags);
++    enum d3dx_resource_type d3dx_rtype;
++    struct d3dx_image image = { 0 };
++    struct d3dx_texture_info info;
++    ID3D10Blob *out_buffer = NULL;
++    HRESULT hr;
+ 
+-    return E_NOTIMPL;
++    TRACE("texture %p, format %u, buffer %p, flags %#x.\n", texture, format, buffer, flags);
++
++    if (!texture || !buffer)
++        return E_INVALIDARG;
++
++    *buffer = NULL;
++    if (format != D3DX10_IFF_DDS)
++    {
++        FIXME("Saving to file format %u is currently unimplemented.\n", format);
++        return E_NOTIMPL;
++    }
++
++    if (FAILED(hr = d3dx_texture_info_from_d3d10_resource(texture, &info)))
++    {
++        if (hr == E_NOTIMPL)
++            FIXME("Currently only 2D and 3D texture saving is supported.\n");
++        return hr;
++    }
++
++    d3dx_rtype = info.resource_type;
++    if (d3dx_rtype == D3DX_RESOURCE_TYPE_TEXTURE_2D && d3d10_resource_is_cube_texture(texture))
++        d3dx_rtype = D3DX_RESOURCE_TYPE_CUBE_TEXTURE;
++
++    if ((info.layers > 1 && d3dx_rtype != D3DX_RESOURCE_TYPE_CUBE_TEXTURE)
++            || (d3dx_rtype == D3DX_RESOURCE_TYPE_CUBE_TEXTURE && info.layers > 6))
++    {
++        FIXME("Texture arrays are currently unimplemented.\n");
++        return E_NOTIMPL;
++    }
++
++    hr = d3dx10_create_dds_file_blob(info.fmt, d3dx_rtype, &info.size, info.levels, info.layers, &out_buffer);
++    if (FAILED(hr))
++    {
++        FIXME("Failed to create dds file with hr %#lx.\n", hr);
++        return hr;
++    }
++
++    hr = d3dx_image_init(ID3D10Blob_GetBufferPointer(out_buffer), ID3D10Blob_GetBufferSize(out_buffer), &image, 0,
++            D3DX_IMAGE_SUPPORT_DXT10);
++    if (SUCCEEDED(hr))
++        hr = d3dx_image_from_d3d10_texture(&image, &info, texture);
++
++    if (SUCCEEDED(hr))
++        *buffer = out_buffer;
++    else
++        ID3D10Blob_Release(out_buffer);
++    return SUCCEEDED(hr) ? S_OK : hr;
+ }
+diff --git a/dlls/d3dx9_36/d3dx9_private.h b/dlls/d3dx9_36/d3dx9_private.h
+index c4d083d33b7..aae59b50d9c 100644
+--- a/dlls/d3dx9_36/d3dx9_private.h
++++ b/dlls/d3dx9_36/d3dx9_private.h
+@@ -68,6 +68,8 @@ const struct pixel_format_desc *get_format_info(D3DFORMAT format);
+ const struct pixel_format_desc *get_format_info_idx(int idx);
+ HRESULT d3dx9_save_pixels_to_memory(struct d3dx_pixels *src_pixels, const struct pixel_format_desc *src_fmt_desc,
+         D3DXIMAGE_FILEFORMAT file_format, ID3DXBuffer **dst_buffer);
++HRESULT d3dx9_create_dds_file_blob(const struct pixel_format_desc *fmt_desc, const PALETTEENTRY *palette,
++        D3DRESOURCETYPE resource_type, const struct volume *size, uint32_t mip_levels, ID3DXBuffer **dst_buffer);
+ 
+ HRESULT lock_surface(IDirect3DSurface9 *surface, const RECT *surface_rect, D3DLOCKED_RECT *lock,
+         IDirect3DSurface9 **temp_surface, BOOL write);
+diff --git a/dlls/d3dx9_36/d3dx_helpers.c b/dlls/d3dx9_36/d3dx_helpers.c
+index d134bb483ea..a7b71a7f2fe 100644
+--- a/dlls/d3dx9_36/d3dx_helpers.c
++++ b/dlls/d3dx9_36/d3dx_helpers.c
+@@ -251,28 +251,28 @@ static const struct
+     /* DDS_PF_FOURCC. */
+     { { 32, DDS_PF_FOURCC, MAKEFOURCC('U','Y','V','Y') }, D3DX_PIXEL_FORMAT_UYVY },
+     { { 32, DDS_PF_FOURCC, MAKEFOURCC('Y','U','Y','2') }, D3DX_PIXEL_FORMAT_YUY2 },
+-    { { 32, DDS_PF_FOURCC, MAKEFOURCC('R','G','B','G') }, D3DX_PIXEL_FORMAT_R8G8_B8G8_UNORM },
+-    { { 32, DDS_PF_FOURCC, MAKEFOURCC('G','R','G','B') }, D3DX_PIXEL_FORMAT_G8R8_G8B8_UNORM },
+-    { { 32, DDS_PF_FOURCC, MAKEFOURCC('D','X','T','1') }, D3DX_PIXEL_FORMAT_DXT1_UNORM },
+-    { { 32, DDS_PF_FOURCC, MAKEFOURCC('D','X','T','2') }, D3DX_PIXEL_FORMAT_DXT2_UNORM },
+-    { { 32, DDS_PF_FOURCC, MAKEFOURCC('D','X','T','3') }, D3DX_PIXEL_FORMAT_DXT3_UNORM },
+-    { { 32, DDS_PF_FOURCC, MAKEFOURCC('D','X','T','4') }, D3DX_PIXEL_FORMAT_DXT4_UNORM },
+-    { { 32, DDS_PF_FOURCC, MAKEFOURCC('D','X','T','5') }, D3DX_PIXEL_FORMAT_DXT5_UNORM },
+-    { { 32, DDS_PF_FOURCC, MAKEFOURCC('B','C','4','U') }, D3DX_PIXEL_FORMAT_BC4_UNORM },
+-    { { 32, DDS_PF_FOURCC, MAKEFOURCC('B','C','4','S') }, D3DX_PIXEL_FORMAT_BC4_SNORM },
++    { { 32, DDS_PF_FOURCC, MAKEFOURCC('R','G','B','G'), 16 }, D3DX_PIXEL_FORMAT_R8G8_B8G8_UNORM },
++    { { 32, DDS_PF_FOURCC, MAKEFOURCC('G','R','G','B'), 16 }, D3DX_PIXEL_FORMAT_G8R8_G8B8_UNORM },
++    { { 32, DDS_PF_FOURCC, MAKEFOURCC('D','X','T','1'), 4 }, D3DX_PIXEL_FORMAT_DXT1_UNORM },
++    { { 32, DDS_PF_FOURCC, MAKEFOURCC('D','X','T','2') },    D3DX_PIXEL_FORMAT_DXT2_UNORM },
++    { { 32, DDS_PF_FOURCC, MAKEFOURCC('D','X','T','3'), 4 }, D3DX_PIXEL_FORMAT_DXT3_UNORM },
++    { { 32, DDS_PF_FOURCC, MAKEFOURCC('D','X','T','4') },    D3DX_PIXEL_FORMAT_DXT4_UNORM },
++    { { 32, DDS_PF_FOURCC, MAKEFOURCC('D','X','T','5'), 8 }, D3DX_PIXEL_FORMAT_DXT5_UNORM },
++    { { 32, DDS_PF_FOURCC, MAKEFOURCC('B','C','4','U'), 8 }, D3DX_PIXEL_FORMAT_BC4_UNORM },
++    { { 32, DDS_PF_FOURCC, MAKEFOURCC('B','C','4','S'), 8 }, D3DX_PIXEL_FORMAT_BC4_SNORM },
+     /* ATI2 is treated identically to BC5U in d3dx10+. */
+-    { { 32, DDS_PF_FOURCC, MAKEFOURCC('A','T','I','2') }, D3DX_PIXEL_FORMAT_BC5_UNORM },
+-    { { 32, DDS_PF_FOURCC, MAKEFOURCC('B','C','5','U') }, D3DX_PIXEL_FORMAT_BC5_UNORM },
+-    { { 32, DDS_PF_FOURCC, MAKEFOURCC('B','C','5','S') }, D3DX_PIXEL_FORMAT_BC5_SNORM },
++    { { 32, DDS_PF_FOURCC, MAKEFOURCC('A','T','I','2'), 8 }, D3DX_PIXEL_FORMAT_BC5_UNORM },
++    { { 32, DDS_PF_FOURCC, MAKEFOURCC('B','C','5','U'), 8 }, D3DX_PIXEL_FORMAT_BC5_UNORM },
++    { { 32, DDS_PF_FOURCC, MAKEFOURCC('B','C','5','S'), 8 }, D3DX_PIXEL_FORMAT_BC5_SNORM },
+     /* These aren't actually fourcc values, they're just D3DFMT values. */
+-    { { 32, DDS_PF_FOURCC, 0x24 }, D3DX_PIXEL_FORMAT_R16G16B16A16_UNORM },
+-    { { 32, DDS_PF_FOURCC, 0x6e }, D3DX_PIXEL_FORMAT_U16V16W16Q16_SNORM },
+-    { { 32, DDS_PF_FOURCC, 0x6f }, D3DX_PIXEL_FORMAT_R16_FLOAT },
+-    { { 32, DDS_PF_FOURCC, 0x70 }, D3DX_PIXEL_FORMAT_R16G16_FLOAT },
+-    { { 32, DDS_PF_FOURCC, 0x71 }, D3DX_PIXEL_FORMAT_R16G16B16A16_FLOAT },
+-    { { 32, DDS_PF_FOURCC, 0x72 }, D3DX_PIXEL_FORMAT_R32_FLOAT },
+-    { { 32, DDS_PF_FOURCC, 0x73 }, D3DX_PIXEL_FORMAT_R32G32_FLOAT },
+-    { { 32, DDS_PF_FOURCC, 0x74 }, D3DX_PIXEL_FORMAT_R32G32B32A32_FLOAT },
++    { { 32, DDS_PF_FOURCC, 0x24, 64  }, D3DX_PIXEL_FORMAT_R16G16B16A16_UNORM },
++    { { 32, DDS_PF_FOURCC, 0x6e, 64  }, D3DX_PIXEL_FORMAT_U16V16W16Q16_SNORM },
++    { { 32, DDS_PF_FOURCC, 0x6f, 16  }, D3DX_PIXEL_FORMAT_R16_FLOAT },
++    { { 32, DDS_PF_FOURCC, 0x70, 32  }, D3DX_PIXEL_FORMAT_R16G16_FLOAT },
++    { { 32, DDS_PF_FOURCC, 0x71, 64  }, D3DX_PIXEL_FORMAT_R16G16B16A16_FLOAT },
++    { { 32, DDS_PF_FOURCC, 0x72, 32  }, D3DX_PIXEL_FORMAT_R32_FLOAT },
++    { { 32, DDS_PF_FOURCC, 0x73, 64  }, D3DX_PIXEL_FORMAT_R32G32_FLOAT },
++    { { 32, DDS_PF_FOURCC, 0x74, 128 }, D3DX_PIXEL_FORMAT_R32G32B32A32_FLOAT },
+     { { 32, DDS_PF_FOURCC, 0x75 }, D3DX_PIXEL_FORMAT_U8V8_SNORM_Cx },
+     /* DDS_PF_RGB. */
+     { { 32, DDS_PF_RGB,  0, 8,  0xe0,       0x1c,       0x03,       0x00       }, D3DX_PIXEL_FORMAT_B2G3R3_UNORM },
+@@ -553,8 +553,8 @@ uint32_t d3dx_calculate_layer_pixels_size(enum d3dx_pixel_format_id format, uint
+     return layer_size;
+ }
+ 
+-HRESULT d3dx_init_dds_header(struct dds_header *header, enum d3dx_resource_type resource_type,
+-        enum d3dx_pixel_format_id format, const struct volume *size, uint32_t mip_levels)
++static HRESULT d3dx_init_dds_header(struct dds_header *header, enum d3dx_resource_type resource_type,
++        enum d3dx_pixel_format_id format, const struct volume *size, uint32_t mip_levels, unsigned int d3dx_version)
+ {
+     HRESULT hr;
+ 
+@@ -562,27 +562,21 @@ HRESULT d3dx_init_dds_header(struct dds_header *header, enum d3dx_resource_type
+     header->signature = MAKEFOURCC('D','D','S',' ');
+     /* The signature is not really part of the DDS header. */
+     header->size = sizeof(*header) - FIELD_OFFSET(struct dds_header, size);
+-    hr = dds_pixel_format_from_d3dx_pixel_format_id(&header->pixel_format, format);
+-    if (FAILED(hr))
+-        return hr;
+ 
+-    header->flags = DDS_CAPS | DDS_HEIGHT | DDS_WIDTH | DDS_PIXELFORMAT;
++    header->flags = DDS_HEIGHT | DDS_WIDTH;
+     header->height = size->height;
+     header->width = size->width;
++    header->depth = (size->depth > 1) ? size->depth : 0;
++    header->miplevels = (mip_levels > 1) ? mip_levels : 0;
+     header->caps = DDS_CAPS_TEXTURE;
+     if (size->depth > 1)
+     {
+         header->flags |= DDS_DEPTH;
+-        header->depth = size->depth;
+         header->caps2 |= DDS_CAPS2_VOLUME;
+     }
+ 
+     if (mip_levels > 1)
+-    {
+-        header->flags |= DDS_MIPMAPCOUNT;
+-        header->caps |= (DDS_CAPS_MIPMAP | DDS_CAPS_COMPLEX);
+-        header->miplevels = mip_levels;
+-    }
++        header->caps |= DDS_CAPS_MIPMAP;
+ 
+     if (resource_type == D3DX_RESOURCE_TYPE_CUBE_TEXTURE)
+     {
+@@ -590,10 +584,50 @@ HRESULT d3dx_init_dds_header(struct dds_header *header, enum d3dx_resource_type
+         header->caps2 |= (DDS_CAPS2_CUBEMAP | DDS_CAPS2_CUBEMAP_ALL_FACES);
+     }
+ 
+-    if (header->pixel_format.flags & DDS_PF_ALPHA || header->pixel_format.flags & DDS_PF_ALPHA_ONLY)
+-        header->caps |= DDSCAPS_ALPHA;
+-    if (header->pixel_format.flags & DDS_PF_INDEXED)
+-        header->caps |= DDSCAPS_PALETTE;
++    if (d3dx_version > 9)
++    {
++        uint32_t row_pitch, slice_pitch;
++        struct dds_pixel_format pf;
++
++        hr = dds_pixel_format_from_d3dx_pixel_format_id(&pf, format);
++        if (FAILED(hr))
++            return hr;
++
++        if (pf.flags == DDS_PF_BUMPDUDV || pf.flags == DDS_PF_BUMPLUMINANCE)
++            return E_NOTIMPL;
++
++        header->pixel_format = pf;
++        hr = d3dx_calculate_pixels_size(format, size->width, size->height, &row_pitch, &slice_pitch);
++        if (FAILED(hr))
++            return hr;
++
++        /* Always sets mip levels and row pitch in header. */
++        header->pitch_or_linear_size = row_pitch;
++        header->miplevels = mip_levels;
++        if (header->caps2)
++            header->caps |= DDS_CAPS_COMPLEX;
++    }
++    else
++    {
++        hr = dds_pixel_format_from_d3dx_pixel_format_id(&header->pixel_format, format);
++        if (FAILED(hr))
++            return hr;
++
++        /* d3dx10+ sets the bpp field for fourCC pixel formats, d3dx9 does not. */
++        if (header->pixel_format.flags == DDS_PF_FOURCC)
++            header->pixel_format.bpp = 0;
++
++        header->flags |= DDS_CAPS | DDS_PIXELFORMAT;
++        if (header->pixel_format.flags & DDS_PF_ALPHA || header->pixel_format.flags & DDS_PF_ALPHA_ONLY)
++            header->caps |= DDSCAPS_ALPHA;
++        if (header->pixel_format.flags & DDS_PF_INDEXED)
++            header->caps |= DDSCAPS_PALETTE;
++        if (mip_levels > 1)
++        {
++            header->flags |= DDS_MIPMAPCOUNT;
++            header->caps |= DDS_CAPS_COMPLEX;
++        }
++    }
+ 
+     return D3D_OK;
+ }
+@@ -973,6 +1007,7 @@ HRESULT d3dx_save_pixels_to_memory(struct d3dx_pixels *src_pixels, const struct
+             struct dds_header *header;
+             uint32_t header_size;
+ 
++            assert(wrapper->d3dx_version < 10); /* This path shouldn't be used for d3dx10+. */
+             header_size = is_index_format(dst_fmt_desc) ? sizeof(*header) + DDS_PALETTE_SIZE : sizeof(*header);
+             hr = wrapper->d3dx_buffer_create((dst_slice_pitch * src_pixels->size.depth) + header_size, dst_buffer);
+             if (FAILED(hr))
+@@ -980,7 +1015,8 @@ HRESULT d3dx_save_pixels_to_memory(struct d3dx_pixels *src_pixels, const struct
+ 
+             header = dst_buffer->buffer_data;
+             pixels = (uint8_t *)dst_buffer->buffer_data + header_size;
+-            hr = d3dx_init_dds_header(header, D3DX_RESOURCE_TYPE_TEXTURE_2D, dst_format, &src_pixels->size, 1);
++            hr = d3dx_init_dds_header(header, D3DX_RESOURCE_TYPE_TEXTURE_2D, dst_format, &src_pixels->size, 1,
++                    wrapper->d3dx_version);
+             if (FAILED(hr))
+                 goto exit;
+             if (is_index_format(dst_fmt_desc))
+@@ -1077,6 +1113,37 @@ exit:
+     return hr;
+ }
+ 
++HRESULT d3dx_create_dds_file_blob(enum d3dx_pixel_format_id format, const PALETTEENTRY *palette,
++        enum d3dx_resource_type resource_type, const struct volume *size, uint32_t mip_levels, uint32_t layers,
++        const struct d3dx_buffer_wrapper *wrapper, struct d3dx_buffer *dst_buffer)
++{
++    const struct pixel_format_desc *fmt_desc = get_d3dx_pixel_format_info(format);
++    uint32_t header_size, pixels_size;
++    struct dds_header header;
++    uint8_t *buf_ptr;
++    HRESULT hr;
++
++    hr = d3dx_init_dds_header(&header, resource_type, format, size, mip_levels, wrapper->d3dx_version);
++    if (FAILED(hr))
++        return hr;
++
++    pixels_size = d3dx_calculate_layer_pixels_size(format, size->width, size->height, size->depth, mip_levels) * layers;
++    header_size = sizeof(header);
++    if (is_index_format(fmt_desc))
++        header_size += DDS_PALETTE_SIZE;
++
++    hr = wrapper->d3dx_buffer_create(header_size + pixels_size, dst_buffer);
++    if (FAILED(hr))
++        return hr;
++
++    buf_ptr = dst_buffer->buffer_data;
++    memcpy(buf_ptr, &header, sizeof(header));
++    if (is_index_format(fmt_desc))
++        memcpy(buf_ptr + sizeof(header), palette, DDS_PALETTE_SIZE);
++
++    return hr;
++}
++
+ static const uint8_t bmp_file_signature[] =       { 'B', 'M' };
+ static const uint8_t jpg_file_signature[] =       { 0xff, 0xd8 };
+ static const uint8_t png_file_signature[] =       { 0x89, 'P', 'N', 'G', 0x0d, 0x0a, 0x1a, 0x0a };
+diff --git a/dlls/d3dx9_36/d3dx_helpers.h b/dlls/d3dx9_36/d3dx_helpers.h
+index 06a7ee3d0e8..477a8452e31 100644
+--- a/dlls/d3dx9_36/d3dx_helpers.h
++++ b/dlls/d3dx9_36/d3dx_helpers.h
+@@ -431,8 +431,6 @@ HRESULT d3dx_calculate_pixels_size(enum d3dx_pixel_format_id format, uint32_t wi
+     uint32_t *pitch, uint32_t *size);
+ uint32_t d3dx_calculate_layer_pixels_size(enum d3dx_pixel_format_id format, uint32_t width, uint32_t height,
+         uint32_t depth, uint32_t mip_levels);
+-HRESULT d3dx_init_dds_header(struct dds_header *header, enum d3dx_resource_type resource_type,
+-        enum d3dx_pixel_format_id format, const struct volume *size, uint32_t mip_levels);
+ const char *debug_d3dx_image_file_format(enum d3dx_image_file_format format);
+ HRESULT d3dx_pixels_init(const void *data, uint32_t row_pitch, uint32_t slice_pitch,
+         const PALETTEENTRY *palette, enum d3dx_pixel_format_id format, uint32_t left, uint32_t top, uint32_t right,
+@@ -456,10 +454,14 @@ struct d3dx_buffer_wrapper
+ {
+     HRESULT (*d3dx_buffer_create)(unsigned int size, struct d3dx_buffer *d3dx_buffer);
+     void (*d3dx_buffer_destroy)(struct d3dx_buffer *d3dx_buffer);
++    unsigned int d3dx_version;
+ };
+ 
+ HRESULT d3dx_save_pixels_to_memory(struct d3dx_pixels *src_pixels, const struct pixel_format_desc *src_fmt_desc,
+         enum d3dx_image_file_format file_format, const struct d3dx_buffer_wrapper *wrapper, struct d3dx_buffer *dst_buffer);
++HRESULT d3dx_create_dds_file_blob(enum d3dx_pixel_format_id format, const PALETTEENTRY *palette,
++        enum d3dx_resource_type resource_type, const struct volume *size, uint32_t mip_levels, uint32_t layers,
++        const struct d3dx_buffer_wrapper *wrapper, struct d3dx_buffer *dst_buffer);
+ 
+ /* Compatible with D3D10_SUBRESOURCE_DATA and D3D11_SUBRESOURCE_DATA. */
+ struct d3dx_subresource_data
+diff --git a/dlls/d3dx9_36/texture.c b/dlls/d3dx9_36/texture.c
+index ae1c3eace7f..4172ec7d7df 100644
+--- a/dlls/d3dx9_36/texture.c
++++ b/dlls/d3dx9_36/texture.c
+@@ -1866,7 +1866,7 @@ HRESULT WINAPI D3DXSaveTextureToFileInMemory(ID3DXBuffer **dst_buffer, D3DXIMAGE
+         IDirect3DBaseTexture9 *src_texture, const PALETTEENTRY *src_palette)
+ {
+     const struct pixel_format_desc *fmt_desc = NULL;
+-    unsigned int levels, file_size, i, j;
++    unsigned int levels, i, j;
+     struct d3dx_image image;
+     D3DRESOURCETYPE type;
+     ID3DXBuffer *buffer;
+@@ -1974,24 +1974,10 @@ HRESULT WINAPI D3DXSaveTextureToFileInMemory(ID3DXBuffer **dst_buffer, D3DXIMAGE
+     if (is_index_format(fmt_desc) && !src_palette)
+         return E_NOTIMPL;
+ 
+-    file_size = d3dx_calculate_layer_pixels_size(fmt_desc->format, size.width, size.height, size.depth, levels);
+-    if (type == D3DRTYPE_CUBETEXTURE)
+-        file_size *= 6;
+-    file_size += is_index_format(fmt_desc) ? sizeof(struct dds_header) + DDS_PALETTE_SIZE : sizeof(struct dds_header);
+-
+-    hr = D3DXCreateBuffer(file_size, &buffer);
++    hr = d3dx9_create_dds_file_blob(fmt_desc, src_palette, type, &size, levels, &buffer);
+     if (FAILED(hr))
+         return hr;
+ 
+-    hr = d3dx_init_dds_header((struct dds_header *)ID3DXBuffer_GetBufferPointer(buffer),
+-            d3dx_resource_type_from_d3dresourcetype(type), fmt_desc->format, &size, levels);
+-    if (FAILED(hr))
+-        goto exit;
+-
+-    if (is_index_format(fmt_desc))
+-        memcpy((uint8_t *)ID3DXBuffer_GetBufferPointer(buffer) + sizeof(struct dds_header), src_palette,
+-                DDS_PALETTE_SIZE);
+-
+     hr = d3dx_image_init(ID3DXBuffer_GetBufferPointer(buffer), ID3DXBuffer_GetBufferSize(buffer), &image, 0, 0);
+     if (FAILED(hr))
+         goto exit;
+diff --git a/dlls/d3dx9_36/util.c b/dlls/d3dx9_36/util.c
+index 7f1fc24e1cd..8656949943a 100644
+--- a/dlls/d3dx9_36/util.c
++++ b/dlls/d3dx9_36/util.c
+@@ -274,6 +274,7 @@ static const struct d3dx_buffer_wrapper d3dx9_buffer_wrapper =
+ {
+     d3dx9_buffer_create,
+     d3dx9_buffer_destroy,
++    9
+ };
+ 
+ HRESULT d3dx9_save_pixels_to_memory(struct d3dx_pixels *src_pixels, const struct pixel_format_desc *src_fmt_desc,
+@@ -291,6 +292,22 @@ HRESULT d3dx9_save_pixels_to_memory(struct d3dx_pixels *src_pixels, const struct
+     return hr;
+ }
+ 
++HRESULT d3dx9_create_dds_file_blob(const struct pixel_format_desc *fmt_desc, const PALETTEENTRY *palette,
++        D3DRESOURCETYPE resource_type, const struct volume *size, uint32_t mip_levels, ID3DXBuffer **dst_buffer)
++{
++    uint32_t layers = (resource_type == D3DRTYPE_CUBETEXTURE) ? 6 : 1;
++    struct d3dx_buffer buffer;
++    HRESULT hr;
++
++    *dst_buffer = NULL;
++    hr = d3dx_create_dds_file_blob(fmt_desc->format, palette, d3dx_resource_type_from_d3dresourcetype(resource_type),
++            size, mip_levels, layers, &d3dx9_buffer_wrapper, &buffer);
++    if (SUCCEEDED(hr))
++        *dst_buffer = (ID3DXBuffer *)buffer.buffer_iface;
++
++    return hr;
++}
++
+ /************************************************************
+  * map_view_of_file
+  *
