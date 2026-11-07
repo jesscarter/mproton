@@ -87,7 +87,8 @@ Then `scripts/bin/bundle-wine.sh`, which needs the signing identity.
 
 **Build status (2026-11-06):**
 - Built: Mesa/KosmicKrisp, GStreamer, Wine, the Wine SDK, FEX (wow64 + arm64ec), vkd3d-proton. The full run took about 22 minutes on the M2.
-- DXMT is blocked until full Xcode is installed: "no Metal compiler".
+- DXMT (v0.80-364, athei `macos-patched`) is built: ARM64X PE + i386 PE + arm64 `winemetal.so`. It needs full Xcode, `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer` (the Command Line Tools are still the selected toolchain), and the separately downloaded Metal toolchain: `xcodebuild -downloadComponent MetalToolchain`, about 840 MB.
+- **The whole stack is built.** `scripts/bin/bundle-wine.sh` checks for the signing identity first (`loader_preflight`), so assembling the bundle waits for the Developer ID certificate and the provisioning profile with `cross-architecture-support`. Apple enrollment was still processing on 2026-11-06.
 - **Workaround:** FEX's staging step wrote AppConfig to `/usr/local/share/fex-emu`, which isn't writable here. Fixed locally by reconfiguring each `build/fex/<tree>` with `-DDATA_DIRECTORY=$PWD/build/fex/install/share/fex-emu`. Worth reporting upstream to athei.
 
 ### KosmicKrisp on M2 (native, no Wine needed)
