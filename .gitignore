@@ -9,3 +9,4 @@ __pycache__/
 signing/profile-stub/build/
 xcuserdata/
 *.xcworkspace/xcuserdata/
+graphics/dxvk/out/
