@@ -9,11 +9,11 @@ CW-Bug-Id: #20442
 CW-Bug-Id: #23084
 CW-Bug-Id: #23301
 (cherry picked from commit 046d8148368269304d954a5fa7e17bb6c8467867)
-mproton-resolved: The d3dx11 code applies as is (it brings its own d3dx_d3d11_texture helpers; 11.20 and upstream master still only have the stub). The test hunk is left out: it conflicts with 11.20's rewritten readback helpers in tests/d3dx11.c (compare_float(), the float4 readback), and tests aren't built by the Linux check.
+mproton-resolved: The d3dx11 code applies as is, except that texture.c no longer includes initguid.h: 11.20's async.c already does (with d3d11.h through d3dx11.h), so both objects defined the same IIDs and the dll failed to link (it brings its own d3dx_d3d11_texture helpers; 11.20 and upstream master still only have the stub). The test hunk is left out: it conflicts with 11.20's rewritten readback helpers in tests/d3dx11.c (compare_float(), the float4 readback), and tests aren't built by the Linux check.
 ---
  dlls/d3dx11_43/dxhelpers.h |   2 +
- dlls/d3dx11_43/texture.c   | 374 ++++++++++++++++++++++++++++++++++++-
- 2 files changed, 367 insertions(+), 9 deletions(-)
+ dlls/d3dx11_43/texture.c   | 373 ++++++++++++++++++++++++++++++++++++-
+ 2 files changed, 366 insertions(+), 9 deletions(-)
 
 diff --git a/dlls/d3dx11_43/dxhelpers.h b/dlls/d3dx11_43/dxhelpers.h
 index 6fff31016fe..073c773daa4 100644
@@ -29,19 +29,18 @@ index 6fff31016fe..073c773daa4 100644
  
  HRESULT get_image_info(const void *data, SIZE_T size, D3DX11_IMAGE_INFO *img_info);
 diff --git a/dlls/d3dx11_43/texture.c b/dlls/d3dx11_43/texture.c
-index 12d87437663..2438eeb2dbe 100644
+index 12d87437663..2546040ec1e 100644
 --- a/dlls/d3dx11_43/texture.c
 +++ b/dlls/d3dx11_43/texture.c
-@@ -18,6 +18,8 @@
+@@ -18,6 +18,7 @@
  
  #define COBJMACROS
  
-+#include "initguid.h"
 +#include "d3d11.h"
  #include "d3dx11.h"
  #include "d3dcompiler.h"
  #include "dxhelpers.h"
-@@ -946,15 +948,6 @@ HRESULT WINAPI D3DX11SaveTextureToMemory(ID3D11DeviceContext *context, ID3D11Res
+@@ -946,15 +947,6 @@ HRESULT WINAPI D3DX11SaveTextureToMemory(ID3D11DeviceContext *context, ID3D11Res
      return E_NOTIMPL;
  }
  
@@ -57,7 +56,7 @@ index 12d87437663..2438eeb2dbe 100644
  HRESULT WINAPI D3DX11GetImageInfoFromMemory(const void *src_data, SIZE_T src_data_size, ID3DX11ThreadPump *pump,
          D3DX11_IMAGE_INFO *img_info, HRESULT *hresult)
  {
-@@ -1212,3 +1205,366 @@ HRESULT WINAPI D3DX11CreateShaderResourceViewFromMemory(ID3D11Device *device, co
+@@ -1212,3 +1204,366 @@ HRESULT WINAPI D3DX11CreateShaderResourceViewFromMemory(ID3D11Device *device, co
          *hresult = hr;
      return hr;
  }

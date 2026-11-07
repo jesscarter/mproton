@@ -39,10 +39,10 @@ index 6e90891e7ce..c327b5c5440 100644
 -    return E_NOTIMPL;
 -}
 diff --git a/dlls/d3dx11_43/texture.c b/dlls/d3dx11_43/texture.c
-index 2438eeb2dbe..846056c0bac 100644
+index 2546040ec1e..86508395a11 100644
 --- a/dlls/d3dx11_43/texture.c
 +++ b/dlls/d3dx11_43/texture.c
-@@ -1267,6 +1267,52 @@ static void d3d11_box_get_mip_level(D3D11_BOX *box, uint32_t level)
+@@ -1266,6 +1266,52 @@ static void d3d11_box_get_mip_level(D3D11_BOX *box, uint32_t level)
      }
  }
  
@@ -95,7 +95,7 @@ index 2438eeb2dbe..846056c0bac 100644
  static HRESULT d3dx_d3d11_texture_init(ID3D11DeviceContext *context, ID3D11Resource *tex_rsrc, uint32_t first_layer,
          uint32_t first_mip_level, D3D11_MAP map_flags, D3D11_BOX *tex_box, struct d3d11_texture *texture)
  {
-@@ -1568,3 +1614,15 @@ end:
+@@ -1567,3 +1613,15 @@ end:
      d3dx_d3d11_texture_release(&dst_tex);
      return SUCCEEDED(hr) ? S_OK : hr;
  }

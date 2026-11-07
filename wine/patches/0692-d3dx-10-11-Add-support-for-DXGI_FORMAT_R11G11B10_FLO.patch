@@ -29,10 +29,10 @@ index 1bf145e6b39..9aac011603b 100644
          case D3DX_PIXEL_FORMAT_R32G32B32A32_FLOAT:      return DXGI_FORMAT_R32G32B32A32_FLOAT;
          case D3DX_PIXEL_FORMAT_G8R8_G8B8_UNORM:         return DXGI_FORMAT_G8R8_G8B8_UNORM;
 diff --git a/dlls/d3dx11_43/texture.c b/dlls/d3dx11_43/texture.c
-index 94b876c2af0..6661b8f2000 100644
+index 2c06dfefe19..56a7d5f1881 100644
 --- a/dlls/d3dx11_43/texture.c
 +++ b/dlls/d3dx11_43/texture.c
-@@ -126,6 +126,7 @@ static DXGI_FORMAT dxgi_format_from_d3dx_pixel_format_id(enum d3dx_pixel_format_
+@@ -125,6 +125,7 @@ static DXGI_FORMAT dxgi_format_from_d3dx_pixel_format_id(enum d3dx_pixel_format_
          case D3DX_PIXEL_FORMAT_R32_FLOAT:               return DXGI_FORMAT_R32_FLOAT;
          case D3DX_PIXEL_FORMAT_R32G32_FLOAT:            return DXGI_FORMAT_R32G32_FLOAT;
          case D3DX_PIXEL_FORMAT_R32G32B32_FLOAT:         return DXGI_FORMAT_R32G32B32_FLOAT;

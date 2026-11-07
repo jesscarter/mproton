@@ -1745,10 +1745,10 @@ index 5ee3e56d832..6a4dbeca32c 100644
      test_dxt10_dds_header_image_info();
      test_image_filters();
 diff --git a/dlls/d3dx11_43/texture.c b/dlls/d3dx11_43/texture.c
-index 6661b8f2000..097f3f9b09b 100644
+index 56a7d5f1881..e7b32197f41 100644
 --- a/dlls/d3dx11_43/texture.c
 +++ b/dlls/d3dx11_43/texture.c
-@@ -116,6 +116,7 @@ static DXGI_FORMAT dxgi_format_from_d3dx_pixel_format_id(enum d3dx_pixel_format_
+@@ -115,6 +115,7 @@ static DXGI_FORMAT dxgi_format_from_d3dx_pixel_format_id(enum d3dx_pixel_format_
          case D3DX_PIXEL_FORMAT_R10G10B10A2_UNORM:       return DXGI_FORMAT_R10G10B10A2_UNORM;
          case D3DX_PIXEL_FORMAT_R16G16B16A16_UNORM:      return DXGI_FORMAT_R16G16B16A16_UNORM;
          case D3DX_PIXEL_FORMAT_R8_UNORM:                return DXGI_FORMAT_R8_UNORM;
@@ -1756,7 +1756,7 @@ index 6661b8f2000..097f3f9b09b 100644
          case D3DX_PIXEL_FORMAT_R8G8_UNORM:              return DXGI_FORMAT_R8G8_UNORM;
          case D3DX_PIXEL_FORMAT_R16_UNORM:               return DXGI_FORMAT_R16_UNORM;
          case D3DX_PIXEL_FORMAT_R16G16_UNORM:            return DXGI_FORMAT_R16G16_UNORM;
-@@ -923,33 +924,6 @@ HRESULT WINAPI D3DX11CreateTextureFromMemory(ID3D11Device *device, const void *d
+@@ -922,33 +923,6 @@ HRESULT WINAPI D3DX11CreateTextureFromMemory(ID3D11Device *device, const void *d
      return hr;
  }
  
@@ -1790,7 +1790,7 @@ index 6661b8f2000..097f3f9b09b 100644
  HRESULT WINAPI D3DX11GetImageInfoFromMemory(const void *src_data, SIZE_T src_data_size, ID3DX11ThreadPump *pump,
          D3DX11_IMAGE_INFO *img_info, HRESULT *hresult)
  {
-@@ -1628,3 +1602,294 @@ HRESULT WINAPI D3DX11FilterTexture(ID3D11DeviceContext *context, ID3D11Resource
+@@ -1627,3 +1601,294 @@ HRESULT WINAPI D3DX11FilterTexture(ID3D11DeviceContext *context, ID3D11Resource
  
      return D3DX11LoadTextureFromTexture(context, texture, &load_info, texture);
  }
