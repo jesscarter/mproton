@@ -1,0 +1,13 @@
+LADDER	INFO	d3d9.env	build=i686 wow64_process=i386 native=amd64 wine=9.0 host=Linux 6.18.44-fc-v310
+LADDER	PASS	d3d9.create	Direct3DCreate9 ok
+LADDER	PASS	d3d9.adapters	1 adapter(s)
+LADDER	INFO	d3d9.adapter0	0: NVIDIA GeForce GTX 470 (driver nvd3dum.dll, vendor 10de device 06cd), 1 X8R8G8B8 modes, current 1280x1024@60
+LADDER	PASS	d3d9.display_modes	1 X8R8G8B8 modes, current 1280x1024
+LADDER	PASS	d3d9.caps	HAL: VS 3.0 PS 3.0, max texture 16384x16384, 8 texture stages, 16 streams, 4 RTs
+LADDER	PASS	d3d9.formats	CheckDeviceFormat: all of A8R8G8B8 texture/RT, D24S8, DXT1, DXT5 supported
+LADDER	PASS	d3d9.create_ex	Direct3DCreate9Ex 00000000
+LADDER	PASS	d3d9.device	CreateDevice(HAL) 00000000
+LADDER	PASS	d3d9.clear	64x64 pixels exact, Clear -> GetRenderTargetData
+LADDER	PASS	d3d9.draw	64x64 pixels exact, fixed-function XYZRHW quad
+LADDER	INFO	d3d9.device_release	final Release returned 0
+LADDER	DONE	d3d9	pass=9 fail=0 skip=0 info=3

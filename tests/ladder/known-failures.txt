@@ -1,0 +1,6 @@
+# Failures the ladder expects, so a run still passes while they're open. One per line,
+# TAB-separated: wine version glob, arch glob, check glob, reason. The globs match the
+# `wine --version` string, the build arch (x86_64, i686, aarch64, arm64ec, or - for the
+# script's own checks) and the check name as printed (program.check).
+# Keep the reason short and say where it was seen. Remove the line once it passes.
+wine-9.0*	x86_64	seh.stack_overflow	Wine 9.0 (Ubuntu 24.04) kills the thread instead of dispatching STATUS_STACK_OVERFLOW when x64 code exhausts its stack; seen on Linux 2026-11-07
