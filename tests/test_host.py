@@ -54,8 +54,8 @@ def test_darwin_steam_media_dirs_empty():
 
 @pytest.mark.parametrize("config,expect_set,expect_unset", [
     (set(), {"WINEMSYNC": "1"}, {"WINEFSYNC", "WINEESYNC", "WINENTSYNC"}),
-    ({"nomsync"}, {}, {"WINEFSYNC", "WINEESYNC", "WINENTSYNC", "WINEMSYNC"}),
-    ({"nofsync"}, {}, {"WINEFSYNC", "WINEESYNC", "WINENTSYNC", "WINEMSYNC"}),
+    ({"nomsync"}, {"WINEMSYNC": "0"}, {"WINEFSYNC", "WINEESYNC", "WINENTSYNC"}),
+    ({"nofsync"}, {"WINEMSYNC": "0"}, {"WINEFSYNC", "WINEESYNC", "WINENTSYNC"}),
 ])
 def test_darwin_sync_env(config, expect_set, expect_unset):
     s, u = HostPlatform("Darwin", "arm64", {}).sync_env(config)

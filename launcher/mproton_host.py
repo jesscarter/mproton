@@ -120,15 +120,18 @@ class HostPlatform:
 
         Linux: fsync (WINEFSYNC) unless 'nofsync'.
         macOS: fsync/ntsync are Linux-only; use msync (Mach semaphores,
-        WINEMSYNC) unless 'nomsync'.  The per-game 'nofsync' entries in the
+        WINEMSYNC) unless 'nomsync', which sets WINEMSYNC=0.  The per-game 'nofsync' entries in the
         compat tables exist because the game breaks under a fast sync path,
         so they disable msync as well.
         """
         if self.is_darwin:
+            # msync is on when WINEMSYNC is unset or a non-zero number (mach9
+            # docs/internals.md, "Runtime"), so turning it off needs "0".
             unset = ["WINEFSYNC", "WINEESYNC", "WINENTSYNC"]
             if "nomsync" in compat_config or "nofsync" in compat_config:
-                return {}, unset + ["WINEMSYNC"]
-            return {"WINEMSYNC": "1"}, unset
+                return {"WINEMSYNC": "0"}, unset
+            # a value the user exported passes through
+            return {"WINEMSYNC": self.environ.get("WINEMSYNC") or "1"}, unset
         if "nofsync" in compat_config:
             return {}, ["WINEFSYNC"]
         return {"WINEFSYNC": "1"}, []
