@@ -11,3 +11,4 @@ xcuserdata/
 *.xcworkspace/xcuserdata/
 steam/build/
 graphics/dxvk/out/
+tests/ladder/out/

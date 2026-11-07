@@ -1,0 +1,18 @@
+LADDER	INFO	ordering.env	build=i686 wow64_process=i386 native=amd64 wine=9.0 host=Linux 6.18.44-fc-v310
+LADDER	INFO	ordering.config	iterations 500000, x86 code, FEX_HARDWARE_TSO=(unset)
+LADDER	PASS	ordering.mp	forbidden outcome 0/500000 times (379 ms)
+LADDER	PASS	ordering.mp_fenced	forbidden outcome 0/500000 times (398 ms)
+LADDER	PASS	ordering.lb	forbidden outcome 0/500000 times (362 ms)
+LADDER	PASS	ordering.lb_fenced	forbidden outcome 0/500000 times (382 ms)
+LADDER	PASS	ordering.iriw	forbidden outcome 0/500000 times (629 ms)
+LADDER	PASS	ordering.iriw_fenced	forbidden outcome 0/500000 times (719 ms)
+LADDER	INFO	ordering.sb	weak outcome 3601/500000 times (349 ms); allowed by TSO and by ARM (store buffering)
+LADDER	PASS	ordering.sb_fenced	forbidden outcome 0/500000 times (389 ms)
+LADDER	PASS	ordering.corr	forbidden outcome 0/500000 times (363 ms)
+LADDER	PASS	ordering.mp_stream	forbidden outcome 0/5000000 times (98 ms)
+LADDER	PASS	ordering.mp_stream_fenced	forbidden outcome 0/5000000 times (200 ms)
+LADDER	PASS	ordering.lock	0 of 2000000 increments lost (165 ms)
+LADDER	PASS	ordering.lock_fenced	0 of 2000000 increments lost (277 ms)
+LADDER	PASS	ordering.atomic	0 of 2000000 increments lost (46 ms)
+LADDER	INFO	ordering.calibration.overlap	sb store-buffering outcomes 3601: threads do overlap
+LADDER	DONE	ordering	pass=13 fail=0 skip=0 info=4

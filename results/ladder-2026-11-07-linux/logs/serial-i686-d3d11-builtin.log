@@ -1,0 +1,13 @@
+LADDER	INFO	d3d11.env	build=i686 wow64_process=i386 native=amd64 wine=9.0 host=Linux 6.18.44-fc-v310
+LADDER	PASS	d3d11.device	D3D11CreateDevice 00000000, feature level 11_1
+LADDER	INFO	d3d11.adapter	NVIDIA GeForce GTX 470 (vendor 10de device 06cd), feature level 11_1
+LADDER	PASS	d3d11.render_target	64x64 RGBA8 render target created
+LADDER	PASS	d3d11.clear	64x64 pixels exact
+LADDER	PASS	d3d11.draw_fullscreen	64x64 pixels exact, SV_VertexID triangle + SV_Position shading
+LADDER	PASS	d3d11.draw_vb_cb	64x64 pixels exact, vertex-buffer quad over the fullscreen pass
+LADDER	PASS	d3d11.update_subresource	64x64 pixels exact
+LADDER	PASS	d3d11.copy_region	64x64 pixels exact, 16x16 box from the render target into an initialised texture
+LADDER	PASS	d3d11.copy_resource	64x64 pixels exact
+LADDER	PASS	d3d11.buffer_copy	1 KiB..3 KiB slice of an initialised buffer copied to staging: 0 words wrong
+LADDER	INFO	d3d11.device_release	final Release returned 0
+LADDER	DONE	d3d11	pass=9 fail=0 skip=0 info=3

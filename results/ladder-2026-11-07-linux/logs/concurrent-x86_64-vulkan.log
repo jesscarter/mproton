@@ -1,0 +1,12 @@
+LADDER	INFO	vulkan.env	build=x86_64 wow64_process=none native=amd64 wine=9.0 host=Linux 6.18.44-fc-v310
+LADDER	PASS	vulkan.instance	vkCreateInstance: 0
+LADDER	PASS	vulkan.entry_points	0 functions missing from vkGetInstanceProcAddr
+LADDER	PASS	vulkan.physical_device	1 physical device(s)
+LADDER	INFO	vulkan.device	llvmpipe (LLVM 20.1.2, 256 bits), Vulkan 1.4.318, driver 06402008, vendor 10005
+LADDER	PASS	vulkan.device	graphics queue family 0, vkCreateDevice: 0
+LADDER	PASS	vulkan.clear	64x64 pixels exact, vkCmdClearColorImage -> vkCmdCopyImageToBuffer
+LADDER	PASS	vulkan.copy_region	64x64 pixels exact, buffer -> 32x32 image region with row length, then image -> buffer
+LADDER	PASS	vulkan.fill_copy_buffer	vkCmdFillBuffer x2 + vkCmdCopyBuffer at offsets: 0 of 1024 words wrong
+LADDER	PASS	vulkan.fence_reuse	50 fill + submit + wait cycles on one fence: 0 saw stale data
+LADDER	PASS	vulkan.teardown	device and instance destroyed
+LADDER	DONE	vulkan	pass=9 fail=0 skip=0 info=2

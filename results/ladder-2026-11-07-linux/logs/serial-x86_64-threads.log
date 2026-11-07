@@ -1,0 +1,14 @@
+LADDER	INFO	threads.env	build=x86_64 wow64_process=none native=amd64 wine=9.0 host=Linux 6.18.44-fc-v310
+LADDER	PASS	threads.tls.static_and_dynamic	32/32 threads kept their own static and TlsAlloc values (expansion slot 64)
+LADDER	PASS	threads.tls.expansion_slots	TlsAlloc beyond 64 slots gave index 64
+LADDER	PASS	threads.tls.fls_callback	FLS destructor ran 32 times for 32 exited threads
+LADDER	PASS	threads.tls.image_callback	TLS directory callback ran DLL_THREAD_ATTACH in 32 of 32 new threads
+LADDER	PASS	threads.locks.counters	critical section 800000, SRW 800000, Interlocked 800000 (want 800000 each)
+LADDER	PASS	threads.locks.condvar	consumed sum 200010000 (want 200010000), in order 1
+LADDER	PASS	threads.apc.sleepex	wait returned 192 (want WAIT_IO_COMPLETION=192), 1 APCs ran on the target thread in order 'a' (want 'a')
+LADDER	PASS	threads.apc.wait_ex	wait returned 192 (want WAIT_IO_COMPLETION=192), 1 APCs ran on the target thread in order 'a' (want 'a')
+LADDER	PASS	threads.apc.nonalertable	wait returned 192 (want WAIT_IO_COMPLETION=192), 5 APCs ran on the target thread in order 'abcde' (want 'abcde'), none during the non-alertable wait
+LADDER	PASS	threads.apc.self	ran before the alertable wait=0, SleepEx(0, TRUE)=192, ran=1
+LADDER	PASS	threads.apc.timer	periodic waitable-timer completion routine ran 3 times in 41 ms
+LADDER	PASS	threads.spawn	500 short threads, 0 wrong exit codes, 215 ms
+LADDER	DONE	threads	pass=12 fail=0 skip=0 info=1
