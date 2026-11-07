@@ -1,0 +1,225 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Fri, 12 May 2023 13:34:23 +0200
+Subject: [PATCH] winegstreamer: Introduce and use a new wg_task_pool helper.
+
+To better track GStreamer threads, avoiding potential task leaks in the
+default pool which keeps some thread alive.
+
+CW-Bug-Id: #22045
+(cherry picked from commit eb6aa9d9dabf8ef88c65c821f0763d486ce90838)
+mproton-resolved: The conflict was the OpenGL parser-context setup that 80eb9f6e2bd (OpenGL group, not carried) adds in wg_parser_create(); the task pool is created without it. Also initializes the GError pointer passed to gst_task_pool_prepare() to NULL, which GLib requires (Proton passes it uninitialized), and frees it.
+---
+ dlls/winegstreamer/Makefile.in    |  1 +
+ dlls/winegstreamer/unix_private.h |  4 ++
+ dlls/winegstreamer/wg_parser.c    | 33 +++++++++++
+ dlls/winegstreamer/wg_task_pool.c | 98 +++++++++++++++++++++++++++++++
+ 4 files changed, 136 insertions(+)
+ create mode 100644 dlls/winegstreamer/wg_task_pool.c
+
+diff --git a/dlls/winegstreamer/Makefile.in b/dlls/winegstreamer/Makefile.in
+index cc2f6d3c740..fa04d6f846d 100644
+--- a/dlls/winegstreamer/Makefile.in
++++ b/dlls/winegstreamer/Makefile.in
+@@ -34,6 +34,7 @@ SOURCES = \
+ 	wg_muxer.c \
+ 	wg_parser.c \
+ 	wg_sample.c \
++	wg_task_pool.c \
+ 	wg_transform.c \
+ 	winegstreamer_classes.idl \
+ 	wm_reader.c \
+diff --git a/dlls/winegstreamer/unix_private.h b/dlls/winegstreamer/unix_private.h
+index 1814d579aeb..81155b9b380 100644
+--- a/dlls/winegstreamer/unix_private.h
++++ b/dlls/winegstreamer/unix_private.h
+@@ -100,6 +100,10 @@ extern NTSTATUS wg_muxer_push_sample(void *args);
+ extern NTSTATUS wg_muxer_read_data(void *args);
+ extern NTSTATUS wg_muxer_finalize(void *args);
+ 
++/* wg_task_pool.c */
++
++extern GstTaskPool *wg_task_pool_new(void);
++
+ /* wg_allocator.c */
+ 
+ static inline BYTE *wg_sample_data(struct wg_sample *sample)
+diff --git a/dlls/winegstreamer/wg_parser.c b/dlls/winegstreamer/wg_parser.c
+index 76f6107b71e..7f5ce835486 100644
+--- a/dlls/winegstreamer/wg_parser.c
++++ b/dlls/winegstreamer/wg_parser.c
+@@ -66,6 +66,7 @@ struct wg_parser
+ 
+     GstElement *container, *decodebin;
+     GstBus *bus;
++    GstTaskPool *task_pool;
+     GstPad *my_src;
+ 
+     guint64 file_size, start_offset, next_offset, stop_offset;
+@@ -1641,6 +1642,24 @@ static GstBusSyncReply bus_handler_cb(GstBus *bus, GstMessage *msg, gpointer use
+         }
+         break;
+ 
++    case GST_MESSAGE_STREAM_STATUS:
++    {
++        GstStreamStatusType type;
++        GstElement *element;
++        const GValue *val;
++        GstTask *task;
++
++        gst_message_parse_stream_status(msg, &type, &element);
++        val = gst_message_get_stream_status_object(msg);
++        GST_DEBUG("parser %p, message %s, type %u, value %p (%s).", parser, GST_MESSAGE_TYPE_NAME(msg), type, val, G_VALUE_TYPE_NAME(val));
++
++        if (G_VALUE_TYPE(val) == GST_TYPE_TASK && (task = g_value_get_object(val))
++                && type == GST_STREAM_STATUS_TYPE_CREATE)
++            gst_task_set_pool(task, parser->task_pool);
++
++        break;
++    }
++
+     default:
+         break;
+     }
+@@ -2039,6 +2058,7 @@ static NTSTATUS wg_parser_disconnect(void *args)
+         parser->input_cache_chunks[i].data = NULL;
+     }
+ 
++    gst_task_pool_cleanup(parser->task_pool);
+     return S_OK;
+ }
+ 
+@@ -2077,9 +2097,21 @@ static NTSTATUS wg_parser_create(void *args)
+ {
+     struct wg_parser_create_params *params = args;
+     struct wg_parser *parser;
++    GError *error = NULL;
+ 
+     if (!(parser = calloc(1, sizeof(*parser))))
+         return E_OUTOFMEMORY;
++    if (!(parser->task_pool = wg_task_pool_new()))
++    {
++        free(parser);
++        return E_OUTOFMEMORY;
++    }
++    gst_task_pool_prepare(parser->task_pool, &error);
++    if (error)
++    {
++        GST_ERROR("Failed to prepare task pool: %s.", error->message);
++        g_error_free(error);
++    }
+ 
+     pthread_mutex_init(&parser->mutex, NULL);
+     pthread_cond_init(&parser->init_cond, NULL);
+@@ -2104,6 +2136,7 @@ static NTSTATUS wg_parser_destroy(void *args)
+         gst_bus_set_sync_handler(parser->bus, NULL, NULL, NULL);
+         gst_object_unref(parser->bus);
+     }
++    gst_object_unref(parser->task_pool);
+ 
+     pthread_mutex_destroy(&parser->mutex);
+     pthread_cond_destroy(&parser->init_cond);
+diff --git a/dlls/winegstreamer/wg_task_pool.c b/dlls/winegstreamer/wg_task_pool.c
+new file mode 100644
+index 00000000000..ec7da286d5f
+--- /dev/null
++++ b/dlls/winegstreamer/wg_task_pool.c
+@@ -0,0 +1,98 @@
++/*
++ * GStreamer task pool
++ *
++ * Copyright 2023 Rémi Bernon for CodeWeavers
++ *
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation; either
++ * version 2.1 of the License, or (at your option) any later version.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with this library; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
++ */
++
++#if 0
++#pragma makedep unix
++#endif
++
++#include "config.h"
++
++#include <assert.h>
++#include <stdarg.h>
++
++#include <gst/gst.h>
++
++#include "unix_private.h"
++
++typedef struct
++{
++    GstTaskPool parent;
++} WgTaskPool;
++
++typedef struct
++{
++    GstTaskPoolClass parent_class;
++} WgTaskPoolClass;
++
++G_DEFINE_TYPE(WgTaskPool, wg_task_pool, GST_TYPE_TASK_POOL);
++
++static void wg_task_pool_prepare(GstTaskPool *pool, GError **error)
++{
++    GST_LOG("pool %p, error %p", pool, error);
++}
++
++static void wg_task_pool_cleanup(GstTaskPool *pool)
++{
++    GST_LOG("pool %p", pool);
++}
++
++static gpointer wg_task_pool_push(GstTaskPool *pool, GstTaskPoolFunction func, gpointer data, GError **error)
++{
++    pthread_t *tid;
++    gint res;
++
++    GST_LOG("pool %p, func %p, data %p, error %p", pool, func, data, error);
++
++    if (!(tid = malloc(sizeof(*tid))) || !(res = pthread_create(tid, NULL, (void *)func, data)))
++        return tid;
++
++    g_set_error(error, G_THREAD_ERROR, G_THREAD_ERROR_AGAIN, "Error creating thread: %s", g_strerror(res));
++    free(tid);
++
++    return NULL;
++}
++
++static void wg_task_pool_join(GstTaskPool *pool, gpointer id)
++{
++    pthread_t *tid = id;
++
++    GST_LOG("pool %p, id %p", pool, id);
++
++    pthread_join(*tid, NULL);
++    free(tid);
++}
++
++static void wg_task_pool_class_init(WgTaskPoolClass *klass)
++{
++    GstTaskPoolClass *parent_class = (GstTaskPoolClass *)klass;
++    parent_class->prepare = wg_task_pool_prepare;
++    parent_class->cleanup = wg_task_pool_cleanup;
++    parent_class->push = wg_task_pool_push;
++    parent_class->join = wg_task_pool_join;
++}
++
++static void wg_task_pool_init(WgTaskPool *pool)
++{
++}
++
++GstTaskPool *wg_task_pool_new(void)
++{
++    return g_object_new(wg_task_pool_get_type(), NULL);
++}

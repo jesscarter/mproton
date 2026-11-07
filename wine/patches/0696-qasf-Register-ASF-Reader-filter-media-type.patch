@@ -1,0 +1,73 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Fri, 20 May 2022 21:48:59 +0200
+Subject: [PATCH] qasf: Register ASF Reader filter media type.
+
+(cherry picked from commit 06e7989b5f59339c2d4339c8c4505eb760a2678a)
+mproton-resolved: 11.20 removed qasf's version.rc (version info now comes from VER_PRODUCTVERSION in Makefile.in), so the WINE_REGISTRY resource for qasf.rgs goes in a new rsrc.rc, added to SOURCES, like winegstreamer's.
+---
+ dlls/qasf/Makefile.in |  3 ++-
+ dlls/qasf/qasf.rgs    | 15 +++++++++++++++
+ dlls/qasf/rsrc.rc     | 20 ++++++++++++++++++++
+ 3 files changed, 37 insertions(+), 1 deletion(-)
+ create mode 100644 dlls/qasf/qasf.rgs
+ create mode 100644 dlls/qasf/rsrc.rc
+
+diff --git a/dlls/qasf/Makefile.in b/dlls/qasf/Makefile.in
+index bac98aa7482..ab3cc82ce73 100644
+--- a/dlls/qasf/Makefile.in
++++ b/dlls/qasf/Makefile.in
+@@ -7,4 +7,5 @@ SOURCES = \
+ 	asfreader.c \
+ 	dmowrapper.c \
+ 	qasf_classes.idl \
+-	qasf_main.c
++	qasf_main.c \
++	rsrc.rc
+diff --git a/dlls/qasf/qasf.rgs b/dlls/qasf/qasf.rgs
+new file mode 100644
+index 00000000000..de0d3e425ed
+--- /dev/null
++++ b/dlls/qasf/qasf.rgs
+@@ -0,0 +1,15 @@
++HKCR
++{
++    NoRemove 'Media Type'
++    {
++        '{e436eb83-524f-11ce-9f53-0020af0ba770}'
++        {
++            '{6b6d0801-9ada-11d0-a520-00a0d10129c0}'
++            {
++                val '0' = s '0,4,,3026b275'
++                val '1' = s '0,4,,d129e2d6'
++                val 'Source Filter' = s '{187463a0-5bb7-11d3-acbe-0080c75e246e}'
++            }
++        }
++    }
++}
+diff --git a/dlls/qasf/rsrc.rc b/dlls/qasf/rsrc.rc
+new file mode 100644
+index 00000000000..8d246390c41
+--- /dev/null
++++ b/dlls/qasf/rsrc.rc
+@@ -0,0 +1,20 @@
++/*
++ * Copyright 2022 Rémi Bernon for CodeWeavers
++ *
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation; either
++ * version 2.1 of the License, or (at your option) any later version.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with this library; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
++ */
++
++/* @makedep: qasf.rgs */
++1 WINE_REGISTRY qasf.rgs

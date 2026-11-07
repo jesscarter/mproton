@@ -1,0 +1,25 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Bernhard=20K=C3=B6lbl?= <bkoelbl@codeweavers.com>
+Date: Thu, 11 Jun 2026 13:36:09 +0200
+Subject: [PATCH] winedmo: Discard transcoded streams from the dump db.
+
+CW-Bug-Id: #27160
+(cherry picked from commit 3999811509e43cc178270f19212a4143eec1412d)
+---
+ dlls/winedmo/unix_demuxer_mediaconv.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/dlls/winedmo/unix_demuxer_mediaconv.c b/dlls/winedmo/unix_demuxer_mediaconv.c
+index a3be26c82cf..1de5b2ca527 100644
+--- a/dlls/winedmo/unix_demuxer_mediaconv.c
++++ b/dlls/winedmo/unix_demuxer_mediaconv.c
+@@ -223,6 +223,9 @@ int mediaconv_demuxer_open( AVFormatContext **ctx, struct stream_context *contex
+ 
+     pthread_mutex_lock( &fozdb_lock );
+ 
++    if ((ret = discard_transcoded_streams(dump_db, read_db)) < 0)
++        TRACE("failed to discard transcoded streams from the dump db, ret %i\n", ret);
++
+     if (read_db && (transcoded = fozdb_entry_get( &read_db->entries, VIDEO_CONV_FOZ_TAG_MKVDATA, &stream_hash )))
+     {
+         TRACE( "Found mkv stream for %s\n", debugstr_fozdb_hash( &stream_hash ) );

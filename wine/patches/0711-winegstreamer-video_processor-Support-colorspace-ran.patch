@@ -1,0 +1,51 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Wed, 11 Sep 2024 18:21:13 +0200
+Subject: [PATCH] winegstreamer/video_processor: Support colorspace range in
+ the D3D11 video processor.
+
+CW-Bug-Id: #24235
+(cherry picked from commit a9ee089454dd5990b72a5cf4dbf3a91804f5146d)
+---
+ dlls/msvproc/video_processor.c | 14 ++++++++++++++
+ 1 file changed, 14 insertions(+)
+
+diff --git a/dlls/msvproc/video_processor.c b/dlls/msvproc/video_processor.c
+index c3b1f90d9fe..81e082bc792 100644
+--- a/dlls/msvproc/video_processor.c
++++ b/dlls/msvproc/video_processor.c
+@@ -781,6 +781,7 @@ failed:
+ static HRESULT video_processor_process_output_d3d11(struct video_processor *processor,
+         IMFSample *input_sample, IMFSample *output_sample)
+ {
++    D3D11_VIDEO_PROCESSOR_COLOR_SPACE color_space;
+     D3D11_VIDEO_PROCESSOR_STREAM streams = {0};
+     struct resource_desc input_desc, output_desc;
+     ID3D11VideoProcessorOutputView *output_view;
+@@ -791,6 +792,7 @@ static HRESULT video_processor_process_output_d3d11(struct video_processor *proc
+     MFVideoArea aperture;
+     RECT rect = {0};
+     LONGLONG time;
++    UINT32 value;
+     DWORD flags;
+     HRESULT hr;
+ 
+@@ -838,6 +840,18 @@ static HRESULT video_processor_process_output_d3d11(struct video_processor *proc
+         SetRect(&rect, 0, 0, output_desc.frame_size >> 32, (UINT32)output_desc.frame_size);
+     ID3D11VideoContext_VideoProcessorSetStreamDestRect(video_context, video_processor, 0, TRUE, &rect);
+ 
++    memset(&color_space, 0, sizeof(color_space));
++    if (SUCCEEDED(IMFMediaType_GetUINT32(processor->input_type, &MF_MT_VIDEO_NOMINAL_RANGE, &value)))
++        color_space.Nominal_Range = value == MFNominalRange_Wide ? D3D11_VIDEO_PROCESSOR_NOMINAL_RANGE_16_235
++                                                                 : D3D11_VIDEO_PROCESSOR_NOMINAL_RANGE_0_255;
++    ID3D11VideoContext_VideoProcessorSetStreamColorSpace(video_context, video_processor, 0, &color_space);
++
++    memset(&color_space, 0, sizeof(color_space));
++    if (SUCCEEDED(IMFMediaType_GetUINT32(processor->output_type, &MF_MT_VIDEO_NOMINAL_RANGE, &value)))
++        color_space.Nominal_Range = value == MFNominalRange_Wide ? D3D11_VIDEO_PROCESSOR_NOMINAL_RANGE_16_235
++                                                                 : D3D11_VIDEO_PROCESSOR_NOMINAL_RANGE_0_255;
++    ID3D11VideoContext_VideoProcessorSetOutputColorSpace(video_context, video_processor, &color_space);
++
+     ID3D11VideoContext_VideoProcessorBlt(video_context, video_processor, output_view, 0, 1, &streams);
+ 
+     IMFSample_CopyAllItems(input_sample, (IMFAttributes *)output_sample);

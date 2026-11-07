@@ -1,0 +1,23 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Fri, 12 Dec 2025 10:51:06 +0100
+Subject: [PATCH] HACK: winedmo: Ignore missing PNG decoders.
+
+CW-Bug-Id: #26326
+(cherry picked from commit ba7c395311e5c3fa8f2cfe8784f4688a34283952)
+---
+ dlls/winedmo/unix_demuxer_mediaconv.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/dlls/winedmo/unix_demuxer_mediaconv.c b/dlls/winedmo/unix_demuxer_mediaconv.c
+index 063f8db2043..5577770db2c 100644
+--- a/dlls/winedmo/unix_demuxer_mediaconv.c
++++ b/dlls/winedmo/unix_demuxer_mediaconv.c
+@@ -202,6 +202,7 @@ int mediaconv_demuxer_open( AVFormatContext **ctx, struct stream_context *contex
+             if (par->codec_id && !strcmp("h264", avcodec_get_name(par->codec_id)))
+                     create_placeholder_file("h264-used");
+             if (!par->codec_id) FIXME( "Ignoring unknown codec on stream %u\n", i );
++            else if (par->codec_id == AV_CODEC_ID_PNG) continue;
+             else if (par->codec_id != AV_CODEC_ID_OPUS && !avcodec_find_decoder( par->codec_id )) break;
+         }
+         if (i == (*ctx)->nb_streams) return 0;

@@ -1,0 +1,56 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Tue, 24 Dec 2024 10:11:38 +0100
+Subject: [PATCH] HACK: winegstreamer: Expose Opus decoding support.
+
+(cherry picked from commit b2a834d2913401fadb885a81b8762ffe54bf7fa1)
+---
+ dlls/winegstreamer/audio_decoder.c |  2 ++
+ dlls/winegstreamer/wg_media_type.c | 14 ++++++++++++++
+ 2 files changed, 16 insertions(+)
+
+diff --git a/dlls/winegstreamer/audio_decoder.c b/dlls/winegstreamer/audio_decoder.c
+index c97bdda0f68..1ac1c67f4ce 100644
+--- a/dlls/winegstreamer/audio_decoder.c
++++ b/dlls/winegstreamer/audio_decoder.c
+@@ -668,6 +668,8 @@ static WAVEFORMATEXTENSIBLE audio_decoder_input_types[] =
+     {.Format = {.wFormatTag = WAVE_FORMAT_EXTENSIBLE, .nChannels = 6, .nSamplesPerSec = 48000, .nAvgBytesPerSec = 1152000, \
+                 .nBlockAlign = 24, .wBitsPerSample = 32, .cbSize = sizeof(WAVEFORMATEXTENSIBLE) - sizeof(WAVEFORMATEX)}, \
+      .SubFormat = {0x8d2fd10b,0x5841,0x4a6b,{0x89,0x05,0x58,0x8f,0xec,0x1a,0xde,0xd9}}},
++    {.Format = {.wFormatTag = WAVE_FORMAT_OPUS, .nChannels = 6, .nSamplesPerSec = 48000, .nAvgBytesPerSec = 1152000,
++                .nBlockAlign = 24, .wBitsPerSample = 32, .cbSize = sizeof(WAVEFORMATEXTENSIBLE) - sizeof(WAVEFORMATEX)}},
+ };
+ 
+ HRESULT audio_decoder_create(REFIID riid, void **ret)
+diff --git a/dlls/winegstreamer/wg_media_type.c b/dlls/winegstreamer/wg_media_type.c
+index 8ee69adf2c9..f6603637173 100644
+--- a/dlls/winegstreamer/wg_media_type.c
++++ b/dlls/winegstreamer/wg_media_type.c
+@@ -179,6 +179,18 @@ static void init_caps_from_wave_format_vorbis(GstCaps *caps, const WAVEFORMATEX
+     gst_caps_set_simple(caps, "bitrate", G_TYPE_INT, format->nAvgBytesPerSec * 8, NULL);
+ }
+ 
++static void init_caps_from_wave_format_opus(GstCaps *caps, const WAVEFORMATEX *format, UINT32 format_size)
++{
++    init_caps_codec_data(caps, format + 1, format->cbSize);
++
++    gst_structure_remove_field(gst_caps_get_structure(caps, 0), "format");
++    gst_structure_set_name(gst_caps_get_structure(caps, 0), "audio/x-opus");
++    gst_caps_set_simple(caps, "channel-mapping-family", G_TYPE_INT, 0, NULL);
++    gst_caps_set_simple(caps, "block_align", G_TYPE_INT, format->nBlockAlign, NULL);
++    gst_caps_set_simple(caps, "depth", G_TYPE_INT, format->wBitsPerSample, NULL);
++    gst_caps_set_simple(caps, "bitrate", G_TYPE_INT, format->nAvgBytesPerSec * 8, NULL);
++}
++
+ static void init_caps_from_wave_format(GstCaps *caps, const GUID *subtype,
+         const void *format, UINT32 format_size)
+ {
+@@ -200,6 +212,8 @@ static void init_caps_from_wave_format(GstCaps *caps, const GUID *subtype,
+         return init_caps_from_wave_format_wma3(caps, format, format_size, 4);
+     if (IsEqualGUID(subtype, &MFAudioFormat_Vorbis))
+         return init_caps_from_wave_format_vorbis(caps, format, format_size);
++    if (IsEqualGUID(subtype, &MFAudioFormat_Opus))
++        return init_caps_from_wave_format_opus(caps, format, format_size);
+ 
+     GST_FIXME("Unsupported subtype " WG_GUID_FORMAT, WG_GUID_ARGS(*subtype));
+ }

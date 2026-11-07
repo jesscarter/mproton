@@ -1,0 +1,105 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Thu, 5 Dec 2024 23:36:09 +0100
+Subject: [PATCH] HACK: winegstreamer/audio_decoder: Expose a vorbis audio
+ decoder.
+
+(cherry picked from commit 3fee8f8e973551a4cb01eecfd6ac9c111ce39b06)
+mproton-resolved: Only the class_objects context differed: 11.20 moved the video processor to msvproc, so CLSID_wg_video_processor is no longer listed. The GStreamer audio decoder is what msauddecmft's carried Vorbis hack (d96440f340d) creates.
+---
+ dlls/winegstreamer/audio_decoder.c           | 33 ++++++++++++++++++++
+ dlls/winegstreamer/gst_private.h             |  1 +
+ dlls/winegstreamer/mfplat.c                  |  2 ++
+ dlls/winegstreamer/winegstreamer_classes.idl |  6 ++++
+ 4 files changed, 42 insertions(+)
+
+diff --git a/dlls/winegstreamer/audio_decoder.c b/dlls/winegstreamer/audio_decoder.c
+index 49538c1ad09..c97bdda0f68 100644
+--- a/dlls/winegstreamer/audio_decoder.c
++++ b/dlls/winegstreamer/audio_decoder.c
+@@ -662,3 +662,36 @@ HRESULT aac_decoder_create(REFIID riid, void **ret)
+     TRACE("Created decoder %p\n", *ret);
+     return S_OK;
+ }
++
++static WAVEFORMATEXTENSIBLE audio_decoder_input_types[] =
++{
++    {.Format = {.wFormatTag = WAVE_FORMAT_EXTENSIBLE, .nChannels = 6, .nSamplesPerSec = 48000, .nAvgBytesPerSec = 1152000, \
++                .nBlockAlign = 24, .wBitsPerSample = 32, .cbSize = sizeof(WAVEFORMATEXTENSIBLE) - sizeof(WAVEFORMATEX)}, \
++     .SubFormat = {0x8d2fd10b,0x5841,0x4a6b,{0x89,0x05,0x58,0x8f,0xec,0x1a,0xde,0xd9}}},
++};
++
++HRESULT audio_decoder_create(REFIID riid, void **ret)
++{
++    struct audio_decoder *decoder;
++    HRESULT hr;
++
++    TRACE("riid %s, ret %p.\n", debugstr_guid(riid), ret);
++
++    if (!(decoder = calloc(1, sizeof(*decoder))))
++        return E_OUTOFMEMORY;
++    decoder->input_types = (WAVEFORMATEXTENSIBLE *)audio_decoder_input_types;
++    decoder->input_type_count = ARRAY_SIZE(audio_decoder_input_types);
++
++    if (FAILED(hr = wg_sample_queue_create(&decoder->wg_sample_queue)))
++    {
++        free(decoder);
++        return hr;
++    }
++
++    decoder->IMFTransform_iface.lpVtbl = &transform_vtbl;
++    decoder->refcount = 1;
++
++    *ret = &decoder->IMFTransform_iface;
++    TRACE("Created decoder %p\n", *ret);
++    return S_OK;
++}
+diff --git a/dlls/winegstreamer/gst_private.h b/dlls/winegstreamer/gst_private.h
+index 3147c42cf9c..32d9d95d952 100644
+--- a/dlls/winegstreamer/gst_private.h
++++ b/dlls/winegstreamer/gst_private.h
+@@ -179,6 +179,7 @@ unsigned int wg_format_get_stride(const struct wg_format *format);
+ 
+ bool wg_video_format_is_rgb(enum wg_video_format format);
+ 
++HRESULT audio_decoder_create(REFIID riid, void **ret);
+ HRESULT aac_decoder_create(REFIID riid, void **ret);
+ HRESULT h264_decoder_create(REFIID riid, void **ret);
+ HRESULT gstreamer_scheme_handler_create(REFIID riid, void **ret);
+diff --git a/dlls/winegstreamer/mfplat.c b/dlls/winegstreamer/mfplat.c
+index a9d51ea7da5..ee83d750152 100644
+--- a/dlls/winegstreamer/mfplat.c
++++ b/dlls/winegstreamer/mfplat.c
+@@ -122,6 +122,7 @@ static const IClassFactoryVtbl class_factory_vtbl =
+     class_factory_LockServer,
+ };
+ 
++static const GUID CLSID_GStreamerAudioDecoder = {0x480b1517, 0xc8e9, 0x4eae, {0xb0, 0x06, 0xe6, 0x30, 0x07, 0x18, 0xd8, 0x5d}};
+ static const GUID CLSID_GStreamerByteStreamHandler = {0x317df618, 0x5e5a, 0x468a, {0x9f, 0x15, 0xd8, 0x27, 0xa9, 0xa0, 0x81, 0x62}};
+ static const GUID CLSID_wg_aac_decoder = {0xe7889a8a,0x2083,0x4844,{0x83,0x70,0x5e,0xe3,0x49,0xb1,0x45,0x03}};
+ static const GUID CLSID_wg_h264_decoder = {0x1f1e273d,0x12c0,0x4b3a,{0x8e,0x9b,0x19,0x33,0xc2,0x49,0x8a,0xea}};
+@@ -136,6 +137,7 @@ static const struct class_object
+ }
+ class_objects[] =
+ {
++    { &CLSID_GStreamerAudioDecoder, &audio_decoder_create },
+     { &CLSID_GStreamerByteStreamHandler, &gstreamer_byte_stream_handler_create },
+     { &CLSID_GStreamerSchemePlugin, &gstreamer_scheme_handler_create },
+     { &CLSID_wg_aac_decoder, &aac_decoder_create },
+diff --git a/dlls/winegstreamer/winegstreamer_classes.idl b/dlls/winegstreamer/winegstreamer_classes.idl
+index 020ada8dbb7..153e62ff46f 100644
+--- a/dlls/winegstreamer/winegstreamer_classes.idl
++++ b/dlls/winegstreamer/winegstreamer_classes.idl
+@@ -78,6 +78,12 @@ coclass GStreamerByteStreamHandler {}
+ ]
+ coclass GStreamerSchemePlugin { }
+ 
++[
++    threading(both),
++    uuid(480b1517-c8e9-4eae-b006-e6300718d85d)
++]
++coclass GStreamerAudioDecoder {}
++
+ [
+     threading(both),
+     uuid(5b4d4e54-0620-4cf9-94ae-7823965c28b6)

@@ -1,0 +1,84 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Tue, 2 Apr 2024 13:08:27 +0200
+Subject: [PATCH] mf/session: Keep previously allocated sample with the
+ transform streams.
+
+CW-Bug-Id: #20833
+(cherry picked from commit 4b32c8027b95e9ef9aafdf039f71d7aba47d4a90)
+mproton-resolved: 11.20 added fields to struct transform_stream (raw_audio, block alignment, samples_independent), so the context moved; the change itself is the same: the new allocated_sample field, its release in transform_stream_drop_events(), reuse in transform_get_external_output_sample() and keeping the sample on MF_E_TRANSFORM_NEED_MORE_INPUT in transform_node_pull_samples().
+---
+ dlls/mf/session.c | 28 ++++++++++++++++++++++++----
+ 1 file changed, 24 insertions(+), 4 deletions(-)
+
+diff --git a/dlls/mf/session.c b/dlls/mf/session.c
+index 93c5f1298e8..03ebfa55718 100644
+--- a/dlls/mf/session.c
++++ b/dlls/mf/session.c
+@@ -176,6 +176,7 @@ struct transform_stream
+     unsigned int bytes_per_second;
+     unsigned int min_buffer_size;
+     BOOL samples_independent;
++    IMFSample *allocated_sample;
+     BOOL draining;
+ };
+ 
+@@ -780,6 +781,12 @@ static void transform_stream_drop_events(struct transform_stream *stream)
+ {
+     IMFMediaEvent *event;
+ 
++    if (stream->allocated_sample)
++    {
++        IMFSample_Release(stream->allocated_sample);
++        stream->allocated_sample = NULL;
++    }
++
+     while (SUCCEEDED(transform_stream_pop_event(stream, &event)))
+         IMFMediaEvent_Release(event);
+ }
+@@ -3496,12 +3503,22 @@ static void session_set_sink_stream_state(struct media_session *session, IMFStre
+ static HRESULT transform_get_external_output_sample(const struct media_session *session, struct topo_node *transform,
+         DWORD output, const MFT_OUTPUT_STREAM_INFO *stream_info, IMFSample **sample)
+ {
++    struct transform_stream *stream = &transform->u.transform.outputs[output];
++    DWORD buffer_size, sample_size, input;
+     IMFMediaBuffer *buffer = NULL;
+     struct topo_node *topo_node;
+-    unsigned int buffer_size;
+-    DWORD input;
+     HRESULT hr;
+ 
++    buffer_size = max(stream_info->cbSize, stream->min_buffer_size);
++    if ((*sample = stream->allocated_sample))
++    {
++        stream->allocated_sample = NULL;
++        if (SUCCEEDED(IMFSample_GetTotalLength(*sample, &sample_size)) && sample_size >= buffer_size)
++            return S_OK;
++        IMFSample_Release(*sample);
++        *sample = NULL;
++    }
++
+     if (!(topo_node = session_get_topo_node_output(session, transform, output, &input)))
+     {
+         WARN("Failed to node %p/%lu output.\n", transform, output);
+@@ -3514,8 +3531,6 @@ static HRESULT transform_get_external_output_sample(const struct media_session *
+     }
+     else
+     {
+-        buffer_size = max(stream_info->cbSize, transform->u.transform.outputs[output].min_buffer_size);
+-
+         hr = MFCreateAlignedMemoryBuffer(buffer_size, stream_info->cbAlignment, &buffer);
+         if (SUCCEEDED(hr))
+             hr = MFCreateSample(sample);
+@@ -3838,6 +3853,11 @@ static HRESULT transform_node_pull_samples(const struct media_session *session,
+             if (FAILED(hr = transform_stream_push_sample(stream, buffers[i].pSample)))
+                 WARN("Failed to queue output sample, hr %#lx\n", hr);
+         }
++        else if (hr == MF_E_TRANSFORM_NEED_MORE_INPUT && !stream->allocated_sample)
++        {
++            stream->allocated_sample = buffers[i].pSample;
++            buffers[i].pSample = NULL;
++        }
+     }
+ 
+ done:

@@ -1,0 +1,446 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Yuxuan Shui <yshui@codeweavers.com>
+Date: Tue, 9 Jan 2024 11:31:50 +0000
+Subject: [PATCH] HACK: winegstreamer: Implement URI media source with
+ uridecodebin.
+
+This overrides Urlmon based scheme handlers. The urlmon scheme handlers
+only support playback of the media after it has been fully downloaded
+from the internet, and has no streaming support. This is undesirable for
+games like VRChat.
+
+Link: https://github.com/ValveSoftware/wine/pull/142
+CW-Bug-Id: #20485
+CW-Bug-Id: #23217
+(cherry picked from commit 4d9083e70bc70efe1bc5409b8fe67f88d1f55528)
+mproton-resolved: Only gst_private.h conflicted: 11.20 moved the video processor to msvproc, so video_processor_create() is gone from the context and only gstreamer_scheme_handler_create() is added. The rest applies as is on 11.20's object_context/media_source_create(). Also releases the placeholder byte stream in scheme_handler_BeginCreateObject() once the context holds it (Proton leaks one per URL).
+---
+ dlls/mf/mf.rgs                               |   8 -
+ dlls/winegstreamer/gst_private.h             |   2 +
+ dlls/winegstreamer/media_source.c            | 267 +++++++++++++++++++
+ dlls/winegstreamer/mfplat.c                  |   3 +
+ dlls/winegstreamer/wg_parser.c               |  14 +-
+ dlls/winegstreamer/winegstreamer.rgs         |  28 ++
+ dlls/winegstreamer/winegstreamer_classes.idl |   7 +
+ 7 files changed, 318 insertions(+), 11 deletions(-)
+
+diff --git a/dlls/mf/mf.rgs b/dlls/mf/mf.rgs
+index f06576baccb..f127df76321 100644
+--- a/dlls/mf/mf.rgs
++++ b/dlls/mf/mf.rgs
+@@ -12,14 +12,6 @@ HKLM
+                     {
+                         val '{477ec299-1421-4bdd-971f-7ccb933f21ad}' = s 'File Scheme Handler'
+                     }
+-                    'http:'
+-                    {
+-                        val '{9ec4b4f9-3029-45ad-947b-344de2a249e2}' = s 'Urlmon Scheme Handler'
+-                    }
+-                    'https:'
+-                    {
+-                        val '{9ec4b4f9-3029-45ad-947b-344de2a249e2}' = s 'Urlmon Scheme Handler'
+-                    }
+                 }
+             }
+         }
+diff --git a/dlls/winegstreamer/gst_private.h b/dlls/winegstreamer/gst_private.h
+index 71ef17985ce..3147c42cf9c 100644
+--- a/dlls/winegstreamer/gst_private.h
++++ b/dlls/winegstreamer/gst_private.h
+@@ -181,6 +181,8 @@ bool wg_video_format_is_rgb(enum wg_video_format format);
+ 
+ HRESULT aac_decoder_create(REFIID riid, void **ret);
+ HRESULT h264_decoder_create(REFIID riid, void **ret);
++HRESULT gstreamer_scheme_handler_create(REFIID riid, void **ret);
++
+ HRESULT h264_encoder_create(REFIID riid, void **ret);
+ 
+ extern const GUID MFAudioFormat_RAW_AAC;
+diff --git a/dlls/winegstreamer/media_source.c b/dlls/winegstreamer/media_source.c
+index c5ff22f45f6..6237b11c3f7 100644
+--- a/dlls/winegstreamer/media_source.c
++++ b/dlls/winegstreamer/media_source.c
+@@ -2104,3 +2104,270 @@ HRESULT gstreamer_byte_stream_handler_create(REFIID riid, void **obj)
+ 
+     return hr;
+ }
++
++struct scheme_handler
++{
++    IMFSchemeHandler IMFSchemeHandler_iface;
++    IMFAsyncCallback IMFAsyncCallback_iface;
++    LONG refcount;
++    struct list results;
++    CRITICAL_SECTION cs;
++};
++
++static struct scheme_handler *impl_from_IMFSchemeHandler(IMFSchemeHandler *iface)
++{
++    return CONTAINING_RECORD(iface, struct scheme_handler, IMFSchemeHandler_iface);
++}
++
++static struct scheme_handler *scheme_handler_from_IMFAsyncCallback(IMFAsyncCallback *iface)
++{
++    return CONTAINING_RECORD(iface, struct scheme_handler, IMFAsyncCallback_iface);
++}
++
++static struct result_entry *scheme_handler_find_result_entry(struct scheme_handler *handler, IMFAsyncResult *result)
++{
++    struct result_entry *entry;
++
++    EnterCriticalSection(&handler->cs);
++    LIST_FOR_EACH_ENTRY(entry, &handler->results, struct result_entry, entry)
++    {
++        if (result == entry->result)
++        {
++            list_remove(&entry->entry);
++            LeaveCriticalSection(&handler->cs);
++            return entry;
++        }
++    }
++    LeaveCriticalSection(&handler->cs);
++
++    return NULL;
++}
++
++
++static HRESULT WINAPI scheme_handler_QueryIntace(IMFSchemeHandler *iface, REFIID riid, void **obj)
++{
++    TRACE("%p, %s, %p.\n", iface, debugstr_guid(riid), obj);
++
++    if (IsEqualIID(riid, &IID_IMFSchemeHandler) ||
++            IsEqualIID(riid, &IID_IUnknown))
++    {
++        *obj = iface;
++        IMFSchemeHandler_AddRef(iface);
++        return S_OK;
++    }
++
++    WARN("Unsupported %s.\n", debugstr_guid(riid));
++    *obj = NULL;
++    return E_NOINTERFACE;
++}
++
++static ULONG WINAPI scheme_handler_AddRef(IMFSchemeHandler *iface)
++{
++    struct scheme_handler *handler = impl_from_IMFSchemeHandler(iface);
++    ULONG refcount = InterlockedIncrement(&handler->refcount);
++
++    TRACE("%p, refcount %lu.\n", handler, refcount);
++
++    return refcount;
++}
++
++static ULONG WINAPI scheme_handler_Release(IMFSchemeHandler *iface)
++{
++    struct scheme_handler *handler = impl_from_IMFSchemeHandler(iface);
++    ULONG refcount = InterlockedDecrement(&handler->refcount);
++    struct result_entry *result, *next;
++
++    TRACE("%p, refcount %lu.\n", iface, refcount);
++
++    if (!refcount)
++    {
++        LIST_FOR_EACH_ENTRY_SAFE(result, next, &handler->results, struct result_entry, entry)
++            result_entry_destroy(result);
++        DeleteCriticalSection(&handler->cs);
++        free(handler);
++    }
++
++    return refcount;
++}
++
++static HRESULT WINAPI scheme_handler_BeginCreateObject(IMFSchemeHandler *iface, const WCHAR *url, DWORD flags,
++        IPropertyStore *props, IUnknown **cancel_cookie, IMFAsyncCallback *callback, IUnknown *state)
++{
++    struct scheme_handler *handler = impl_from_IMFSchemeHandler(iface);
++    IMFByteStream *bytestream;
++    IMFAsyncResult *result;
++    IUnknown *context;
++    IStream *stream;
++    HRESULT hr;
++
++    TRACE("%p, %s, %#lx, %p, %p, %p, %p.\n", iface, debugstr_w(url), flags, props, cancel_cookie, callback, state);
++
++    if (cancel_cookie)
++        *cancel_cookie = NULL;
++
++    if (FAILED(hr = CreateStreamOnHGlobal(0, TRUE, &stream)))
++        return hr;
++
++    hr = MFCreateMFByteStreamOnStream(stream, &bytestream);
++    IStream_Release(stream);
++    if (FAILED(hr))
++        return hr;
++
++    if (FAILED(hr = MFCreateAsyncResult(NULL, callback, state, &result)))
++    {
++        IMFByteStream_Release(bytestream);
++        return hr;
++    }
++    hr = object_context_create(flags, bytestream, url, -1, result, &context);
++    IMFByteStream_Release(bytestream);
++    if (FAILED(hr))
++    {
++        IMFAsyncResult_Release(result);
++        return hr;
++    }
++
++    hr = MFPutWorkItem(MFASYNC_CALLBACK_QUEUE_IO, &handler->IMFAsyncCallback_iface, context);
++    IUnknown_Release(context);
++    IMFAsyncResult_Release(result);
++
++    return hr;
++}
++
++static HRESULT WINAPI scheme_handler_EndCreateObject(IMFSchemeHandler *iface, IMFAsyncResult *result,
++        MF_OBJECT_TYPE *obj_type, IUnknown **object)
++{
++    struct scheme_handler *handler = impl_from_IMFSchemeHandler(iface);
++    struct result_entry *entry;
++    HRESULT hr;
++
++    TRACE("%p, %p, %p, %p.\n", iface, result, obj_type, object);
++
++    if (!(entry = scheme_handler_find_result_entry(handler, result)))
++    {
++        *obj_type = MF_OBJECT_INVALID;
++        *object = NULL;
++        return MF_E_UNEXPECTED;
++    }
++
++    hr = IMFAsyncResult_GetStatus(entry->result);
++    *obj_type = MF_OBJECT_MEDIASOURCE;
++    *object = entry->object;
++    IUnknown_AddRef(*object);
++    result_entry_destroy(entry);
++
++    return hr;
++}
++
++static HRESULT WINAPI scheme_handler_CancelObjectCreation(IMFSchemeHandler *iface, IUnknown *cancel_cookie)
++{
++    /* Cancellation is not supported. */
++    TRACE("%p, %p.\n", iface, cancel_cookie);
++    return MF_E_UNEXPECTED;
++}
++
++static const IMFSchemeHandlerVtbl scheme_handler_vtbl =
++{
++    scheme_handler_QueryIntace,
++    scheme_handler_AddRef,
++    scheme_handler_Release,
++    scheme_handler_BeginCreateObject,
++    scheme_handler_EndCreateObject,
++    scheme_handler_CancelObjectCreation,
++};
++
++static HRESULT WINAPI scheme_handler_callback_QueryInterface(IMFAsyncCallback *iface, REFIID riid, void **obj)
++{
++    if (IsEqualIID(riid, &IID_IMFAsyncCallback) ||
++            IsEqualIID(riid, &IID_IUnknown))
++    {
++        *obj = iface;
++        IMFAsyncCallback_AddRef(iface);
++        return S_OK;
++    }
++
++    WARN("Unsupported %s.\n", debugstr_guid(riid));
++    *obj = NULL;
++    return E_NOINTERFACE;
++}
++
++static ULONG WINAPI scheme_handler_callback_AddRef(IMFAsyncCallback *iface)
++{
++    struct scheme_handler *handler = scheme_handler_from_IMFAsyncCallback(iface);
++    return IMFSchemeHandler_AddRef(&handler->IMFSchemeHandler_iface);
++}
++
++static ULONG WINAPI scheme_handler_callback_Release(IMFAsyncCallback *iface)
++{
++    struct scheme_handler *handler = scheme_handler_from_IMFAsyncCallback(iface);
++    return IMFSchemeHandler_Release(&handler->IMFSchemeHandler_iface);
++}
++
++static HRESULT WINAPI scheme_handler_callback_GetParameters(IMFAsyncCallback *iface, DWORD *flags, DWORD *queue)
++{
++    return E_NOTIMPL;
++}
++
++static HRESULT WINAPI scheme_handler_callback_Invoke(IMFAsyncCallback *iface, IMFAsyncResult *result)
++{
++    struct scheme_handler *handler = scheme_handler_from_IMFAsyncCallback(iface);
++    IUnknown *object, *state = IMFAsyncResult_GetStateNoAddRef(result);
++    struct object_context *context;
++    struct result_entry *entry;
++    HRESULT hr;
++
++    if (!state || !(context = impl_from_IUnknown(state)))
++        return E_INVALIDARG;
++
++    if (FAILED(hr = media_source_create(context, (IMFMediaSource **)&object)))
++        WARN("Failed to create media source, hr %#lx\n", hr);
++    else
++    {
++        if (FAILED(hr = result_entry_create(context->result, MF_OBJECT_MEDIASOURCE, object, &entry)))
++            WARN("Failed to create handler result, hr %#lx\n", hr);
++        else
++        {
++            EnterCriticalSection(&handler->cs);
++            list_add_tail(&handler->results, &entry->entry);
++            LeaveCriticalSection(&handler->cs);
++        }
++
++        IUnknown_Release(object);
++    }
++
++    IMFAsyncResult_SetStatus(context->result, hr);
++    MFInvokeCallback(context->result);
++
++    return S_OK;
++}
++
++static const IMFAsyncCallbackVtbl scheme_handler_callback_vtbl =
++{
++    scheme_handler_callback_QueryInterface,
++    scheme_handler_callback_AddRef,
++    scheme_handler_callback_Release,
++    scheme_handler_callback_GetParameters,
++    scheme_handler_callback_Invoke,
++};
++
++HRESULT gstreamer_scheme_handler_create(REFIID riid, void **obj)
++{
++    struct scheme_handler *handler;
++    HRESULT hr;
++
++    TRACE("%s, %p.\n", debugstr_guid(riid), obj);
++
++    if (!(handler = calloc(1, sizeof(*handler))))
++        return E_OUTOFMEMORY;
++
++    list_init(&handler->results);
++    InitializeCriticalSection(&handler->cs);
++
++    handler->IMFSchemeHandler_iface.lpVtbl = &scheme_handler_vtbl;
++    handler->IMFAsyncCallback_iface.lpVtbl = &scheme_handler_callback_vtbl;
++    handler->refcount = 1;
++
++    hr = IMFSchemeHandler_QueryInterface(&handler->IMFSchemeHandler_iface, riid, obj);
++    IMFSchemeHandler_Release(&handler->IMFSchemeHandler_iface);
++
++    return hr;
++}
+diff --git a/dlls/winegstreamer/mfplat.c b/dlls/winegstreamer/mfplat.c
+index 7ae86e49be1..a9d51ea7da5 100644
+--- a/dlls/winegstreamer/mfplat.c
++++ b/dlls/winegstreamer/mfplat.c
+@@ -127,6 +127,8 @@ static const GUID CLSID_wg_aac_decoder = {0xe7889a8a,0x2083,0x4844,{0x83,0x70,0x
+ static const GUID CLSID_wg_h264_decoder = {0x1f1e273d,0x12c0,0x4b3a,{0x8e,0x9b,0x19,0x33,0xc2,0x49,0x8a,0xea}};
+ static const GUID CLSID_wg_h264_encoder = {0x6c34de69,0x4670,0x46cd,{0x8c,0xb4,0x1f,0x2f,0xa1,0xdf,0xfb,0x65}};
+ 
++static const GUID CLSID_GStreamerSchemePlugin = {0x587eeb6a,0x7336,0x4ebd,{0xa4,0xf2,0x91,0xc9,0x48,0xde,0x62,0x2c}};
++
+ static const struct class_object
+ {
+     const GUID *clsid;
+@@ -135,6 +137,7 @@ static const struct class_object
+ class_objects[] =
+ {
+     { &CLSID_GStreamerByteStreamHandler, &gstreamer_byte_stream_handler_create },
++    { &CLSID_GStreamerSchemePlugin, &gstreamer_scheme_handler_create },
+     { &CLSID_wg_aac_decoder, &aac_decoder_create },
+     { &CLSID_wg_h264_decoder, &h264_decoder_create },
+     { &CLSID_wg_h264_encoder, &h264_encoder_create },
+diff --git a/dlls/winegstreamer/wg_parser.c b/dlls/winegstreamer/wg_parser.c
+index 7f5ce835486..c6c9b053518 100644
+--- a/dlls/winegstreamer/wg_parser.c
++++ b/dlls/winegstreamer/wg_parser.c
+@@ -2065,14 +2065,22 @@ static NTSTATUS wg_parser_disconnect(void *args)
+ static BOOL decodebin_parser_init_gst(struct wg_parser *parser)
+ {
+     GstElement *element;
++    const char *type;
+ 
+-    if (!(element = create_element("decodebin", "base")))
++    type = parser->uri && (!strncmp(parser->uri, "http://", 7) || !strncmp(parser->uri, "https://", 8) ||
++                            !strncmp(parser->uri, "rtsp://", 7)) ? "uridecodebin" : "decodebin";
++    if (!(element = create_element(type, "base")))
+         return FALSE;
++    GST_INFO("creating %s element for uri \"%s\"", type, parser->uri ? parser->uri : "(null)");
+ 
+     gst_bin_add(GST_BIN(parser->container), element);
+     parser->decodebin = element;
+ 
+-    g_object_set(element, "max-size-bytes", G_MAXUINT, NULL);
++    if (!strcmp(type, "decodebin"))
++        g_object_set(element, "max-size-bytes", G_MAXUINT, NULL);
++    else
++        g_object_set(element, "uri", parser->uri, NULL);
++
+     g_signal_connect(element, "pad-added", G_CALLBACK(pad_added_cb), parser);
+     g_signal_connect(element, "pad-removed", G_CALLBACK(pad_removed_cb), parser);
+     g_signal_connect(element, "autoplug-continue", G_CALLBACK(autoplug_continue_cb), parser);
+@@ -2086,7 +2094,7 @@ static BOOL decodebin_parser_init_gst(struct wg_parser *parser)
+     parser->no_more_pads = false;
+     pthread_mutex_unlock(&parser->mutex);
+ 
+-    if (!link_src_to_element(parser->my_src, element))
++    if (!strcmp(type, "decodebin") && !link_src_to_element(parser->my_src, element))
+         return FALSE;
+ 
+     return TRUE;
+diff --git a/dlls/winegstreamer/winegstreamer.rgs b/dlls/winegstreamer/winegstreamer.rgs
+index 923ba673f8c..c50d3a05747 100644
+--- a/dlls/winegstreamer/winegstreamer.rgs
++++ b/dlls/winegstreamer/winegstreamer.rgs
+@@ -12,3 +12,31 @@ HKCR
+         }
+     }
+ }
++
++HKLM
++{
++    NoRemove 'Software'
++    {
++        NoRemove 'Microsoft'
++        {
++            NoRemove 'Windows Media Foundation'
++            {
++                NoRemove 'SchemeHandlers'
++                {
++                    'http:'
++                    {
++                        val '{587eeb6a-7336-4ebd-a4f2-91c948de622c}' = s 'GStreamer Scheme Handler'
++                    }
++                    'https:'
++                    {
++                        val '{587eeb6a-7336-4ebd-a4f2-91c948de622c}' = s 'GStreamer Scheme Handler'
++                    }
++                    'rtsp:'
++                    {
++                        val '{587eeb6a-7336-4ebd-a4f2-91c948de622c}' = s 'GStreamer Scheme Handler'
++                    }
++                }
++            }
++        }
++    }
++}
+diff --git a/dlls/winegstreamer/winegstreamer_classes.idl b/dlls/winegstreamer/winegstreamer_classes.idl
+index fd46ba3e687..020ada8dbb7 100644
+--- a/dlls/winegstreamer/winegstreamer_classes.idl
++++ b/dlls/winegstreamer/winegstreamer_classes.idl
+@@ -71,6 +71,13 @@ coclass decodebin_parser {}
+ ]
+ coclass GStreamerByteStreamHandler {}
+ 
++[
++    helpstring("GStreamer scheme handler"),
++    threading(both),
++    uuid(587eeb6a-7336-4ebd-a4f2-91c948de622c)
++]
++coclass GStreamerSchemePlugin { }
++
+ [
+     threading(both),
+     uuid(5b4d4e54-0620-4cf9-94ae-7823965c28b6)
