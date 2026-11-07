@@ -60,6 +60,11 @@ Toolchain for the build check (`wine/scripts/linux-build-check.sh` documents the
 
 ## The workflow that worked
 
+**On the Mac**, change the series only with `wine/scripts/series-edit.sh` and compile-check with `build/mproton-build.sh --check`, never by editing `work/mach9/src`. See [Fixing the Wine series](../docs/building.md#fixing-the-wine-series-batch-fixes-build-once). Collect every error from one `make -k` run before fixing. Cloud sessions can't catch darwin-only errors (glibc pulls in headers that macOS doesn't, e.g. `pthread.h`), so the Mac side verifies cloud branches together, several per build.
+
+**On Linux**, same rule: don't re-run `apply.sh` in the tree you build from. Apply in a scratch worktree and `git checkout` the result in the build source, so only changed files get new timestamps.
+
+
 - **Hand-port a commit:** `git cherry-pick -x <proton-sha>` at the tip, then resolve. If it should sit earlier in the series, move it with `git rebase -i` (sequence editor = a small script). Then amend the message to add a trailer: `mproton-resolved: <what changed and why>`. The driver reads that trailer as `hand-merged` plus the note.
 - **Fix a commit that's already in the series:** `GIT_SEQUENCE_EDITOR="sed -i 's/^pick <sha> /edit <sha> /'" git rebase -i 5959a04b1af`, edit, then `git commit --amend` adding the trailer, then `git rebase --continue`. Several fixes in one rebase: a script that marks every target `edit` and dispatches on `git log -1 --format=%s` at each stop.
 - **Remove a commit:** drop it in a rebase, and add a line to `wine/scripts/manual-status.tsv` with `conflict` and the reason, or `dropped-upstream` if 11.20 already has the change.

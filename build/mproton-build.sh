@@ -26,6 +26,12 @@
 #   --bundle-arg <arg>  pass <arg> to bundle-wine.sh (repeatable), e.g.
 #                       --runtime-only, --keep-symbols, --strict-floor
 #   --status            print each step's state and exit
+#   --check             fast compile check of a Wine series change: update
+#                       work/mach9/src to the series (as the workspace step
+#                       does), then `make -k` in the existing Wine build tree,
+#                       which compiles only what changed and lists every error.
+#                       No 32-bit build, SDK, FEX, DXMT, DXVK or bundle. Use it
+#                       after each fix; run the full build once at the end.
 #   -h, --help          this text
 #
 # Environment:
@@ -40,6 +46,8 @@
 #   DEVELOPER_DIR       Xcode (default: /Applications/Xcode.app/Contents/Developer)
 #   MPROTON_BUNDLE_DEST bundle parent dir (default: <work>/dist; bundle in .../wine)
 #   MPROTON_SKIP_DXVK=1, MPROTON_SKIP_STEAM=1   leave a component out
+#   MPROTON_CCACHE=0    don't compile through ccache (default: on when installed;
+#                       CCACHE_MAXSIZE defaults to 30G)
 #
 # Every step is idempotent: a step that finished leaves a stamp in
 # <work>/.mproton/stamps with the inputs it ran with, and is skipped while
@@ -61,6 +69,7 @@ usage() { sed -n '3,/^set -euo/p' "$0" | sed '$d' | sed 's/^# \{0,1\}//'; exit "
 FORCE=0
 CLEAN=0
 STATUS=0
+CHECK=0
 FROM=""
 STEPS=()
 BUNDLE_ARGS=()
@@ -71,6 +80,7 @@ while [ $# -gt 0 ]; do
         --clean) CLEAN=1; FORCE=1; shift ;;
         --bundle-arg) [ $# -ge 2 ] || usage 2; BUNDLE_ARGS+=("$2"); shift 2 ;;
         --status) STATUS=1; shift ;;
+        --check) CHECK=1; shift ;;
         -h|--help) usage 0 ;;
         -*) echo "unknown option: $1 (try --help)" >&2; exit 2 ;;
         *) STEPS+=("$1"); shift ;;
@@ -116,6 +126,17 @@ if [ -z "${DEVELOPER_DIR:-}" ] && [ -d /Applications/Xcode.app/Contents/Develope
 fi
 export MINGW_DIR
 [ -z "${DEVELOPER_DIR:-}" ] || export DEVELOPER_DIR
+# ccache, on by default when installed: mach9 runs Wine's, FEX's, Mesa's and
+# GStreamer's compilers through WINE_BUILD_CCACHE. It caches by content, so
+# when make rebuilds files only because their timestamps moved, the objects
+# come out of the cache instead of the compiler.
+if [ "${MPROTON_CCACHE:-1}" != 0 ] && [ -z "${WINE_BUILD_CCACHE:-}" ] && command -v ccache >/dev/null 2>&1; then
+    WINE_BUILD_CCACHE=$(command -v ccache)
+fi
+if [ -n "${WINE_BUILD_CCACHE:-}" ]; then
+    export WINE_BUILD_CCACHE
+    export CCACHE_MAXSIZE="${CCACHE_MAXSIZE:-30G}"
+fi
 DEPS_PREFIX=/opt/homebrew
 WINE_SERIES="$REPO/wine/apply.sh"
 
@@ -376,6 +397,36 @@ check_brew() {
         "Run: brew install$missing"
 }
 
+# Wine's make reruns configure when src/configure is newer than
+# config.status, and regenerates config.h when src/include/config.h.in is
+# newer than include/stamp-h. build-wine.sh then has to re-patch config.h,
+# which every file includes: a full rebuild. git rewrites those files
+# whenever a checkout passes through a commit where they differ (e.g. going
+# to the commit before the regen patch and back), so they can be newer with
+# the same content. GEN_FILES' blob hashes are recorded after each Wine
+# build (record_generated); before the next one, a file whose content is
+# unchanged gets the timestamp of its make target back (restore_generated_mtimes).
+GEN_FILES="configure include/config.h.in"
+gen_hashes() { (cd "$SRC" && git hash-object $GEN_FILES | paste -sd ' ' -); }
+record_generated() {
+    stamp_set wine-gen "$(gen_hashes)"
+    stamp_set wine-built.head "$(src_state)"
+}
+restore_generated_mtimes() {
+    local recorded current i f ref
+    [ -f "$WINE_BUILD/config.status" ] && [ -f "$WINE_BUILD/include/stamp-h" ] || return 0
+    recorded=($(stamp_of wine-gen)); current=($(gen_hashes))
+    i=0
+    for f in $GEN_FILES; do
+        case "$f" in configure) ref="$WINE_BUILD/config.status" ;; *) ref="$WINE_BUILD/include/stamp-h" ;; esac
+        if [ "${recorded[$i]:-}" = "${current[$i]}" ] && [ "$SRC/$f" -nt "$ref" ]; then
+            touch -r "$ref" "$SRC/$f"
+            note "$f is unchanged since the last Wine build; reset its timestamp so make doesn't rerun configure"
+        fi
+        i=$((i + 1))
+    done
+}
+
 do_wine() {
     local key
     step "wine: mach9 build-wine.sh"
@@ -395,8 +446,10 @@ do_wine() {
     [ "$CLEAN" -eq 0 ] || args+=(--clean)
     info "MINGW_DIR=$MINGW_DIR DEVELOPER_DIR=$DEVELOPER_DIR"
     info "This is the long one: about 25 minutes on an M2 from scratch."
+    restore_generated_mtimes
     "$SCRIPTS/bin/build-wine.sh" ${args[@]+"${args[@]}"}
     [ -f "$ROOT/build/sdk/WINE_COMMIT" ] || die "build-wine.sh finished without a Wine SDK in $ROOT/build/sdk"
+    record_generated
     stamp_set wine "$key"
     ok "Wine stack built; SDK in $ROOT/build/sdk ($(cat "$ROOT/build/sdk/WINE_COMMIT"))"
 }
@@ -610,7 +663,37 @@ do_bundle() {
     ok "bundle ready: $DIST"
 }
 
+# ═══ --check ═════════════════════════════════════════════════════════════
+do_check() {
+    local last path n
+    step "check: make -k in $WINE_BUILD"
+    require_macos check
+    [ -f "$WINE_BUILD/Makefile" ] && [ -f "$WINE_BUILD/config.status" ] \
+        || die "no configured Wine build in $WINE_BUILD" "Run the full build once: build/mproton-build.sh"
+    last=$(stamp_of wine-built.head)
+    if [ "$last" != none ] && ! git -C "$SRC" diff --quiet "${last%-dirty}" -- $GEN_FILES; then
+        die "configure or config.h.in changed since the last Wine build" \
+            "--check would leave config.h unpatched; run the full build: build/mproton-build.sh --from wine"
+    fi
+    restore_generated_mtimes
+    path="$MINGW_DIR/bin:$PATH"
+    [ ! -d "$WINE_BUILD/ccache-bin" ] || [ -z "${WINE_BUILD_CCACHE:-}" ] || path="$WINE_BUILD/ccache-bin:$path"
+    n=$(sysctl -n hw.ncpu)
+    if PATH="$path" make -C "$WINE_BUILD" -k -j"$n" >"$STATE/check.log" 2>&1; then
+        ok "Wine compiles (only the 64-bit tree; log $STATE/check.log)"
+    else
+        grep -E "error:|\*\*\* \[" "$STATE/check.log" | sort -u | head -60 || true
+        die "the Wine build has errors (all of them are listed above; log $STATE/check.log)" \
+            "Fix them all, re-run --check, then run the full build."
+    fi
+}
+
 # ── Run ─────────────────────────────────────────────────────────────────
+if [ "$CHECK" -eq 1 ]; then
+    workspace_wine_src
+    do_check
+    exit 0
+fi
 for s in "${STEPS[@]}"; do
     "do_$s"
 done
