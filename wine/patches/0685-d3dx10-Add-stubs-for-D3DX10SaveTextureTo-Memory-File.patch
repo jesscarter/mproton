@@ -1,0 +1,83 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Connor McAdams <cmcadams@codeweavers.com>
+Date: Mon, 12 Jan 2026 11:53:50 -0500
+Subject: [PATCH] d3dx10: Add stubs for D3DX10SaveTextureTo{Memory,File}().
+
+Signed-off-by: Connor McAdams <cmcadams@codeweavers.com>
+
+CW-Bug-Id: #20442
+CW-Bug-Id: #23084
+CW-Bug-Id: #23301
+(cherry picked from commit 8448f7cdff1c00b4a3f8638bcbb4ab9fb45f76c6)
+mproton-resolved: test hunks left out (they build on test helpers from Proton's superseded d3dx10 texture tests); the stubs apply as is.
+---
+ dlls/d3dx10_43/d3dx10_43.spec |  6 +++---
+ dlls/d3dx10_43/texture.c      | 22 ++++++++++++++++++++++
+ include/d3dx10tex.h           |  7 +++++++
+ 3 files changed, 32 insertions(+), 3 deletions(-)
+
+diff --git a/dlls/d3dx10_43/d3dx10_43.spec b/dlls/d3dx10_43/d3dx10_43.spec
+index 3ba478b1f05..1690e1d29e4 100644
+--- a/dlls/d3dx10_43/d3dx10_43.spec
++++ b/dlls/d3dx10_43/d3dx10_43.spec
+@@ -61,9 +61,9 @@
+ @ stub D3DX10PreprocessShaderFromResourceA(long str str ptr ptr ptr ptr ptr)
+ @ stub D3DX10PreprocessShaderFromResourceW(long wstr wstr ptr ptr ptr ptr ptr)
+ @ stub D3DX10SHProjectCubeMap(long ptr ptr ptr ptr)
+-@ stub D3DX10SaveTextureToFileA(ptr ptr str)
+-@ stub D3DX10SaveTextureToFileW(ptr ptr wstr)
+-@ stub D3DX10SaveTextureToMemory(ptr ptr ptr long)
++@ stdcall D3DX10SaveTextureToFileA(ptr ptr str)
++@ stdcall D3DX10SaveTextureToFileW(ptr ptr wstr)
++@ stdcall D3DX10SaveTextureToMemory(ptr ptr ptr long)
+ @ stdcall D3DX10UnsetAllDeviceObjects(ptr)
+ @ stdcall D3DXBoxBoundProbe(ptr ptr ptr ptr)
+ @ stdcall D3DXColorAdjustContrast(ptr ptr float)
+diff --git a/dlls/d3dx10_43/texture.c b/dlls/d3dx10_43/texture.c
+index eb649e036db..72854fad8dc 100644
+--- a/dlls/d3dx10_43/texture.c
++++ b/dlls/d3dx10_43/texture.c
+@@ -1627,3 +1627,25 @@ HRESULT WINAPI D3DX10FilterTexture(ID3D10Resource *texture, UINT src_level, UINT
+     return d3d10_load_texture_from_texture(&info, texture, &src_box, 0, src_level, &info, texture, &dst_box, 0,
+             src_level + 1, info.layers, info.levels - src_level - 1, filter);
+ }
++
++HRESULT WINAPI D3DX10SaveTextureToFileW(ID3D10Resource *texture, D3DX10_IMAGE_FILE_FORMAT format, const WCHAR *filename)
++{
++    FIXME("texture %p, format %u, filename %s stub!\n", texture, format, debugstr_w(filename));
++
++    return E_NOTIMPL;
++}
++
++HRESULT WINAPI D3DX10SaveTextureToFileA(ID3D10Resource *texture, D3DX10_IMAGE_FILE_FORMAT format, const char *filename)
++{
++    FIXME("texture %p, format %u, filename %s stub!\n", texture, format, debugstr_a(filename));
++
++    return E_NOTIMPL;
++}
++
++HRESULT WINAPI D3DX10SaveTextureToMemory(ID3D10Resource *texture, D3DX10_IMAGE_FILE_FORMAT format, ID3D10Blob **buffer,
++        UINT flags)
++{
++    FIXME("texture %p, format %u, buffer %p, flags %#x stub!\n", texture, format, buffer, flags);
++
++    return E_NOTIMPL;
++}
+diff --git a/include/d3dx10tex.h b/include/d3dx10tex.h
+index 6083965512e..d62032b61a8 100644
+--- a/include/d3dx10tex.h
++++ b/include/d3dx10tex.h
+@@ -185,6 +185,13 @@ HRESULT WINAPI D3DX10CreateShaderResourceViewFromResourceW(ID3D10Device *device,
+ HRESULT WINAPI D3DX10LoadTextureFromTexture(ID3D10Resource *src_texture, D3DX10_TEXTURE_LOAD_INFO *load_info,
+         ID3D10Resource *dst_texture);
+ 
++HRESULT WINAPI D3DX10SaveTextureToFileA(ID3D10Resource *texture, D3DX10_IMAGE_FILE_FORMAT format, const char *filename);
++HRESULT WINAPI D3DX10SaveTextureToFileW(ID3D10Resource *texture, D3DX10_IMAGE_FILE_FORMAT format, const WCHAR *filename);
++#define        D3DX10SaveTextureToFile WINELIB_NAME_AW(D3DX10SaveTextureToFile)
++
++HRESULT WINAPI D3DX10SaveTextureToMemory(ID3D10Resource *texture, D3DX10_IMAGE_FILE_FORMAT format, ID3D10Blob **buffer,
++        UINT flags);
++
+ #ifdef __cplusplus
+ }
+ #endif

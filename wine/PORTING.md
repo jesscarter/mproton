@@ -4,9 +4,10 @@ For the next session that continues [docs/wine-tree.md](../docs/wine-tree.md). R
 
 ## Where things stand
 
-- `main` has the series: 659 patches in `wine/patches/` on athei `arm64-patched` `5959a04b1af` (`wine/base.ref`). That's 655 Proton commits plus 4 mproton patches, and the last patch is always `mproton: Regenerate generated files.`
-- `wine/series.tsv` has one row per Proton commit (`ValveSoftware/wine` `proton_11.0` @ `e60892cc239`, 1454 commits on wine-11.0). **246 have status `conflict`.** Those are the job.
+- `main` has the series: 686 patches in `wine/patches/` on athei `arm64-patched` `5959a04b1af` (`wine/base.ref`). That's 682 Proton commits plus 4 mproton patches, and the last patch is always `mproton: Regenerate generated files.`
+- `wine/series.tsv` has one row per Proton commit (`ValveSoftware/wine` `proton_11.0` @ `e60892cc239`, 1454 commits on wine-11.0). **200 have status `conflict`** (246 before batch 1). Those are the job.
 - A clean aarch64-Linux build of the series has 0 errors. So does athei alone. Keep it at 0.
+- **Progress:** batch 1 (high-confidence groups except 10 d3dx commits) is done; see [Porting the conflicts](../docs/wine-tree.md#porting-the-conflicts). Next: the 10 d3dx commits left (d3dx10/d3dx11 save, d3dx11 load/filter), then multimedia. Hand-set statuses (superseded, Linux-only) go in `wine/scripts/manual-status.tsv`.
 
 ## The task
 
@@ -23,7 +24,7 @@ Commit statuses in the TSV are derived from the branch (see below), so a ported 
 
 ## Rebuilding the environment (fresh container)
 
-**First check whether the old one survived:** if `/home/user/work/series` exists with branch `mproton/series`, and `/opt/llvm-mingw`, `/opt/sysroot-arm64` and `/opt/xbin` exist, skip this section. In that case, check that `git -C /home/user/work/series rev-parse HEAD^{tree}` equals the tree `wine/apply.sh` produces from `main` (it was `a24d5443782e` at handoff). `/home/user/work/build-final` is a finished build of exactly that tree, so `make -k` there is incremental.
+**First check whether the old one survived:** if `/home/user/work/series` exists with branch `mproton/series`, and `/opt/llvm-mingw`, `/opt/sysroot-arm64` and `/opt/xbin` exist, skip this section. In that case, check that `git -C /home/user/work/series rev-parse HEAD^{tree}` equals the tree `wine/apply.sh` produces from `main` (it was `65cfb5187179` after batch 1). `/home/user/work/build-final` is a finished build of exactly that tree, so `make -k` there is incremental.
 
 Otherwise, everything outside the repo is gone. On x86_64 Ubuntu 24.04:
 
@@ -77,6 +78,9 @@ Toolchain for the build check (`wine/scripts/linux-build-check.sh` documents the
 - Watch for duplicates of things 11.20 already has (pdh, `RtlWow64SuspendThread`). Grep 11.20 for the symbol before adding it.
 - Use the variable name `is_unix`, not `unix`: `unix` is a predefined macro on Linux.
 - 11.20's makedep crashes when a test dir's module is missing from `configure.ac`.
+- `WINE_PACKAGE_FLAGS(FOO,...,[-lfoo],...)` leaves `FOO_LIBS=-lfoo` even when the check fails. Code that is now built without the library (the opencl stub) needs it cleared.
+- In an incremental build, unixlib objects don't depend on `config.h`. After a configure change, delete stale `.o` files whose `#ifdef HAVE_*` path changed (amd_ags_x64 linked an old libdrm `unixlib.o`).
+- For d3dx10/d3dx11, Proton's code builds on its own `struct d3d10_texture` helpers. 11.20 has different upstream helpers (`d3dx_texture_info`, `d3d10_staging_resource_from_d3dx_texture_info()`), so write the d3dx10/11 side on those. The d3dx9_36 helper hunks apply cleanly. Proton's d3dx10 tests use test helpers 11.20 doesn't have; leave them out and say so.
 - The steamclient → lsteamclient redirect is only hooked in the x86 signal handlers. Porting it to arm64/FEX is a separate, open item (see `steam/README.md`).
 
 ## Done means

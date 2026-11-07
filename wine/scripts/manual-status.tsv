@@ -4,3 +4,22 @@ dfaffd22c1d	dropped-upstream	superseded: Proton's vk.xml 1.4.344 is older than 1
 f73a44de7a4	dropped-upstream	superseded: wine-11.20 implements PdhGetFormattedCounterArrayA/W (d30dcd75bc9); Proton's stub would redefine them
 965d4e24cdd	conflict	removed from the series: needs the xinput controller_destroy()/open_device_at_index() refactors (64ca68c68d6 and others), which conflict
 544a0817198	conflict	removed from the series: needs SEND_HWMSG_NO_RAW from the rawinput server commits (eb0c49cf1ed), which conflict
+129fc2bd2e4	dropped-upstream	superseded: wine-11.20 has its own jscript/mshtml cycle collection design (d41a3a76cfd moves the CC IIDs to jsdisp.idl, 2b9ff9e7c4e/a0217f8f289/780a44337f2 make the jscript GC traverse host objects)
+083a8f7f275	dropped-upstream	superseded: same as 129fc2bd2e4; 11.20 traverses mshtml objects from the jscript GC instead
+e8e57d39563	dropped-upstream	superseded: wine-11.20 replaced the gnutls backend with SymCrypt on the PE side (149bd084066, b77b0a29b9e); Proton's DH secret-agreement test targets its gnutls/libgmp DH; wine-11.20 has its own test_DH
+9fd3d6ef4cf	dropped-upstream	superseded: wine-11.20 replaced the gnutls backend with SymCrypt on the PE side (149bd084066, b77b0a29b9e); DH is implemented with SymCrypt
+e0ce1e9afb3	dropped-upstream	superseded: wine-11.20 replaced the gnutls backend with SymCrypt on the PE side (149bd084066, b77b0a29b9e); ECC secret derivation is implemented with SymCrypt
+fcf8e23d727	dropped-upstream	superseded: wine-11.20 replaced the gnutls backend with SymCrypt on the PE side (149bd084066, b77b0a29b9e); BCRYPT_PAD_NONE/OAEP encryption is implemented with SymCrypt
+4cf6d8b6f09	dropped-upstream	superseded: wine-11.20 replaced the gnutls backend with SymCrypt on the PE side (149bd084066, b77b0a29b9e); BCRYPT_PAD_NONE/OAEP decryption is implemented with SymCrypt
+49a26f3bd8e	dropped-upstream	superseded: wine-11.20 replaced the gnutls backend with SymCrypt on the PE side (149bd084066, b77b0a29b9e); ECDH P-521 is implemented with SymCrypt (no gcrypt needed)
+c18ebc392d1	dropped-upstream	wine-11.20 implements PackageFullNameFromId() (with tests)
+e415577be81	dropped-upstream	superseded: wine-11.20 has the upstream version, 738aac8c6ed "msvcrt: Introduce asm wrapper for _isatty on x64." (same lea of __pioinfo for the Ruby runtime, different padding)
+ae6ae2609ef	dropped-upstream	superseded: wine-11.20 has a real icu.dll (plus icuin/icuuc) built on bundled ICU, not a stub
+99d77fc35dc	dropped-upstream	superseded: forwards to a native ICU v68 from Proton's stub icu.dll; wine-11.20 implements icu.dll itself
+f5a15b2201f	skipped-linux	winepulse.drv (PulseAudio) is not built on macOS (mach9 uses winecoreaudio); 11.20 reworked the pulse timer thread, so this needs a port that only Linux would use
+e4848caf5c3	skipped-linux	winepulse.drv (PulseAudio) is not built on macOS; depends on f5a15b2201f
+17f7a76dc56	dropped-upstream	superseded: wine-11.20 has an ITfFnReconversion stub returned from ITfFunctionProvider::GetFunction (605b577219e)
+13a018bc07b	dropped-upstream	superseded: in wine-11.20 SetupDiGetClassDevs(DIGCF_DEVICEINTERFACE) creates devices only from CM_Get_Device_Interface_List() paths, which already honours DIGCF_PRESENT (f9b51de6234), so devices without present interfaces are never added
+acd2f9f92fd	dropped-upstream	superseded: wine-11.20's ImeSetCompositionString() already strips trailing zeros (all of them) and ends the composition on an empty string
+1bd0c7edb54	dropped-upstream	superseded: wine-11.20 handles D3DX_FILTER_SRGB_IN/OUT (CONV_FLAG_SRGB_IN/OUT with the exact sRGB curve, not gamma 2.2)
+b123817064e	dropped-upstream	superseded: wine-11.20 implements D3DX10LoadTextureFromTexture() upstream (different code, same author); later d3dx10 ports use it

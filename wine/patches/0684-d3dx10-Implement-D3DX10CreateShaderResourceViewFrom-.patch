@@ -1,0 +1,305 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Connor McAdams <cmcadams@codeweavers.com>
+Date: Mon, 12 Jan 2026 11:34:14 -0500
+Subject: [PATCH] d3dx10: Implement
+ D3DX10CreateShaderResourceViewFrom{File,Memory,Resource}().
+
+Signed-off-by: Connor McAdams <cmcadams@codeweavers.com>
+
+CW-Bug-Id: #20442
+CW-Bug-Id: #23084
+CW-Bug-Id: #23301
+(cherry picked from commit 60a9a91b1790c5f5cdae852390daaff981795cda)
+mproton-resolved: the new functions sit where 11.20 now has its own texture-loading helpers (init_d3d10_box() etc.); placed them before those and dropped the superseded Proton struct definitions from the conflict. They use create_texture()/load_file()/d3dx_load_resource_*(), which 11.20 still has. Test hunks left out.
+---
+ dlls/d3dx10_43/d3dx10_43.spec |  10 +-
+ dlls/d3dx10_43/texture.c      | 222 ++++++++++++++++++++++++++++++++++
+ include/d3dx10tex.h           |  14 +++
+ 3 files changed, 241 insertions(+), 5 deletions(-)
+
+diff --git a/dlls/d3dx10_43/d3dx10_43.spec b/dlls/d3dx10_43/d3dx10_43.spec
+index 1e7cf19ae4c..3ba478b1f05 100644
+--- a/dlls/d3dx10_43/d3dx10_43.spec
++++ b/dlls/d3dx10_43/d3dx10_43.spec
+@@ -35,11 +35,11 @@
+ @ stdcall D3DX10CreateFontIndirectW(ptr ptr ptr)
+ @ stdcall D3DX10CreateFontW(ptr long long long long long long long long long wstr ptr)
+ @ stdcall D3DX10CreateMesh(ptr ptr long str long long long ptr)
+-@ stub D3DX10CreateShaderResourceViewFromFileA(ptr str ptr ptr ptr ptr)
+-@ stub D3DX10CreateShaderResourceViewFromFileW(ptr wstr ptr ptr ptr ptr)
+-@ stub D3DX10CreateShaderResourceViewFromMemory(ptr ptr long ptr ptr ptr ptr)
+-@ stub D3DX10CreateShaderResourceViewFromResourceA(ptr long str ptr ptr ptr ptr)
+-@ stub D3DX10CreateShaderResourceViewFromResourceW(ptr long wstr ptr ptr ptr ptr)
++@ stdcall D3DX10CreateShaderResourceViewFromFileA(ptr str ptr ptr ptr ptr)
++@ stdcall D3DX10CreateShaderResourceViewFromFileW(ptr wstr ptr ptr ptr ptr)
++@ stdcall D3DX10CreateShaderResourceViewFromMemory(ptr ptr long ptr ptr ptr ptr)
++@ stdcall D3DX10CreateShaderResourceViewFromResourceA(ptr long str ptr ptr ptr ptr)
++@ stdcall D3DX10CreateShaderResourceViewFromResourceW(ptr long wstr ptr ptr ptr ptr)
+ @ stub D3DX10CreateSkinInfo(ptr)
+ @ stdcall D3DX10CreateSprite(ptr long ptr)
+ @ stdcall D3DX10CreateTextureFromFileA(ptr str ptr ptr ptr ptr)
+diff --git a/dlls/d3dx10_43/texture.c b/dlls/d3dx10_43/texture.c
+index 7f02be5ec8b..eb649e036db 100644
+--- a/dlls/d3dx10_43/texture.c
++++ b/dlls/d3dx10_43/texture.c
+@@ -958,6 +958,228 @@ HRESULT WINAPI D3DX10CreateTextureFromMemory(ID3D10Device *device, const void *s
+     return hr;
+ }
+ 
++/*
++ * D3DX10CreateShaderResourceView variants.
++ */
++HRESULT WINAPI D3DX10CreateShaderResourceViewFromFileA(ID3D10Device *device, const char *src_file,
++        D3DX10_IMAGE_LOAD_INFO *load_info, ID3DX10ThreadPump *pump, ID3D10ShaderResourceView **srv, HRESULT *hresult)
++{
++    WCHAR *buffer;
++    int str_len;
++    HRESULT hr;
++
++    TRACE("device %p, src_file %s, load_info %p, pump %p, srv %p, hresult %p.\n",
++            device, debugstr_a(src_file), load_info, pump, srv, hresult);
++
++    if (!device)
++        return E_INVALIDARG;
++    if (!src_file)
++        return E_FAIL;
++
++    if (!(str_len = MultiByteToWideChar(CP_ACP, 0, src_file, -1, NULL, 0)))
++        return HRESULT_FROM_WIN32(GetLastError());
++
++    if (!(buffer = malloc(str_len * sizeof(*buffer))))
++        return E_OUTOFMEMORY;
++
++    MultiByteToWideChar(CP_ACP, 0, src_file, -1, buffer, str_len);
++    hr = D3DX10CreateShaderResourceViewFromFileW(device, buffer, load_info, pump, srv, hresult);
++
++    free(buffer);
++
++    return hr;
++}
++
++HRESULT WINAPI D3DX10CreateShaderResourceViewFromFileW(ID3D10Device *device, const WCHAR *src_file,
++        D3DX10_IMAGE_LOAD_INFO *load_info, ID3DX10ThreadPump *pump, ID3D10ShaderResourceView **srv, HRESULT *hresult)
++{
++    ID3D10Resource *texture;
++    void *buffer = NULL;
++    DWORD size = 0;
++    HRESULT hr;
++
++    TRACE("device %p, src_file %s, load_info %p, pump %p, srv %p, hresult %p.\n",
++            device, debugstr_w(src_file), load_info, pump, srv, hresult);
++
++    if (!device)
++        return E_INVALIDARG;
++    if (!src_file)
++        return E_FAIL;
++
++    if (pump)
++    {
++        ID3DX10DataProcessor *processor;
++        ID3DX10DataLoader *loader;
++
++        if (FAILED((hr = D3DX10CreateAsyncFileLoaderW(src_file, &loader))))
++            return hr;
++        if (FAILED((hr = D3DX10CreateAsyncShaderResourceViewProcessor(device, load_info, &processor))))
++        {
++            ID3DX10DataLoader_Destroy(loader);
++            return hr;
++        }
++        if (FAILED((hr = ID3DX10ThreadPump_AddWorkItem(pump, loader, processor, hresult, (void **)srv))))
++        {
++            ID3DX10DataLoader_Destroy(loader);
++            ID3DX10DataProcessor_Destroy(processor);
++        }
++        return hr;
++    }
++
++    if (SUCCEEDED((hr = load_file(src_file, &buffer, &size))))
++    {
++        hr = create_texture(device, buffer, size, load_info, &texture);
++        if (SUCCEEDED(hr))
++        {
++            hr = ID3D10Device_CreateShaderResourceView(device, texture, NULL, srv);
++            ID3D10Resource_Release(texture);
++        }
++        free(buffer);
++    }
++    if (hresult)
++        *hresult = hr;
++    return hr;
++}
++
++HRESULT WINAPI D3DX10CreateShaderResourceViewFromResourceA(ID3D10Device *device, HMODULE module, const char *resource,
++        D3DX10_IMAGE_LOAD_INFO *load_info, ID3DX10ThreadPump *pump, ID3D10ShaderResourceView **srv, HRESULT *hresult)
++{
++    ID3D10Resource *texture;
++    uint32_t size;
++    void *buffer;
++    HRESULT hr;
++
++    TRACE("device %p, module %p, resource %s, load_info %p, pump %p, srv %p, hresult %p.\n",
++            device, module, debugstr_a(resource), load_info, pump, srv, hresult);
++
++    if (!device)
++        return E_INVALIDARG;
++
++    if (pump)
++    {
++        ID3DX10DataProcessor *processor;
++        ID3DX10DataLoader *loader;
++
++        if (FAILED((hr = D3DX10CreateAsyncResourceLoaderA(module, resource, &loader))))
++            return hr;
++        if (FAILED((hr = D3DX10CreateAsyncShaderResourceViewProcessor(device, load_info, &processor))))
++        {
++            ID3DX10DataLoader_Destroy(loader);
++            return hr;
++        }
++        if (FAILED((hr = ID3DX10ThreadPump_AddWorkItem(pump, loader, processor, hresult, (void **)srv))))
++        {
++            ID3DX10DataLoader_Destroy(loader);
++            ID3DX10DataProcessor_Destroy(processor);
++        }
++        return hr;
++    }
++
++    if (FAILED((hr = d3dx_load_resource_a(module, resource, &buffer, &size))))
++        return hr;
++    hr = create_texture(device, buffer, size, load_info, &texture);
++    if (SUCCEEDED(hr))
++    {
++        hr = ID3D10Device_CreateShaderResourceView(device, texture, NULL, srv);
++        ID3D10Resource_Release(texture);
++    }
++    if (hresult)
++        *hresult = hr;
++    return hr;
++}
++
++HRESULT WINAPI D3DX10CreateShaderResourceViewFromResourceW(ID3D10Device *device, HMODULE module, const WCHAR *resource,
++        D3DX10_IMAGE_LOAD_INFO *load_info, ID3DX10ThreadPump *pump, ID3D10ShaderResourceView **srv, HRESULT *hresult)
++{
++    ID3D10Resource *texture;
++    uint32_t size;
++    void *buffer;
++    HRESULT hr;
++
++    TRACE("device %p, module %p, resource %s, load_info %p, pump %p, srv %p, hresult %p.\n",
++            device, module, debugstr_w(resource), load_info, pump, srv, hresult);
++
++    if (!device)
++        return E_INVALIDARG;
++
++    if (pump)
++    {
++        ID3DX10DataProcessor *processor;
++        ID3DX10DataLoader *loader;
++
++        if (FAILED((hr = D3DX10CreateAsyncResourceLoaderW(module, resource, &loader))))
++            return hr;
++        if (FAILED((hr = D3DX10CreateAsyncShaderResourceViewProcessor(device, load_info, &processor))))
++        {
++            ID3DX10DataLoader_Destroy(loader);
++            return hr;
++        }
++        if (FAILED((hr = ID3DX10ThreadPump_AddWorkItem(pump, loader, processor, hresult, (void **)srv))))
++        {
++            ID3DX10DataLoader_Destroy(loader);
++            ID3DX10DataProcessor_Destroy(processor);
++        }
++        return hr;
++    }
++
++    if (FAILED((hr = d3dx_load_resource_w(module, resource, &buffer, &size))))
++        return hr;
++    hr = create_texture(device, buffer, size, load_info, &texture);
++    if (SUCCEEDED(hr))
++    {
++        hr = ID3D10Device_CreateShaderResourceView(device, texture, NULL, srv);
++        ID3D10Resource_Release(texture);
++    }
++    if (hresult)
++        *hresult = hr;
++    return hr;
++}
++
++HRESULT WINAPI D3DX10CreateShaderResourceViewFromMemory(ID3D10Device *device, const void *src_data, SIZE_T src_data_size,
++        D3DX10_IMAGE_LOAD_INFO *load_info, ID3DX10ThreadPump *pump, ID3D10ShaderResourceView **srv, HRESULT *hresult)
++{
++    ID3D10Resource *texture;
++    HRESULT hr;
++
++    TRACE("device %p, src_data %p, src_data_size %Iu, load_info %p, pump %p, srv %p, hresult %p.\n",
++            device, src_data, src_data_size, load_info, pump, srv, hresult);
++
++    if (!device)
++        return E_INVALIDARG;
++    if (!src_data)
++        return E_FAIL;
++
++    if (pump)
++    {
++        ID3DX10DataProcessor *processor;
++        ID3DX10DataLoader *loader;
++
++        if (FAILED((hr = D3DX10CreateAsyncMemoryLoader(src_data, src_data_size, &loader))))
++            return hr;
++        if (FAILED((hr = D3DX10CreateAsyncShaderResourceViewProcessor(device, load_info, &processor))))
++        {
++            ID3DX10DataLoader_Destroy(loader);
++            return hr;
++        }
++        if (FAILED((hr = ID3DX10ThreadPump_AddWorkItem(pump, loader, processor, hresult, (void **)srv))))
++        {
++            ID3DX10DataLoader_Destroy(loader);
++            ID3DX10DataProcessor_Destroy(processor);
++        }
++        return hr;
++    }
++
++    hr = create_texture(device, src_data, src_data_size, load_info, &texture);
++    if (SUCCEEDED(hr))
++    {
++        hr = ID3D10Device_CreateShaderResourceView(device, texture, NULL, srv);
++        ID3D10Resource_Release(texture);
++    }
++    if (hresult)
++        *hresult = hr;
++    return hr;
++}
++
+ static void init_d3d10_box(D3D10_BOX *box, uint32_t left, uint32_t top, uint32_t right, uint32_t bottom, uint32_t front,
+         uint32_t back)
+ {
+diff --git a/include/d3dx10tex.h b/include/d3dx10tex.h
+index 33e41e577b4..6083965512e 100644
+--- a/include/d3dx10tex.h
++++ b/include/d3dx10tex.h
+@@ -139,6 +139,8 @@ extern "C" {
+ 
+ HRESULT WINAPI D3DX10CreateTextureFromMemory(ID3D10Device *device, const void *src_data, SIZE_T src_data_size,
+         D3DX10_IMAGE_LOAD_INFO *loadinfo, ID3DX10ThreadPump *pump, ID3D10Resource **texture, HRESULT *hresult);
++HRESULT WINAPI D3DX10CreateShaderResourceViewFromMemory(ID3D10Device *device, const void *src_data, SIZE_T src_data_size,
++        D3DX10_IMAGE_LOAD_INFO *loadinfo, ID3DX10ThreadPump *pump, ID3D10ShaderResourceView **srv, HRESULT *hresult);
+ HRESULT WINAPI D3DX10FilterTexture(ID3D10Resource *texture, UINT src_level, UINT filter);
+ 
+ HRESULT WINAPI D3DX10GetImageInfoFromFileA(const char *src_file, ID3DX10ThreadPump *pump, D3DX10_IMAGE_INFO *info,
+@@ -168,6 +170,18 @@ HRESULT WINAPI D3DX10CreateTextureFromResourceW(ID3D10Device *device, HMODULE mo
+         D3DX10_IMAGE_LOAD_INFO *load_info, ID3DX10ThreadPump *pump, ID3D10Resource **texture, HRESULT *hresult);
+ #define        D3DX10CreateTextureFromResource WINELIB_NAME_AW(D3DX10CreateTextureFromResource)
+ 
++HRESULT WINAPI D3DX10CreateShaderResourceViewFromFileA(ID3D10Device *device, const char *src_file,
++        D3DX10_IMAGE_LOAD_INFO *load_info, ID3DX10ThreadPump *pump, ID3D10ShaderResourceView **srv, HRESULT *hresult);
++HRESULT WINAPI D3DX10CreateShaderResourceViewFromFileW(ID3D10Device *device, const WCHAR *src_file,
++        D3DX10_IMAGE_LOAD_INFO *load_info, ID3DX10ThreadPump *pump, ID3D10ShaderResourceView **srv, HRESULT *hresult);
++#define        D3DX10CreateShaderResourceViewFromFile WINELIB_NAME_AW(D3DX10CreateShaderResourceViewFromFile)
++
++HRESULT WINAPI D3DX10CreateShaderResourceViewFromResourceA(ID3D10Device *device, HMODULE module, const char *resource,
++        D3DX10_IMAGE_LOAD_INFO *load_info, ID3DX10ThreadPump *pump, ID3D10ShaderResourceView **srv, HRESULT *hresult);
++HRESULT WINAPI D3DX10CreateShaderResourceViewFromResourceW(ID3D10Device *device, HMODULE module, const WCHAR *resource,
++        D3DX10_IMAGE_LOAD_INFO *load_info, ID3DX10ThreadPump *pump, ID3D10ShaderResourceView **srv, HRESULT *hresult);
++#define        D3DX10CreateShaderResourceViewFromResource WINELIB_NAME_AW(D3DX10CreateShaderResourceViewFromResource)
++
+ HRESULT WINAPI D3DX10LoadTextureFromTexture(ID3D10Resource *src_texture, D3DX10_TEXTURE_LOAD_INFO *load_info,
+         ID3D10Resource *dst_texture);
+ 

@@ -1,0 +1,63 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Connor McAdams <cmcadams@codeweavers.com>
+Date: Tue, 27 Aug 2024 12:20:56 -0400
+Subject: [PATCH] d3dx10: Add D3DX10CreateAsyncShaderResourceViewProcessor()
+ stub.
+
+Signed-off-by: Connor McAdams <cmcadams@codeweavers.com>
+
+CW-Bug-Id: #20442
+CW-Bug-Id: #23084
+CW-Bug-Id: #23301
+(cherry picked from commit 0c7d34d3fac8213149226e5a6b1aed2839e7cdd9)
+mproton-resolved: test hunks left out (11.20 rewrote the d3dx10 texture tests they extend); the stub itself applies as is.
+---
+ dlls/d3dx10_43/async.c        | 8 ++++++++
+ dlls/d3dx10_43/d3dx10_43.spec | 2 +-
+ include/d3dx10async.h         | 2 ++
+ 3 files changed, 11 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/d3dx10_43/async.c b/dlls/d3dx10_43/async.c
+index 389ca624787..fecc7834d88 100644
+--- a/dlls/d3dx10_43/async.c
++++ b/dlls/d3dx10_43/async.c
+@@ -518,6 +518,14 @@ HRESULT WINAPI D3DX10CreateAsyncTextureProcessor(ID3D10Device *device,
+     return S_OK;
+ }
+ 
++HRESULT WINAPI D3DX10CreateAsyncShaderResourceViewProcessor(ID3D10Device *device,
++        D3DX10_IMAGE_LOAD_INFO *load_info, ID3DX10DataProcessor **processor)
++{
++    FIXME("device %p, load_info %p, processor %p stub.\n", device, load_info, processor);
++
++    return E_NOTIMPL;
++}
++
+ struct work_item
+ {
+     struct list entry;
+diff --git a/dlls/d3dx10_43/d3dx10_43.spec b/dlls/d3dx10_43/d3dx10_43.spec
+index 31325023e09..1e7cf19ae4c 100644
+--- a/dlls/d3dx10_43/d3dx10_43.spec
++++ b/dlls/d3dx10_43/d3dx10_43.spec
+@@ -15,7 +15,7 @@
+ @ stdcall D3DX10CreateAsyncResourceLoaderA(long str ptr)
+ @ stdcall D3DX10CreateAsyncResourceLoaderW(long wstr ptr)
+ @ stub D3DX10CreateAsyncShaderPreprocessProcessor(str ptr ptr ptr ptr ptr)
+-@ stub D3DX10CreateAsyncShaderResourceViewProcessor(ptr ptr ptr)
++@ stdcall D3DX10CreateAsyncShaderResourceViewProcessor(ptr ptr ptr)
+ @ stdcall D3DX10CreateAsyncTextureInfoProcessor(ptr ptr)
+ @ stdcall D3DX10CreateAsyncTextureProcessor(ptr ptr ptr)
+ @ stdcall D3DX10CreateDevice(ptr long long long ptr)
+diff --git a/include/d3dx10async.h b/include/d3dx10async.h
+index 931458f4813..bfab25b4561 100644
+--- a/include/d3dx10async.h
++++ b/include/d3dx10async.h
+@@ -79,5 +79,7 @@ HRESULT WINAPI D3DX10CreateAsyncResourceLoaderW(HMODULE module, const WCHAR *res
+ HRESULT WINAPI D3DX10CreateAsyncTextureProcessor(ID3D10Device *device,
+         D3DX10_IMAGE_LOAD_INFO *info, ID3DX10DataProcessor **processor);
+ HRESULT WINAPI D3DX10CreateAsyncTextureInfoProcessor(D3DX10_IMAGE_INFO *info, ID3DX10DataProcessor **processor);
++HRESULT WINAPI D3DX10CreateAsyncShaderResourceViewProcessor(ID3D10Device *device,
++        D3DX10_IMAGE_LOAD_INFO *info, ID3DX10DataProcessor **processor);
+ 
+ #endif

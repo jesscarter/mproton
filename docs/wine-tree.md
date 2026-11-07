@@ -6,12 +6,12 @@ The mproton Wine tree is athei's macOS ARM64 Wine (`athei/wine` `arm64-patched`,
 
 ## TL;DR
 
-- **The series:** 659 patches in [`wine/patches/`](../wine/patches), on athei `5959a04b1af` ([`wine/base.ref`](../wine/base.ref)). `wine/apply.sh <dir>` clones athei and applies them as commits on branch `mproton`.
-- **Proton's 1454 commits:** 631 applied cleanly, 24 applied with a hand merge, 396 dropped as already upstream in 11.20 (or superseded), 22 dropped because Proton reverts them itself, 132 skipped as Linux-only, 3 skipped as generated-file deletions, and **246 not carried** because they don't apply on the 11.20 base. Per-commit status: [Every Proton commit](#every-proton-commit) and [`wine/series.tsv`](../wine/series.tsv).
+- **The series:** 686 patches in [`wine/patches/`](../wine/patches), on athei `5959a04b1af` ([`wine/base.ref`](../wine/base.ref)). `wine/apply.sh <dir>` clones athei and applies them as commits on branch `mproton`.
+- **Proton's 1454 commits:** 635 applied cleanly, 47 applied with a hand merge or a port, 413 dropped as already upstream in 11.20 (or superseded), 22 dropped because Proton reverts them itself, 134 skipped as Linux-only, 3 skipped as generated-file deletions, and **200 not carried yet** because they don't apply on the 11.20 base. Per-commit status: [Every Proton commit](#every-proton-commit) and [`wine/series.tsv`](../wine/series.tsv).
 - **Linux build:** `wine/apply.sh` into a fresh directory, then `configure` and a full `make` for aarch64 Linux with PE arches `aarch64,arm64ec,i386` (llvm-mingw 20261020): **0 errors**. A control build of unmodified athei with the same setup also has 0 errors. See [Linux verification](#linux-verification).
 - **Darwin build blockers from the triage:** #4 (libdrm in `amd_ags_x64`) and #5 (`<linux/limits.h>` in protontts) are fixed with configure checks and a portable header, not `#ifdef __APPLE__`. #1 to #3 and #6 don't occur, because the code that had them (fsync/ntsync, the glibc `mallopt` hack, the win32u fshack) isn't in the series.
 - **`__APPLE__`:** the series adds no `__APPLE__` code. One Proton hunk lands inside an existing Mach-only branch (a 5-line stub in `ntdll/unix/process.c`). That stub, plus every unix-side change in the series, has only been compiled for Linux.
-- **The biggest gaps:** the 246 commits that don't apply on 11.20. They include all of the fullscreen hack, most of Proton's `virtual.c` work (`WINE_SIMULATE_WRITECOPY`, address-space limits), the winegstreamer/media-converter chain, touch and rawinput, and part of the controller work. See [Not carried](#not-carried-and-why).
+- **The biggest gaps:** the 200 commits that don't apply on 11.20. They include all of the fullscreen hack, most of Proton's `virtual.c` work (`WINE_SIMULATE_WRITECOPY`, address-space limits), the winegstreamer/media-converter chain, touch and rawinput, and part of the controller work. See [Not carried](#not-carried-and-why).
 
 ## Layout
 
@@ -85,9 +85,9 @@ Nothing in the series adds `__APPLE__` code. These are the places where it could
    - `protontts/unixlib.c` is only built with libpiper, which mach9 doesn't provide.
 3. **Every unix-side file the series changes.** These are compiled on darwin too and have only been compiled for aarch64 Linux: 
 
-   <details><summary>61 files</summary>
+   <details><summary>64 files</summary>
 
-   `dlls/amd_ags_x64/unixlib.c`, `dlls/crypt32/unixlib.c`, `dlls/msv1_0/unixlib.c`, `dlls/ntdll/unix/debug.c`, `dlls/ntdll/unix/env.c`, `dlls/ntdll/unix/file.c`, `dlls/ntdll/unix/loader.c`, `dlls/ntdll/unix/loadorder.c`, `dlls/ntdll/unix/process.c`, `dlls/ntdll/unix/registry.c`, `dlls/ntdll/unix/security.c`, `dlls/ntdll/unix/signal_i386.c`, `dlls/ntdll/unix/signal_x86_64.c`, `dlls/ntdll/unix/socket.c`, `dlls/ntdll/unix/sync.c`, `dlls/ntdll/unix/system.c`, `dlls/ntdll/unix/thread.c`, `dlls/ntdll/unix/unix_private.h`, `dlls/ntdll/unix/virtual.c`, `dlls/opengl32/unix_wgl.c`, `dlls/protontts/unixlib.c`, `dlls/win32u/d3dkmt.c`, `dlls/win32u/dce.c`, `dlls/win32u/font.c`, `dlls/win32u/freetype.c`, `dlls/win32u/input.c`, `dlls/win32u/message.c`, `dlls/win32u/rawinput.c`, `dlls/win32u/scroll.c`, `dlls/win32u/sysparams.c`, `dlls/win32u/win32u_private.h`, `dlls/win32u/window.c`, `dlls/windows.media.speech/unixlib.c`, `dlls/winebus.sys/bus_udev.c`, `dlls/winebus.sys/main.c`, `dlls/winedmo/unix_demuxer.c`, `dlls/winedmo/unix_media_type.c`, `dlls/winegstreamer/unixlib.c`, `dlls/winegstreamer/wg_format.c`, `dlls/winegstreamer/wg_media_type.c`, `dlls/winegstreamer/wg_parser.c`, `dlls/winegstreamer/wg_transform.c`, `loader/main.c`, `server/change.c`, `server/file.c`, `server/file.h`, `server/handle.c`, `server/main.c`, `server/mapping.c`, `server/object.c`, `server/object.h`, `server/process.c`, `server/protocol.def`, `server/queue.c`, `server/registry.c`, `server/request.c`, `server/security.h`, `server/sock.c`, `server/thread.c`, `server/token.c`, `server/window.c`
+   `dlls/amd_ags_x64/unixlib.c`, `dlls/crypt32/unixlib.c`, `dlls/msv1_0/unixlib.c`, `dlls/ntdll/unix/debug.c`, `dlls/ntdll/unix/env.c`, `dlls/ntdll/unix/file.c`, `dlls/ntdll/unix/loader.c`, `dlls/ntdll/unix/loadorder.c`, `dlls/ntdll/unix/process.c`, `dlls/ntdll/unix/registry.c`, `dlls/ntdll/unix/security.c`, `dlls/ntdll/unix/signal_i386.c`, `dlls/ntdll/unix/signal_x86_64.c`, `dlls/ntdll/unix/socket.c`, `dlls/ntdll/unix/sync.c`, `dlls/ntdll/unix/system.c`, `dlls/ntdll/unix/thread.c`, `dlls/ntdll/unix/unix_private.h`, `dlls/ntdll/unix/virtual.c`, `dlls/opencl/unix_private.h`, `dlls/opencl/unix_thunks.c`, `dlls/opencl/unix_wrappers.c`, `dlls/opengl32/unix_wgl.c`, `dlls/protontts/unixlib.c`, `dlls/win32u/d3dkmt.c`, `dlls/win32u/dce.c`, `dlls/win32u/font.c`, `dlls/win32u/freetype.c`, `dlls/win32u/input.c`, `dlls/win32u/message.c`, `dlls/win32u/rawinput.c`, `dlls/win32u/scroll.c`, `dlls/win32u/sysparams.c`, `dlls/win32u/win32u_private.h`, `dlls/win32u/window.c`, `dlls/windows.media.speech/unixlib.c`, `dlls/winebus.sys/bus_udev.c`, `dlls/winebus.sys/main.c`, `dlls/winedmo/unix_demuxer.c`, `dlls/winedmo/unix_media_type.c`, `dlls/winegstreamer/unixlib.c`, `dlls/winegstreamer/wg_format.c`, `dlls/winegstreamer/wg_media_type.c`, `dlls/winegstreamer/wg_parser.c`, `dlls/winegstreamer/wg_transform.c`, `loader/main.c`, `server/change.c`, `server/file.c`, `server/file.h`, `server/handle.c`, `server/main.c`, `server/mapping.c`, `server/object.c`, `server/object.h`, `server/process.c`, `server/protocol.def`, `server/queue.c`, `server/registry.c`, `server/request.c`, `server/security.h`, `server/sock.c`, `server/thread.c`, `server/token.c`, `server/window.c`
 
    </details>
 4. **`configure` from Autoconf 2.71** with Proton's new checks (Vosk, Piper, libdrm/libdrm_amdgpu, `-D__STDC__` for the PE compilers).
@@ -100,36 +100,49 @@ Things that compile but need a Mac to tell whether they work:
 - **steamclient → lsteamclient.** `c177a34d784` (carried) redirects calls from the native steamclient through exec page faults, but Proton hooks `steamclient_handle_fault()` only in the **x86** signal handlers (`signal_x86_64.c`, `signal_i386.c`). On arm64 macOS, the x86 steamclient code runs under FEX (ARM64EC / wow64), and nothing in `signal_arm64.c` or FEX calls the hook. The redirect won't fire until that's ported. (Also recorded in `steam/README.md`.)
 - **Proton changes inside athei's macOS core:** `ntdll/unix/virtual.c` (section names through drive symlinks), `sync.c` (completion-port zero timeout, next to msync), `thread.c` + `server/thread.c` ("Delay resuming thread after suspending self", "Wait for thread suspension in NtSuspendThread()": wineserver suspends threads with Mach calls on macOS), `server/mapping.c` (mapping space in accessible memory), `server/process.c` (job/parent tracking), `signal_arm64ec.c` (WOW64 suspension helpers, fault logging).
 - **`hacks_init()` and compatdb.** Proton's per-game switch now runs right after athei's `msync_init()`, and athei's `compatdb.so` still loads. Two per-game mechanisms are live at once. They don't touch the same variables yet.
-- The PE side in general: 655 Proton commits are in the series, but nothing ran.
+- The PE side in general: 682 Proton commits are in the series, but nothing ran.
 
 ## Not carried, and why
 
 | triage group | not carried |
 |---|---:|
 | ntdll unix side (virtual memory, signals, sync, process) | 52 |
-| multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | 35 |
-| other PE-side game / app fixes | 25 |
-| OpenGL (opengl32 / win32u opengl / wined3d) | 22 |
+| multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | 33 |
 | win32u (windows, messages, display, d3dkmt) | 21 |
 | fullscreen hack (fshack, win32u/opengl32 side) | 21 |
-| d3dx / d3dcompiler / ddraw / dxgi PE side | 20 |
+| OpenGL (opengl32 / win32u opengl / wined3d) | 20 |
 | winebus / HID / Steam Input / controllers | 16 |
 | wineserver core | 15 |
+| d3dx / d3dcompiler / ddraw / dxgi PE side | 10 |
 | winevulkan / win32u Vulkan / OpenXR / vrclient | 6 |
 | ARM64 / ARM64EC / FEX / WoW64 | 4 |
-| networking (ws2_32, nsiproxy, iphlpapi, winhttp, wininet) | 3 |
-| audio drivers (winepulse/winealsa) & mmdevapi | 3 |
-| prefix / registry defaults (wine.inf, wineboot, fonts) | 2 |
+| other PE-side game / app fixes | 1 |
 | Proton integration (steam.exe, proton hooks, lsteamclient, env vars) | 1 |
 
 What that means in practice:
 
 - **Fullscreen hack (21):** all conflict with athei's winemac/win32u OpenGL-on-EGL work. The triage planned to gate it off on macOS first anyway (winemac has its own scaling), so its absence is the intended starting state.
 - **ntdll `virtual.c` and `loader.c` (52):** `WINE_SIMULATE_WRITECOPY` and its ~15 per-game enables, the 2 GB / `PROTON_LIMIT_ADDRESS_SPACE` limits, heap hacks, `WINE_RAM_REPORTING_BIAS`, the PE link map for GDB. This is athei's W^X / 4K-page / FEX memory code, and these need porting by someone who can test on a Mac.
-- **Multimedia (35):** the mf session changes, the audio decoder rename and the Vorbis/Opus decoders, the media-converter demuxer, the D3D11 video processor. They conflict with 11.20's winegstreamer/winedmo rework. Without them, the media-converter (Proton's video transcoding path) is not wired in.
+- **Multimedia (33):** the mf session changes, the audio decoder rename and the Vorbis/Opus decoders, the media-converter demuxer, the D3D11 video processor. They conflict with 11.20's winegstreamer/winedmo rework. Without them, the media-converter (Proton's video transcoding path) is not wired in.
 - **win32u + wineserver (35):** touch/pointer input, rawinput absolute mouse, layered-window game hacks, NtFlushKey, file security xattrs, CPU topology override.
 - **winebus/xinput (15):** Steam Input virtual-controller handling and SDL tweaks. hidraw/udev parts are Linux-only anyway.
-- **d3dx (20)**, **bcrypt via gcrypt/libgmp (6)**, **appx package APIs**, **jscript/mshtml cycle collection**: 11.20 changed the same code.
+- **d3dx (10):** the rest of Connor McAdams' d3dx10/d3dx11 texture work: D3DX10SaveTextureToMemory/ToFile (DDS, DXT10 DDS, other file formats), D3DX11LoadTextureFromTexture/FilterTexture/SaveTexture*, and two DXGI formats. See [Porting the conflicts](#porting-the-conflicts).
+- The other high-confidence groups (networking, audio, prefix, Proton integration except `PROTON_LIMIT_ADDRESS_SPACE`, other PE-side fixes) are done: see [Porting the conflicts](#porting-the-conflicts). The one left in "other PE-side" is Proton's pdh stub, which 11.20 supersedes.
+
+## Porting the conflicts
+
+Following [`wine/PORTING.md`](../wine/PORTING.md), the `conflict` commits are being ported group by group onto the 11.20 code, a build-checked batch at a time. Ported commits are appended to the series after mproton's own patches, before the final regeneration patch.
+
+**Batch 1 (2026-11-07): high-confidence groups, 46 commits.** 246 → 200 `conflict`.
+
+- **Ported (23, `hand-merged`, each with a `mproton-resolved:` note):** winemenubuilder raw exe path; webservices and xaudio2/x3daudio/xapofx prefer-native; winhttp connect checks moved out of the loop; dmime secondary-segment hack; wineboot root certificates; win32u GGO_METRICS with the DC's AA flags (on top of athei's NONANTIALIASED metrics fix); GetPackagesByPackageFamily and GetPackagePath; the Red Tie Runner CEF option (kernelbase part only; the GL vendor override it extends isn't in this tree); opencl stub dll without OpenCL headers; mmdevapi min-period rounding; msctf thread-manager list; dsound primary buffer with the device channel layout; setupapi DIGCF_PRESENT for devices (re-applied on 11.20's cfgmgr32-based enumeration); ddraw hwnd clipper in exclusive mode (blit half; 11.20 has the SetClipper half); gdi32 ETO_OPAQUE test; d3dx10 sRGB formats, D3DX10FilterTexture (rewritten on 11.20's texture loader), the async SRV processor, D3DX10CreateShaderResourceViewFrom* and the D3DX10SaveTexture stubs.
+- **Now apply cleanly (4):** two winhttp renegotiation commits and two kernelbase CEF hacks, once their predecessors were in.
+- **Superseded by 11.20 (17, `dropped-upstream`, in `wine/scripts/manual-status.tsv`):** bcrypt DH/ECC/OAEP via gnutls, libgmp and gcrypt (6; 11.20 moved bcrypt to SymCrypt), jscript/mshtml cycle collection (2; 11.20 has its own design), icu stub + v68 forward (2; 11.20 builds a real icu.dll), PackageFullNameFromId, the msvcrt `_isatty` wrapper, the msctf reconversion stub, setupapi device removal, the imm32 trailing zero, the d3dx9 sRGB filter flags and D3DX10LoadTextureFromTexture.
+- **Linux-only (2, `skipped-linux`):** the two winepulse timer commits. winepulse isn't built on macOS (winecoreaudio is used).
+- **Tests:** test hunks that extend tests 11.20 rewrote were left out (mostly d3dx10), as each note says. Tests aren't compiled by the build check (`--disable-tests`).
+- **Build:** an incremental build after the batch and a from-scratch build through `wine/apply.sh` (see [Linux verification](#linux-verification)). The build caught one porting bug: `WINE_PACKAGE_FLAGS` leaves `OPENCL_LIBS=-lOpenCL` even when OpenCL isn't found, so the opencl port clears it.
+
+**Next:** the rest of d3dx (10), then multimedia (33). For the d3dx10 save functions, the d3dx9 helper hunks apply cleanly; the d3dx10 part has to be written on 11.20's staging helpers, because Proton's version uses its own `struct d3d10_texture` code that 11.20 replaced.
 
 ## Using it with mach9
 
@@ -173,43 +186,43 @@ Generated by `wine/scripts/status-tables.py wine/series.tsv`. Links go to the Pr
 
 | status | commits |
 |---|---:|
-| applied | 631 |
-| hand-merged | 24 |
-| dropped-upstream | 396 |
+| applied | 635 |
+| hand-merged | 47 |
+| dropped-upstream | 413 |
 | dropped-reverted | 22 |
-| skipped-linux | 132 |
+| skipped-linux | 134 |
 | skipped-generated | 3 |
-| conflict | 246 |
+| conflict | 200 |
 | **total** | **1454** |
 
 | group | applied | hand-merged | dropped-upstream | dropped-reverted | skipped-linux | skipped-generated | conflict |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | 146 | 1 | 136 |  |  |  | 35 |
-| other PE-side game / app fixes | 102 | 2 | 61 | 2 |  |  | 25 |
+| multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | 146 | 3 | 136 |  |  |  | 33 |
+| other PE-side game / app fixes | 102 | 11 | 76 | 2 |  |  | 1 |
 | ntdll unix side (virtual memory, signals, sync, process) | 32 | 3 | 36 | 4 |  | 1 | 52 |
 | GPU vendor libs (amd_ags, atiadlxx, amdxc, nvapi, dxgi vendor) | 112 |  |  |  |  |  |  |
 | winex11.drv (window mgmt, input, XInput2, Vulkan surfaces) |  |  | 11 |  | 73 |  |  |
 | winebus / HID / Steam Input / controllers | 19 |  | 30 | 6 |  |  | 16 |
-| prefix / registry defaults (wine.inf, wineboot, fonts) | 57 | 1 | 7 |  |  |  | 2 |
+| prefix / registry defaults (wine.inf, wineboot, fonts) | 57 | 3 | 7 |  |  |  |  |
 | win32u (windows, messages, display, d3dkmt) | 25 | 3 | 10 |  |  |  | 21 |
-| OpenGL (opengl32 / win32u opengl / wined3d) | 14 |  | 17 |  |  |  | 22 |
-| d3dx / d3dcompiler / ddraw / dxgi PE side | 17 | 1 | 14 |  |  |  | 20 |
+| OpenGL (opengl32 / win32u opengl / wined3d) | 15 | 1 | 17 |  |  |  | 20 |
+| d3dx / d3dcompiler / ddraw / dxgi PE side | 18 | 8 | 16 |  |  |  | 10 |
 | wineserver core | 17 | 1 | 8 |  |  |  | 15 |
 | speech / TTS (windows.media.speech, protontts, Vosk, Piper) | 21 | 2 | 15 |  |  |  |  |
 | ARM64 / ARM64EC / FEX / WoW64 | 9 | 1 | 6 | 10 | 2 |  | 4 |
 | Proton integration (steam.exe, proton hooks, lsteamclient, env vars) | 22 | 5 |  |  |  |  | 1 |
 | winevulkan / win32u Vulkan / OpenXR / vrclient | 5 |  | 15 |  |  | 1 | 6 |
-| networking (ws2_32, nsiproxy, iphlpapi, winhttp, wininet) | 2 |  | 22 |  |  |  | 3 |
+| networking (ws2_32, nsiproxy, iphlpapi, winhttp, wininet) | 4 | 1 | 22 |  |  |  |  |
 | gamescope / Steam Deck |  |  |  |  | 22 |  |  |
 | fullscreen hack (fshack, win32u/opengl32 side) |  |  |  |  |  |  | 21 |
 | anti-cheat / launchers (EAC, BattlEye, EA, Ubisoft, CEF) | 18 |  | 1 |  |  |  |  |
 | Linux tracing / debug (ftrace, gpuvis, uffd, memfd) |  |  | 2 |  | 14 |  |  |
 | fsync / ntsync / in-process sync |  |  |  |  | 15 |  |  |
 | loader / preloader / build system (configure, makedep, winebuild, winegcc) | 7 | 4 | 2 |  |  | 1 |  |
-| audio drivers (winepulse/winealsa) & mmdevapi | 6 |  | 2 |  |  |  | 3 |
+| audio drivers (winepulse/winealsa) & mmdevapi | 6 | 1 | 2 |  | 2 |  |  |
 | winewayland.drv |  |  | 1 |  | 6 |  |  |
 
-<details><summary><b>Applied cleanly</b> (631)</summary>
+<details><summary><b>Applied cleanly</b> (635)</summary>
 
 | # | Proton commit | group | subject | note |
 |---:|---|---|---|---|
@@ -844,10 +857,14 @@ Generated by `wine/scripts/status-tables.py wine/series.tsv`. Links go to the Pr
 | 652 | [`d8477f50b9e`](https://github.com/ValveSoftware/wine/commit/d8477f50b9e) | speech / TTS (windows.media.speech, protontts, Vosk, Piper) | protontts/tts: Implement volume support. | dlls/protontts/tts.c |
 | 653 | [`92a7c46ed49`](https://github.com/ValveSoftware/wine/commit/92a7c46ed49) | speech / TTS (windows.media.speech, protontts, Vosk, Piper) | protontts: Implement rate support. | dlls/protontts/tts.c |
 | 654 | [`c2b31103f06`](https://github.com/ValveSoftware/wine/commit/c2b31103f06) | speech / TTS (windows.media.speech, protontts, Vosk, Piper) | protontts: Check for available data more frequently. | dlls/protontts/tts.c |
+| 662 | [`294b122185f`](https://github.com/ValveSoftware/wine/commit/294b122185f) | networking (ws2_32, nsiproxy, iphlpapi, winhttp, wininet) | winhttp: Introduce new netconn_negotiate helper. | dlls/winhttp/net.c |
+| 663 | [`377075a4df1`](https://github.com/ValveSoftware/wine/commit/377075a4df1) | networking (ws2_32, nsiproxy, iphlpapi, winhttp, wininet) | winhttp: Handle SEC_I_RENEGOTIATE after DecryptMessage. | dlls/winhttp/net.c |
+| 671 | [`a20b0e65ebe`](https://github.com/ValveSoftware/wine/commit/a20b0e65ebe) | OpenGL (opengl32 / win32u opengl / wined3d) | kernelbase: HACK: Add --use-gl=swiftshader for another game. | dlls/kernelbase/process.c |
+| 672 | [`c7e869c1f61`](https://github.com/ValveSoftware/wine/commit/c7e869c1f61) | d3dx / d3dcompiler / ddraw / dxgi PE side | kernelbase: HACK: Force angle d3d9 for Alpha League. | dlls/kernelbase/process.c |
 
 </details>
 
-<details><summary><b>Applied with a hand merge</b> (24)</summary>
+<details><summary><b>Applied with a hand merge</b> (47)</summary>
 
 | # | Proton commit | group | subject | note |
 |---:|---|---|---|---|
@@ -875,10 +892,33 @@ Generated by `wine/scripts/status-tables.py wine/series.tsv`. Links go to the Pr
 | 649 | [`5a57918796e`](https://github.com/ValveSoftware/wine/commit/5a57918796e) | speech / TTS (windows.media.speech, protontts, Vosk, Piper) | windows.media.speech: Add Vosk checks to autoconf. | union with 11.20's --without-va option |
 | 650 | [`bc506509c64`](https://github.com/ValveSoftware/wine/commit/bc506509c64) | speech / TTS (windows.media.speech, protontts, Vosk, Piper) | protontts: Implement basic TTS functionality using Piper. | dropped the libgcrypt check from the hunk (11.20 has none and Proton's gcrypt bcrypt patches are not carried); kept the Piper check |
 | 658 | [`1d4a019a8c6`](https://github.com/ValveSoftware/wine/commit/1d4a019a8c6) | ntdll unix side (virtual memory, signals, sync, process) | ntdll: HACK: Export a function to set a Unix environment variable. | union in winternl.h with 11.20's Ps* unix-lib prototypes |
+| 659 | [`2639c49b765`](https://github.com/ValveSoftware/wine/commit/2639c49b765) | other PE-side game / app fixes | winemenubuilder: User raw exe path in the created .desktop files. | kept 11.20's `args && *args` check; otherwise as Proton. |
+| 660 | [`39e7eed749a`](https://github.com/ValveSoftware/wine/commit/39e7eed749a) | other PE-side game / app fixes | webservices: Prefer native. | kept 11.20's version-resource lines next to the --prefer-native flag. |
+| 661 | [`fadcf28ba20`](https://github.com/ValveSoftware/wine/commit/fadcf28ba20) | networking (ws2_32, nsiproxy, iphlpapi, winhttp, wininet) | winhttp: Move connect end checks out of the loop. | 11.20 passes &conn-&gt;chain to netconn_verify_cert(); kept that in the moved check. |
+| 664 | [`46cedf9d9fe`](https://github.com/ValveSoftware/wine/commit/46cedf9d9fe) | other PE-side game / app fixes | HACK: dmime: Don't send segment end message for secondary segments. | header context: 11.20 added segment_get_rt_length() above segment_state_create(); change itself as Proton. |
+| 665 | [`c80b657861d`](https://github.com/ValveSoftware/wine/commit/c80b657861d) | prefix / registry defaults (wine.inf, wineboot, fonts) | wineboot: Load root certificates on prefix update. | 11.20's import line has rpcrt4 and ENABLE_ARCHS; only added crypt32 to DELAYIMPORTS. |
+| 666 | [`c1d74b8e154`](https://github.com/ValveSoftware/wine/commit/c1d74b8e154) | prefix / registry defaults (wine.inf, wineboot, fonts) | win32u: Use font AA flags when querying glyph outline with GGO_METRICS. | athei's freetype.c already picks GGO_BITMAP load flags for GGO_METRICS on NONANTIALIASED_QUALITY fonts (load_format). Ported Proton's change onto that: GGO_METRICS otherwise loads with the DC's aa_flags. Restricted to GGO_METRICS, as the subject says (Proton also applied it to explicit bitmap formats), and the retry now really falls back to the requested format (Proton recomputed the same flags). |
+| 667 | [`095fdddb5e1`](https://github.com/ValveSoftware/wine/commit/095fdddb5e1) | multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | xaudio2: Prefer native | kept 11.20's version-resource lines next to the --prefer-native flag. |
+| 668 | [`7b4037421ea`](https://github.com/ValveSoftware/wine/commit/7b4037421ea) | other PE-side game / app fixes | kernel32: Implement GetPackagesByPackageFamily(). | 11.20 already has PackageFullNameFromId() (with its own tests) and only a stub GetPackagesByPackageFamily(); replaced the stub with Proton's registry-based implementation and kept both test functions. |
+| 669 | [`8089c27dae7`](https://github.com/ValveSoftware/wine/commit/8089c27dae7) | other PE-side game / app fixes | kernel32: Implement GetPackagePath(). | appmodel.h: kept 11.20's PackageFullNameFromId() prototype next to the new one. |
+| 670 | [`0f02fcc46b8`](https://github.com/ValveSoftware/wine/commit/0f02fcc46b8) | OpenGL (opengl32 / win32u opengl / wined3d) | kernelbase, opengl32: HACK: Add --use-angle=gl for Red Tie Runner. | kernelbase part only. The opengl32 part extends Proton's GL vendor override, which lives in code this tree doesn't have (Proton's override_vendor() in unix_wgl.c / winex11); it is an Nvidia-only workaround, irrelevant on macOS. |
+| 673 | [`13484a23a41`](https://github.com/ValveSoftware/wine/commit/13484a23a41) | other PE-side game / app fixes | gdi32/tests: Add test for text background fill extends with ETO_OPAQUE. | test-only; inserted the new test function before START_TEST (11.20 added tests at the same spot). Tests aren't compiled by the build check. |
+| 674 | [`f3195627a81`](https://github.com/ValveSoftware/wine/commit/f3195627a81) | other PE-side game / app fixes | opencl: HACK: Build a stub dll if Unix headers are missing. | 11.20 checks OpenCL with WINE_PACKAGE_FLAGS; kept that check (it still sets OPENCL_LIBS/HAVE_CL_CL_H when OpenCL exists), dropped [enable_opencl] so opencl.dll is built as a stub instead of disabled, and cleared OPENCL_LIBS when clGetPlatformInfo isn't found (WINE_PACKAGE_FLAGS defaults it to -lOpenCL). On macOS the OpenCL framework is found, so the real path is built there. |
+| 675 | [`89d7ee5f985`](https://github.com/ValveSoftware/wine/commit/89d7ee5f985) | audio drivers (winepulse/winealsa) & mmdevapi | mmdevapi: Round min_period_frames up in client_GetSharedModeEnginePeriod(). | 11.20 computes the periods with MulDiv(); kept that for the default period and applied Proton's round-up for the minimum and the default &gt;= minimum clamp. |
+| 676 | [`b6f7c600d36`](https://github.com/ValveSoftware/wine/commit/b6f7c600d36) | other PE-side game / app fixes | msctf: Use list to keep thread managers. | 11.20 added the ITfFnReconversion/ITfFunctionProvider code at the spot where Proton inserts TF_GetThreadMgr(); kept both. |
+| 677 | [`30eff977093`](https://github.com/ValveSoftware/wine/commit/30eff977093) | multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | dsound: Initialize primary buffer with device's channel layout | moved 11.20's DSOUND_ParseSpeakerConfig() (which adds the 7.1 layouts) to primary.c instead of Proton's older 5.1-only copy. |
+| 678 | [`764bff28f1b`](https://github.com/ValveSoftware/wine/commit/764bff28f1b) | other PE-side game / app fixes | setupapi: Support DICGF_PRESENT when looking for devices | 11.20 rewrote SetupDiGetClassDevs() on cfgmgr32 (2857fec3c24), and cfgmgr32 ignores CM_GETIDLIST_FILTER_PRESENT for devices. Re-applied Proton's check in the new SETUPDI_EnumerateDevices(): with DIGCF_PRESENT, a device is only returned if one of its interfaces is linked (Proton's is_device_instance_linked(), unchanged). |
+| 679 | [`4c175582270`](https://github.com/ValveSoftware/wine/commit/4c175582270) | d3dx / d3dcompiler / ddraw / dxgi PE side | ddraw: Ignore hwnd clipper in exclusive fullscreen mode. | 11.20 already skips the clipping window in SetClipper() in exclusive mode (303b7903766, the upstream half of this change), so only the blit-path part is applied. Proton's test updates are left out: 11.20 restructured check_surface_clipper(). |
+| 680 | [`2ff0c5e7209`](https://github.com/ValveSoftware/wine/commit/2ff0c5e7209) | d3dx / d3dcompiler / ddraw / dxgi PE side | d3dx10: Implement D3DX10FilterTexture(). | 11.20 has its own (upstream) D3DX10LoadTextureFromTexture() and staging helpers instead of the Proton code this was built on. Rewrote it on 11.20's d3d10_load_texture_from_texture(), the same call 11.20 uses for mip generation: each level below src_level is filtered from the one above. Proton's test is left out (it needs test helpers from the superseded b123817064e). |
+| 681 | [`b8cb280c21b`](https://github.com/ValveSoftware/wine/commit/b8cb280c21b) | d3dx / d3dcompiler / ddraw / dxgi PE side | d3dx10: Add support for sRGB formats. | code applied as is (it builds on 11.20's D3DX_FILTER_SRGB_IN/OUT handling). Proton's test hunk only removes todo_hr from format-conversion tests that 11.20's test file doesn't have; left out. |
+| 682 | [`0c7d34d3fac`](https://github.com/ValveSoftware/wine/commit/0c7d34d3fac) | d3dx / d3dcompiler / ddraw / dxgi PE side | d3dx10: Add D3DX10CreateAsyncShaderResourceViewProcessor() stub. | test hunks left out (11.20 rewrote the d3dx10 texture tests they extend); the stub itself applies as is. |
+| 683 | [`c7b2ce3ab42`](https://github.com/ValveSoftware/wine/commit/c7b2ce3ab42) | d3dx / d3dcompiler / ddraw / dxgi PE side | d3dx10: Implement D3DX10CreateAsyncShaderResourceViewProcessor(). | 11.20 moved D3DX10CompileFromMemory() out of async.c (to d3dx9_36/d3dx10_compiler.c), so the copy in this hunk's context is dropped; test hunks left out. |
+| 684 | [`60a9a91b179`](https://github.com/ValveSoftware/wine/commit/60a9a91b179) | d3dx / d3dcompiler / ddraw / dxgi PE side | d3dx10: Implement D3DX10CreateShaderResourceViewFrom{File,Memory,Resource}(). | the new functions sit where 11.20 now has its own texture-loading helpers (init_d3d10_box() etc.); placed them before those and dropped the superseded Proton struct definitions from the conflict. They use create_texture()/load_file()/d3dx_load_resource_*(), which 11.20 still has. Test hunks left out. |
+| 685 | [`8448f7cdff1`](https://github.com/ValveSoftware/wine/commit/8448f7cdff1) | d3dx / d3dcompiler / ddraw / dxgi PE side | d3dx10: Add stubs for D3DX10SaveTextureTo{Memory,File}(). | test hunks left out (they build on test helpers from Proton's superseded d3dx10 texture tests); the stubs apply as is. |
 
 </details>
 
-<details><summary><b>Dropped: already upstream (or superseded) in wine-11.20</b> (396)</summary>
+<details><summary><b>Dropped: already upstream (or superseded) in wine-11.20</b> (413)</summary>
 
 | Proton commit | group | subject | note |
 |---|---|---|---|
@@ -892,8 +932,20 @@ Generated by `wine/scripts/status-tables.py wine/series.tsv`. Links go to the Pr
 | [`ad396074e93`](https://github.com/ValveSoftware/wine/commit/ad396074e93) | OpenGL (opengl32 / win32u opengl / wined3d) | opengl32: Resolve default framebuffer before flushing. | same patch-id upstream |
 | [`e765574d0de`](https://github.com/ValveSoftware/wine/commit/e765574d0de) | winex11.drv (window mgmt, input, XInput2, Vulkan surfaces) | winex11: Always ignore MotionNotify event after SetCursorPos. | same patch-id upstream |
 | [`4462ba3a45b`](https://github.com/ValveSoftware/wine/commit/4462ba3a45b) | other PE-side game / app fixes | jscript: Use no_gc_traverse for host functions and constructors. | same patch-id upstream |
+| [`129fc2bd2e4`](https://github.com/ValveSoftware/wine/commit/129fc2bd2e4) | other PE-side game / app fixes | mshtml: Move cycle collector definitions to jscript. | superseded: wine-11.20 has its own jscript/mshtml cycle collection design (d41a3a76cfd moves the CC IIDs to jsdisp.idl, 2b9ff9e7c4e/a0217f8f289/780a44337f2 make the jscript GC traverse host objects) |
 | [`b2e013018ac`](https://github.com/ValveSoftware/wine/commit/b2e013018ac) | other PE-side game / app fixes | jscript: Replace the addref/release methods for host objects with get_host_disp. | same patch-id upstream |
 | [`486369a15cd`](https://github.com/ValveSoftware/wine/commit/486369a15cd) | other PE-side game / app fixes | jscript: Use get_host_disp in the vtbl when retrieving the host outer dispatch. | same patch-id upstream |
+| [`083a8f7f275`](https://github.com/ValveSoftware/wine/commit/083a8f7f275) | other PE-side game / app fixes | jscript: Implement mshtml cycle collection for jscript objects, when available. | superseded: same as 129fc2bd2e4; 11.20 traverses mshtml objects from the jscript GC instead |
+| [`e8e57d39563`](https://github.com/ValveSoftware/wine/commit/e8e57d39563) | other PE-side game / app fixes | bcrypt/tests: Add test for DH secret agreement. | superseded: wine-11.20 replaced the gnutls backend with SymCrypt on the PE side (149bd084066, b77b0a29b9e); Proton's DH secret-agreement test targets its gnutls/libgmp DH; wine-11.20 has its own test_DH |
+| [`9fd3d6ef4cf`](https://github.com/ValveSoftware/wine/commit/9fd3d6ef4cf) | other PE-side game / app fixes | bcrypt: Reimplement DH using libgmp instead of private gnutls functions. | superseded: wine-11.20 replaced the gnutls backend with SymCrypt on the PE side (149bd084066, b77b0a29b9e); DH is implemented with SymCrypt |
+| [`e0ce1e9afb3`](https://github.com/ValveSoftware/wine/commit/e0ce1e9afb3) | other PE-side game / app fixes | bcrypt: Add support for calculating secret ecc keys. | superseded: wine-11.20 replaced the gnutls backend with SymCrypt on the PE side (149bd084066, b77b0a29b9e); ECC secret derivation is implemented with SymCrypt |
+| [`fcf8e23d727`](https://github.com/ValveSoftware/wine/commit/fcf8e23d727) | other PE-side game / app fixes | bcrypt: Add support for none and OAEP-padded asymmetric key encryption. | superseded: wine-11.20 replaced the gnutls backend with SymCrypt on the PE side (149bd084066, b77b0a29b9e); BCRYPT_PAD_NONE/OAEP encryption is implemented with SymCrypt |
+| [`4cf6d8b6f09`](https://github.com/ValveSoftware/wine/commit/4cf6d8b6f09) | other PE-side game / app fixes | bcrypt: Add support for none and OAEP padded asymmetric key decryption. | superseded: wine-11.20 replaced the gnutls backend with SymCrypt on the PE side (149bd084066, b77b0a29b9e); BCRYPT_PAD_NONE/OAEP decryption is implemented with SymCrypt |
+| [`49a26f3bd8e`](https://github.com/ValveSoftware/wine/commit/49a26f3bd8e) | other PE-side game / app fixes | bcrypt: Support for ECDH_P521 through gcrypt. | superseded: wine-11.20 replaced the gnutls backend with SymCrypt on the PE side (149bd084066, b77b0a29b9e); ECDH P-521 is implemented with SymCrypt (no gcrypt needed) |
+| [`c18ebc392d1`](https://github.com/ValveSoftware/wine/commit/c18ebc392d1) | other PE-side game / app fixes | kernel32: Implement PackageFullNameFromId(). | wine-11.20 implements PackageFullNameFromId() (with tests) |
+| [`e415577be81`](https://github.com/ValveSoftware/wine/commit/e415577be81) | other PE-side game / app fixes | msvcrt: HACK: Introduce asm wrapper for _isatty on x64. | superseded: wine-11.20 has the upstream version, 738aac8c6ed "msvcrt: Introduce asm wrapper for _isatty on x64." (same lea of __pioinfo for the Ruby runtime, different padding) |
+| [`ae6ae2609ef`](https://github.com/ValveSoftware/wine/commit/ae6ae2609ef) | other PE-side game / app fixes | icu: Add stub dll. | superseded: wine-11.20 has a real icu.dll (plus icuin/icuuc) built on bundled ICU, not a stub |
+| [`99d77fc35dc`](https://github.com/ValveSoftware/wine/commit/99d77fc35dc) | other PE-side game / app fixes | icu: Forward function to Unicode library v68. | superseded: forwards to a native ICU v68 from Proton's stub icu.dll; wine-11.20 implements icu.dll itself |
 | [`c1937396073`](https://github.com/ValveSoftware/wine/commit/c1937396073) | other PE-side game / app fixes | kernelbase: Add stub for GetIntegratedDisplaySize(). | same patch-id upstream |
 | [`c3f7b78641d`](https://github.com/ValveSoftware/wine/commit/c3f7b78641d) | networking (ws2_32, nsiproxy, iphlpapi, winhttp, wininet) | iphlpapi: Implement GetOwnerModuleFromTcpEntry(). | same patch-id upstream |
 | [`11ff39f885e`](https://github.com/ValveSoftware/wine/commit/11ff39f885e) | networking (ws2_32, nsiproxy, iphlpapi, winhttp, wininet) | iphlpapi: Implement GetOwnerModuleFromTcp6Entry(). | same patch-id upstream |
@@ -906,7 +958,10 @@ Generated by `wine/scripts/status-tables.py wine/series.tsv`. Links go to the Pr
 | [`916718b3156`](https://github.com/ValveSoftware/wine/commit/916718b3156) | d3dx / d3dcompiler / ddraw / dxgi PE side | d3dx11: Implement D3DX11CreateTextureFromResource{A,W}(). | same patch-id upstream |
 | [`ab808a6de3f`](https://github.com/ValveSoftware/wine/commit/ab808a6de3f) | d3dx / d3dcompiler / ddraw / dxgi PE side | d3dx9: Properly handle DXT textures with premultiplied alpha. | same author+subject upstream: c8a59256d7a |
 | [`fd312628f0c`](https://github.com/ValveSoftware/wine/commit/fd312628f0c) | d3dx / d3dcompiler / ddraw / dxgi PE side | d3dx9/tests: Add tests for D3DX_FILTER_SRGB flags. | same author+subject upstream: 61634061289 |
+| [`1bd0c7edb54`](https://github.com/ValveSoftware/wine/commit/1bd0c7edb54) | d3dx / d3dcompiler / ddraw / dxgi PE side | d3dx9: Handle D3DX_FILTER_SRGB flags. | superseded: wine-11.20 handles D3DX_FILTER_SRGB_IN/OUT (CONV_FLAG_SRGB_IN/OUT with the exact sRGB curve, not gamma 2.2) |
 | [`a6d93c800b3`](https://github.com/ValveSoftware/wine/commit/a6d93c800b3) | d3dx / d3dcompiler / ddraw / dxgi PE side | d3dx10/tests: Add tests for D3DX10LoadTextureFromTexture(). | same author+subject upstream: 01bede4c2c8 |
+| [`b123817064e`](https://github.com/ValveSoftware/wine/commit/b123817064e) | d3dx / d3dcompiler / ddraw / dxgi PE side | d3dx10: Implement D3DX10LoadTextureFromTexture(). | superseded: wine-11.20 implements D3DX10LoadTextureFromTexture() upstream (different code, same author); later d3dx10 ports use it |
+| [`13a018bc07b`](https://github.com/ValveSoftware/wine/commit/13a018bc07b) | other PE-side game / app fixes | setupapi: Remove devices without any present interfaces from the device info list. | superseded: in wine-11.20 SetupDiGetClassDevs(DIGCF_DEVICEINTERFACE) creates devices only from CM_Get_Device_Interface_List() paths, which already honours DIGCF_PRESENT (f9b51de6234), so devices without present interfaces are never added |
 | [`094cc70dadd`](https://github.com/ValveSoftware/wine/commit/094cc70dadd) | winebus / HID / Steam Input / controllers | windows.gaming.input: Enfore axis usage mapping for HID devices. | same author+subject upstream: 7f29964c157 |
 | [`ff2b3deac0e`](https://github.com/ValveSoftware/wine/commit/ff2b3deac0e) | other PE-side game / app fixes | wbemprox: Add Win32_SystemEnclosure.SerialNumber. | same patch-id upstream |
 | [`59559d636d4`](https://github.com/ValveSoftware/wine/commit/59559d636d4) | other PE-side game / app fixes | wbemprox: Mark Win32_SystemEnclosure.Tag as key column. | same patch-id upstream |
@@ -1130,6 +1185,7 @@ Generated by `wine/scripts/status-tables.py wine/series.tsv`. Links go to the Pr
 | [`ab182d6f28a`](https://github.com/ValveSoftware/wine/commit/ab182d6f28a) | ARM64 / ARM64EC / FEX / WoW64 | server: On ARM64, only list 32-bit ARM as a supported architecture if the CPU supports it. | cherry-picked from e11b4cd1c9e |
 | [`2537ca1b788`](https://github.com/ValveSoftware/wine/commit/2537ca1b788) | d3dx / d3dcompiler / ddraw / dxgi PE side | ddraw/tests: Add tests for clipper in exclusive fullscreen mode. | same author+subject upstream: b6a992482b8 |
 | [`66e6df045d5`](https://github.com/ValveSoftware/wine/commit/66e6df045d5) | other PE-side game / app fixes | msctf: Return stub interface from ThreadMgr_GetFunctionProvider(). | same author+subject upstream: a9f1edc8742 |
+| [`17f7a76dc56`](https://github.com/ValveSoftware/wine/commit/17f7a76dc56) | other PE-side game / app fixes | msctf: HACK: Stub ITfFnReconversion function. | superseded: wine-11.20 has an ITfFnReconversion stub returned from ITfFunctionProvider::GetFunction (605b577219e) |
 | [`d81627a6ebf`](https://github.com/ValveSoftware/wine/commit/d81627a6ebf) | ntdll unix side (virtual memory, signals, sync, process) | ntdll: Only take PEB lock to update PEB data in RtlSetCurrentDirectory_U(). | same author+subject upstream: 13c79337d21 |
 | [`240db1f29d3`](https://github.com/ValveSoftware/wine/commit/240db1f29d3) | networking (ws2_32, nsiproxy, iphlpapi, winhttp, wininet) | wininet/tests: Add a test for multiple server addresses. | same patch-id upstream |
 | [`9a0a28aa4d1`](https://github.com/ValveSoftware/wine/commit/9a0a28aa4d1) | networking (ws2_32, nsiproxy, iphlpapi, winhttp, wininet) | wininet: Pass proxy server addr_str if present in open_http_connection(). | same patch-id upstream |
@@ -1166,6 +1222,7 @@ Generated by `wine/scripts/status-tables.py wine/series.tsv`. Links go to the Pr
 | [`b72a0e944a5`](https://github.com/ValveSoftware/wine/commit/b72a0e944a5) | networking (ws2_32, nsiproxy, iphlpapi, winhttp, wininet) | ws2_32: Add WSCEnumProtocols32(). | same patch-id upstream |
 | [`7dde2609baf`](https://github.com/ValveSoftware/wine/commit/7dde2609baf) | other PE-side game / app fixes | imm32/tests: Flush events in test_ImmSetCompositionWindow(). | same author+subject upstream: 52ef5356917 |
 | [`bee62551c9c`](https://github.com/ValveSoftware/wine/commit/bee62551c9c) | other PE-side game / app fixes | imm32/tests: Add tests for resetting in-composition state. | same author+subject upstream: 82cb77662ff |
+| [`acd2f9f92fd`](https://github.com/ValveSoftware/wine/commit/acd2f9f92fd) | other PE-side game / app fixes | imm32: Strip off tralining zero in ImeSetCompositionString(). | superseded: wine-11.20's ImeSetCompositionString() already strips trailing zeros (all of them) and ends the composition on an empty string |
 | [`946d1e67d32`](https://github.com/ValveSoftware/wine/commit/946d1e67d32) | other PE-side game / app fixes | imm32: Clear in-composition state when empty composition string is set. | same author+subject upstream: de304dae0ba |
 | [`0b8a86cf3b8`](https://github.com/ValveSoftware/wine/commit/0b8a86cf3b8) | other PE-side game / app fixes | imm32: Reset composition string when deactivating context. | same patch-id upstream |
 | [`04469ee5bc9`](https://github.com/ValveSoftware/wine/commit/04469ee5bc9) | audio drivers (winepulse/winealsa) & mmdevapi | mmdevapi: Implement SAORS_Reset(). | same patch-id upstream |
@@ -1310,7 +1367,7 @@ Generated by `wine/scripts/status-tables.py wine/series.tsv`. Links go to the Pr
 
 </details>
 
-<details><summary><b>Skipped: Linux-only</b> (132)</summary>
+<details><summary><b>Skipped: Linux-only</b> (134)</summary>
 
 | Proton commit | group | subject | note |
 |---|---|---|---|
@@ -1383,6 +1440,8 @@ Generated by `wine/scripts/status-tables.py wine/series.tsv`. Links go to the Pr
 | [`9cf3bab621a`](https://github.com/ValveSoftware/wine/commit/9cf3bab621a) | winex11.drv (window mgmt, input, XInput2, Vulkan surfaces) | winex11.drv: HACK: Reduce SM_CYCAPTION on low resolutions. | winex11.drv (window mgmt, input, XInput2, Vulkan surfaces) |
 | [`15593c0634b`](https://github.com/ValveSoftware/wine/commit/15593c0634b) | Linux tracing / debug (ftrace, gpuvis, uffd, memfd) | ntdll: Add ftracelog debug channel enabling dumping logs to ftrace. | Linux tracing / debug (ftrace, gpuvis, uffd, memfd) |
 | [`f6c2e0d630f`](https://github.com/ValveSoftware/wine/commit/f6c2e0d630f) | Linux tracing / debug (ftrace, gpuvis, uffd, memfd) | ntdll: HACK: Try to load steamoverlay.so manually if LD_PRELOAD was lost. | Linux tracing / debug (ftrace, gpuvis, uffd, memfd) |
+| [`f5a15b2201f`](https://github.com/ValveSoftware/wine/commit/f5a15b2201f) | audio drivers (winepulse/winealsa) & mmdevapi | winepulse.drv: Move pulse_release_stream() below. | winepulse.drv (PulseAudio) is not built on macOS (mach9 uses winecoreaudio); 11.20 reworked the pulse timer thread, so this needs a port that only Linux would use |
+| [`e4848caf5c3`](https://github.com/ValveSoftware/wine/commit/e4848caf5c3) | audio drivers (winepulse/winealsa) & mmdevapi | winepulse.drv: Process streams timer updates from PA main loop. | winepulse.drv (PulseAudio) is not built on macOS; depends on f5a15b2201f |
 | [`5d76e39fe96`](https://github.com/ValveSoftware/wine/commit/5d76e39fe96) | fsync / ntsync / in-process sync | ntdll: Add local copy of linux/ntsync.h. | fsync / ntsync / in-process sync |
 | [`eb1b0915eef`](https://github.com/ValveSoftware/wine/commit/eb1b0915eef) | fsync / ntsync / in-process sync | fsync: Add WINE_FSYNC_SIMULATE_SCHED_QUANTUM config option. | fsync / ntsync / in-process sync |
 | [`c66c32de2bf`](https://github.com/ValveSoftware/wine/commit/c66c32de2bf) | fsync / ntsync / in-process sync | ntdll: Enable WINE_FSYNC_SIMULATE_SCHED_QUANTUM for Planet Zoo. | fsync / ntsync / in-process sync |
@@ -1459,11 +1518,10 @@ Generated by `wine/scripts/status-tables.py wine/series.tsv`. Links go to the Pr
 
 </details>
 
-<details><summary><b>Not carried: conflicts with the wine-11.20 / athei base</b> (246)</summary>
+<details><summary><b>Not carried: conflicts with the wine-11.20 / athei base</b> (200)</summary>
 
 | Proton commit | group | subject | note |
 |---|---|---|---|
-| [`2639c49b765`](https://github.com/ValveSoftware/wine/commit/2639c49b765) | other PE-side game / app fixes | winemenubuilder: User raw exe path in the created .desktop files. | programs/winemenubuilder/winemenubuilder.c |
 | [`85ffc3a79a3`](https://github.com/ValveSoftware/wine/commit/85ffc3a79a3) | winebus / HID / Steam Input / controllers | dinput: Don't apply G920 mapping when used through windows.gaming.input. | dlls/dinput/joystick_hid.c |
 | [`aed70985a03`](https://github.com/ValveSoftware/wine/commit/aed70985a03) | multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | HACK: winegstreamer/wg_parser: Use capssetter to ignore non-default YUV color spaces. | dlls/winegstreamer/wg_parser.c |
 | [`b2083eb3adb`](https://github.com/ValveSoftware/wine/commit/b2083eb3adb) | multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | mf: Don't make stream sink shutdown dependent on IMFActivate presence in node. | dlls/mf/session.c |
@@ -1521,11 +1579,6 @@ Generated by `wine/scripts/status-tables.py wine/series.tsv`. Links go to the Pr
 | [`b00d7673111`](https://github.com/ValveSoftware/wine/commit/b00d7673111) | win32u (windows, messages, display, d3dkmt) | HACK: user32: Disable layered windows support for Zombie Army 4. | dlls/win32u/window.c |
 | [`98945d07339`](https://github.com/ValveSoftware/wine/commit/98945d07339) | win32u (windows, messages, display, d3dkmt) | HACK: user32: Disable layered windows for Strange Brigade. | dlls/win32u/window.c |
 | [`c66d56f8539`](https://github.com/ValveSoftware/wine/commit/c66d56f8539) | win32u (windows, messages, display, d3dkmt) | HACK: user32: Disable layered windows for Evil Genius 2. | dlls/win32u/window.c |
-| [`39e7eed749a`](https://github.com/ValveSoftware/wine/commit/39e7eed749a) | other PE-side game / app fixes | webservices: Prefer native. | dlls/webservices/Makefile.in |
-| [`fadcf28ba20`](https://github.com/ValveSoftware/wine/commit/fadcf28ba20) | networking (ws2_32, nsiproxy, iphlpapi, winhttp, wininet) | winhttp: Move connect end checks out of the loop. | dlls/winhttp/net.c |
-| [`294b122185f`](https://github.com/ValveSoftware/wine/commit/294b122185f) | networking (ws2_32, nsiproxy, iphlpapi, winhttp, wininet) | winhttp: Introduce new netconn_negotiate helper. | dlls/winhttp/net.c |
-| [`377075a4df1`](https://github.com/ValveSoftware/wine/commit/377075a4df1) | networking (ws2_32, nsiproxy, iphlpapi, winhttp, wininet) | winhttp: Handle SEC_I_RENEGOTIATE after DecryptMessage. | dlls/winhttp/net.c |
-| [`46cedf9d9fe`](https://github.com/ValveSoftware/wine/commit/46cedf9d9fe) | other PE-side game / app fixes | HACK: dmime: Don't send segment end message for secondary segments. | dlls/dmime/dmime_private.h |
 | [`b94adb1cf20`](https://github.com/ValveSoftware/wine/commit/b94adb1cf20) | ntdll unix side (virtual memory, signals, sync, process) | ntdll: Increase step after failed map attempt in try_map_free_area(). | dlls/ntdll/unix/virtual.c |
 | [`f573dbbd8c2`](https://github.com/ValveSoftware/wine/commit/f573dbbd8c2) | ntdll unix side (virtual memory, signals, sync, process) | ntdll: Increase free ranges view block size on 64 bit. | dlls/ntdll/unix/virtual.c |
 | [`0e735500a9a`](https://github.com/ValveSoftware/wine/commit/0e735500a9a) | ntdll unix side (virtual memory, signals, sync, process) | ntdll: Force virtual memory allocation order. | dlls/ntdll/unix/virtual.c |
@@ -1534,26 +1587,11 @@ Generated by `wine/scripts/status-tables.py wine/series.tsv`. Links go to the Pr
 | [`551d4a47ffd`](https://github.com/ValveSoftware/wine/commit/551d4a47ffd) | ntdll unix side (virtual memory, signals, sync, process) | HACK: ntdll: Mark first gta5.exe page as copied. | dlls/ntdll/unix/virtual.c |
 | [`799e5f0f562`](https://github.com/ValveSoftware/wine/commit/799e5f0f562) | ntdll unix side (virtual memory, signals, sync, process) | ntdll/loader: add support for overriding IMAGE_FILE_LARGE_ADDRESS_AWARE | dlls/ntdll/env.c dlls/ntdll/ntdll.spec dlls/ntdll/unix/loader.c dlls/ntdll/unix/virtual.c dlls/ntdll/unixlib.h include/winternl.h |
 | [`a260f8bc13c`](https://github.com/ValveSoftware/wine/commit/a260f8bc13c) | ntdll unix side (virtual memory, signals, sync, process) | ntdll: Guard against syscall stack overrun. | dlls/ntdll/unix/signal_arm.c dlls/ntdll/unix/signal_arm64.c dlls/ntdll/unix/signal_i386.c dlls/ntdll/unix/signal_x86_64.c dlls/ntdll/unix/unix_private.h |
-| [`129fc2bd2e4`](https://github.com/ValveSoftware/wine/commit/129fc2bd2e4) | other PE-side game / app fixes | mshtml: Move cycle collector definitions to jscript. | dlls/jscript/jsdisp.idl dlls/mshtml/mshtml_private.h |
-| [`083a8f7f275`](https://github.com/ValveSoftware/wine/commit/083a8f7f275) | other PE-side game / app fixes | jscript: Implement mshtml cycle collection for jscript objects, when available. | dlls/jscript/enumerator.c dlls/jscript/function.c dlls/jscript/jsdisp.idl dlls/mshtml/dispex.c dlls/mshtml/htmlwindow.c |
-| [`c80b657861d`](https://github.com/ValveSoftware/wine/commit/c80b657861d) | prefix / registry defaults (wine.inf, wineboot, fonts) | wineboot: Load root certificates on prefix update. | programs/wineboot/Makefile.in |
 | [`6769129e0a1`](https://github.com/ValveSoftware/wine/commit/6769129e0a1) | win32u (windows, messages, display, d3dkmt) | win32u: Set all glyph load flags in get_load_flags(). | dlls/win32u/freetype.c |
-| [`c1d74b8e154`](https://github.com/ValveSoftware/wine/commit/c1d74b8e154) | prefix / registry defaults (wine.inf, wineboot, fonts) | win32u: Use font AA flags when querying glyph outline with GGO_METRICS. | dlls/win32u/freetype.c |
-| [`e8e57d39563`](https://github.com/ValveSoftware/wine/commit/e8e57d39563) | other PE-side game / app fixes | bcrypt/tests: Add test for DH secret agreement. | dlls/bcrypt/tests/bcrypt.c |
-| [`9fd3d6ef4cf`](https://github.com/ValveSoftware/wine/commit/9fd3d6ef4cf) | other PE-side game / app fixes | bcrypt: Reimplement DH using libgmp instead of private gnutls functions. | dlls/bcrypt/Makefile.in dlls/bcrypt/bcrypt_internal.h dlls/bcrypt/gnutls.c dlls/bcrypt/tests/bcrypt.c |
-| [`e0ce1e9afb3`](https://github.com/ValveSoftware/wine/commit/e0ce1e9afb3) | other PE-side game / app fixes | bcrypt: Add support for calculating secret ecc keys. | dlls/bcrypt/gnutls.c |
-| [`fcf8e23d727`](https://github.com/ValveSoftware/wine/commit/fcf8e23d727) | other PE-side game / app fixes | bcrypt: Add support for none and OAEP-padded asymmetric key encryption. | dlls/bcrypt/bcrypt_main.c dlls/bcrypt/gnutls.c dlls/bcrypt/tests/bcrypt.c |
-| [`4cf6d8b6f09`](https://github.com/ValveSoftware/wine/commit/4cf6d8b6f09) | other PE-side game / app fixes | bcrypt: Add support for none and OAEP padded asymmetric key decryption. | dlls/bcrypt/bcrypt_main.c dlls/bcrypt/gnutls.c dlls/bcrypt/tests/bcrypt.c |
-| [`49a26f3bd8e`](https://github.com/ValveSoftware/wine/commit/49a26f3bd8e) | other PE-side game / app fixes | bcrypt: Support for ECDH_P521 through gcrypt. | dlls/bcrypt/gnutls.c |
 | [`edd5fa7c08e`](https://github.com/ValveSoftware/wine/commit/edd5fa7c08e) | wineserver core | ntdll: Implement CPU topology override. | dlls/ntdll/unix/system.c server/protocol.def |
-| [`095fdddb5e1`](https://github.com/ValveSoftware/wine/commit/095fdddb5e1) | multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | xaudio2: Prefer native | dlls/xapofx1_1/Makefile.in dlls/xapofx1_3/Makefile.in dlls/xaudio2_9/Makefile.in |
 | [`27d4315e7ba`](https://github.com/ValveSoftware/wine/commit/27d4315e7ba) | ntdll unix side (virtual memory, signals, sync, process) | ntdll: Update cached debug registers in call_init_thunk(). | dlls/ntdll/unix/signal_x86_64.c |
 | [`46008e1ce86`](https://github.com/ValveSoftware/wine/commit/46008e1ce86) | ntdll unix side (virtual memory, signals, sync, process) | ntdll: Use cached debug registers in NtGetContextThread() if hw debug breakpoints are disabled. | dlls/ntdll/unix/signal_i386.c dlls/ntdll/unix/signal_x86_64.c |
-| [`7b4037421ea`](https://github.com/ValveSoftware/wine/commit/7b4037421ea) | other PE-side game / app fixes | kernel32: Implement GetPackagesByPackageFamily(). | dlls/kernel32/tests/version.c dlls/kernelbase/version.c include/appmodel.h |
-| [`c18ebc392d1`](https://github.com/ValveSoftware/wine/commit/c18ebc392d1) | other PE-side game / app fixes | kernel32: Implement PackageFullNameFromId(). | dlls/kernelbase/version.c include/appmodel.h |
-| [`8089c27dae7`](https://github.com/ValveSoftware/wine/commit/8089c27dae7) | other PE-side game / app fixes | kernel32: Implement GetPackagePath(). | dlls/kernel32/kernel32.spec dlls/kernel32/tests/version.c dlls/kernelbase/version.c include/appmodel.h |
 | [`0031a3b527e`](https://github.com/ValveSoftware/wine/commit/0031a3b527e) | wineserver core | server: Initialize local user SID with unique values. | server/main.c |
-| [`e415577be81`](https://github.com/ValveSoftware/wine/commit/e415577be81) | other PE-side game / app fixes | msvcrt: HACK: Introduce asm wrapper for _isatty on x64. | dlls/msvcrt/file.c |
 | [`baf7cf6aec6`](https://github.com/ValveSoftware/wine/commit/baf7cf6aec6) | ntdll unix side (virtual memory, signals, sync, process) | ntdll: HACK: Add WINE_HEAP_DELAY_FREE variable to force the use of pending free buffer. | dlls/ntdll/loader.c |
 | [`334f7a78190`](https://github.com/ValveSoftware/wine/commit/334f7a78190) | ntdll unix side (virtual memory, signals, sync, process) | ntdll: HACK: Add WINE_SIMULATE_WRITECOPY option. | dlls/ntdll/unix/virtual.c |
 | [`f00d5b45363`](https://github.com/ValveSoftware/wine/commit/f00d5b45363) | ntdll unix side (virtual memory, signals, sync, process) | ntdll: HACK: Enable WINE_SIMULATE_WRITECOPY for Purgo box. | dlls/ntdll/unix/loader.c |
@@ -1570,7 +1608,6 @@ Generated by `wine/scripts/status-tables.py wine/series.tsv`. Links go to the Pr
 | [`e19fb66f1a5`](https://github.com/ValveSoftware/wine/commit/e19fb66f1a5) | wineserver core | server: Store file security attributes with extended file attributes. (v8) | server/file.c |
 | [`8d4ca3d63ac`](https://github.com/ValveSoftware/wine/commit/8d4ca3d63ac) | wineserver core | server: Convert return of file security masks with generic access mappings. (try 7) | dlls/advapi32/tests/security.c server/file.c |
 | [`4fea7a2368a`](https://github.com/ValveSoftware/wine/commit/4fea7a2368a) | wineserver core | server: Retrieve file security attributes with extended file attributes. (try 7) | server/file.c |
-| [`0f02fcc46b8`](https://github.com/ValveSoftware/wine/commit/0f02fcc46b8) | OpenGL (opengl32 / win32u opengl / wined3d) | kernelbase, opengl32: HACK: Add --use-angle=gl for Red Tie Runner. | dlls/opengl32/unix_wgl.c |
 | [`0c3c210cf7b`](https://github.com/ValveSoftware/wine/commit/0c3c210cf7b) | ntdll unix side (virtual memory, signals, sync, process) | ntdll: HACK: Enable WINE_SIMULATE_WRITECOPY for Red Tie Runner. | dlls/ntdll/unix/loader.c |
 | [`55cb7324221`](https://github.com/ValveSoftware/wine/commit/55cb7324221) | ntdll unix side (virtual memory, signals, sync, process) | ntdll: HACK: Add WINE_RAM_REPORTING_BIAS option. | dlls/ntdll/unix/loader.c dlls/ntdll/unix/unix_private.h |
 | [`7c62bbb9884`](https://github.com/ValveSoftware/wine/commit/7c62bbb9884) | ntdll unix side (virtual memory, signals, sync, process) | ntdll: Add virtstat debug channel and log memory allocation statistics. | dlls/ntdll/unix/virtual.c |
@@ -1579,7 +1616,6 @@ Generated by `wine/scripts/status-tables.py wine/series.tsv`. Links go to the Pr
 | [`415d8cabb04`](https://github.com/ValveSoftware/wine/commit/415d8cabb04) | winevulkan / win32u Vulkan / OpenXR / vrclient | win32u: HACK: Sync calls to vkQueuePresentKHR(). | dlls/win32u/vulkan.c |
 | [`65fa09de3c0`](https://github.com/ValveSoftware/wine/commit/65fa09de3c0) | wineserver core | win32u, server: Support setting desktop close timeout. | server/winstation.c |
 | [`94b4d6a2131`](https://github.com/ValveSoftware/wine/commit/94b4d6a2131) | ntdll unix side (virtual memory, signals, sync, process) | ntdll: HACK: Add 2g allocation limit option for FFX/X-2. | dlls/ntdll/unix/loader.c dlls/ntdll/unix/unix_private.h |
-| [`a20b0e65ebe`](https://github.com/ValveSoftware/wine/commit/a20b0e65ebe) | OpenGL (opengl32 / win32u opengl / wined3d) | kernelbase: HACK: Add --use-gl=swiftshader for another game. | dlls/kernelbase/process.c |
 | [`7c88dbe8048`](https://github.com/ValveSoftware/wine/commit/7c88dbe8048) | ntdll unix side (virtual memory, signals, sync, process) | ntdll: HACK: Enable WINE_SIMULATE_WRITECOPY for Dinogen Online. | dlls/ntdll/unix/loader.c |
 | [`2bf5a5799fa`](https://github.com/ValveSoftware/wine/commit/2bf5a5799fa) | ntdll unix side (virtual memory, signals, sync, process) | HACK: ntdll: Add WINE_HEAP_ZERO_MEMORY variable to force zeroing allocated memory. | dlls/ntdll/loader.c |
 | [`870373c99ae`](https://github.com/ValveSoftware/wine/commit/870373c99ae) | ntdll unix side (virtual memory, signals, sync, process) | HACK: ntdll: Extend heap zero hack to private heaps. | dlls/ntdll/heap.c dlls/ntdll/loader.c dlls/ntdll/ntdll_misc.h |
@@ -1589,23 +1625,18 @@ Generated by `wine/scripts/status-tables.py wine/series.tsv`. Links go to the Pr
 | [`a955c350413`](https://github.com/ValveSoftware/wine/commit/a955c350413) | OpenGL (opengl32 / win32u opengl / wined3d) | opengl32: HACK: Fixup shaders for Joe Danger 2: The Movie. | dlls/opengl32/wgl.c |
 | [`133c6f3e551`](https://github.com/ValveSoftware/wine/commit/133c6f3e551) | OpenGL (opengl32 / win32u opengl / wined3d) | opengl32: HACK: Fixup shaders for Joe Danger. | dlls/opengl32/wgl.c |
 | [`12792bbb6e9`](https://github.com/ValveSoftware/wine/commit/12792bbb6e9) | OpenGL (opengl32 / win32u opengl / wined3d) | opengl32: HACK: Fixup shaders for Stellar Reach. | dlls/opengl32/wgl.c |
-| [`c7e869c1f61`](https://github.com/ValveSoftware/wine/commit/c7e869c1f61) | d3dx / d3dcompiler / ddraw / dxgi PE side | kernelbase: HACK: Force angle d3d9 for Alpha League. | dlls/kernelbase/process.c |
 | [`73e9d4a8f7f`](https://github.com/ValveSoftware/wine/commit/73e9d4a8f7f) | ntdll unix side (virtual memory, signals, sync, process) | HACK: ntdll: Enable WINE_SIMULATE_WRITECOPY for Hentai Maid Memories. | dlls/ntdll/unix/loader.c |
 | [`a2cf73f6495`](https://github.com/ValveSoftware/wine/commit/a2cf73f6495) | ntdll unix side (virtual memory, signals, sync, process) | ntdll: HACK: Enable WINE_SIMULATE_WRITECOPY for Lovey-Dovey Lockdown. | dlls/ntdll/unix/loader.c |
 | [`a0a6df09f50`](https://github.com/ValveSoftware/wine/commit/a0a6df09f50) | other PE-side game / app fixes | pdh: Add stub for PdhGetFormattedCounterArray(). | removed from the series |
 | [`f5228289861`](https://github.com/ValveSoftware/wine/commit/f5228289861) | wineserver core | server: Renamed KEY_WOWSHARE constant to KEY_WOWREFLECT. | server/registry.c |
 | [`55436bd6d37`](https://github.com/ValveSoftware/wine/commit/55436bd6d37) | wineserver core | ntdll: Partially support querying directory entries for '\\Device\\NamedPipe\\'. | server/named_pipe.c server/trace.c |
-| [`13484a23a41`](https://github.com/ValveSoftware/wine/commit/13484a23a41) | other PE-side game / app fixes | gdi32/tests: Add test for text background fill extends with ETO_OPAQUE. | dlls/gdi32/tests/font.c |
 | [`9ee133cfad6`](https://github.com/ValveSoftware/wine/commit/9ee133cfad6) | win32u (windows, messages, display, d3dkmt) | win32u: Account for overhang in background fill in NtGdiExtTextOutW(). | dlls/gdi32/tests/font.c |
 | [`bb62612d546`](https://github.com/ValveSoftware/wine/commit/bb62612d546) | ntdll unix side (virtual memory, signals, sync, process) | ntdll: Implement NtSetInformationProcess( ProcessTlsInformation ). | dlls/ntdll/tests/info.c |
 | [`1769607c91c`](https://github.com/ValveSoftware/wine/commit/1769607c91c) | ntdll unix side (virtual memory, signals, sync, process) | ntdll: Use NtSetInformationProcess( ProcessTlsInformation ) in alloc_tls_slot(). | dlls/ntdll/unix/virtual.c |
 | [`3dcea332471`](https://github.com/ValveSoftware/wine/commit/3dcea332471) | ntdll unix side (virtual memory, signals, sync, process) | ntdll: Match memory allocation layout for ThreadLocalStoragePointer. | dlls/ntdll/loader.c |
 | [`0673170e081`](https://github.com/ValveSoftware/wine/commit/0673170e081) | ntdll unix side (virtual memory, signals, sync, process) | ntdll: HACK: Introduce WINE_HEAP_TOP_DOWN hack. | dlls/ntdll/heap.c dlls/ntdll/loader.c dlls/ntdll/ntdll_misc.h |
-| [`ae6ae2609ef`](https://github.com/ValveSoftware/wine/commit/ae6ae2609ef) | other PE-side game / app fixes | icu: Add stub dll. | configure.ac dlls/icu/Makefile.in dlls/icu/icu.spec |
-| [`99d77fc35dc`](https://github.com/ValveSoftware/wine/commit/99d77fc35dc) | other PE-side game / app fixes | icu: Forward function to Unicode library v68. | dlls/icu/icu.spec |
 | [`7e7bf645e29`](https://github.com/ValveSoftware/wine/commit/7e7bf645e29) | OpenGL (opengl32 / win32u opengl / wined3d) | opengl32: HACK: Do not check for extensions in wglGetProcAddress() for Chromacell. | dlls/opengl32/unix_wgl.c |
 | [`239de74087d`](https://github.com/ValveSoftware/wine/commit/239de74087d) | win32u (windows, messages, display, d3dkmt) | win32u: Send message with timeout in send_erase(). | dlls/win32u/dce.c |
-| [`f3195627a81`](https://github.com/ValveSoftware/wine/commit/f3195627a81) | other PE-side game / app fixes | opencl: HACK: Build a stub dll if Unix headers are missing. | configure.ac |
 | [`0b54a2da324`](https://github.com/ValveSoftware/wine/commit/0b54a2da324) | ntdll unix side (virtual memory, signals, sync, process) | ntdll: HACK: Enable WINE_SIMULATE_WRITECOPY for Gemstones. | dlls/ntdll/unix/loader.c |
 | [`5268060d6d3`](https://github.com/ValveSoftware/wine/commit/5268060d6d3) | ntdll unix side (virtual memory, signals, sync, process) | ntdll: HACK: Add a workaround to free more reserved memory on 32 bit. | dlls/ntdll/unix/loader.c dlls/ntdll/unix/unix_private.h dlls/ntdll/unix/virtual.c |
 | [`4352f6a3cc4`](https://github.com/ValveSoftware/wine/commit/4352f6a3cc4) | ntdll unix side (virtual memory, signals, sync, process) | ntdll: HACK: Limit address space for Reverse: 1999. | dlls/ntdll/unix/virtual.c |
@@ -1614,23 +1645,10 @@ Generated by `wine/scripts/status-tables.py wine/series.tsv`. Links go to the Pr
 | [`34e74948322`](https://github.com/ValveSoftware/wine/commit/34e74948322) | ntdll unix side (virtual memory, signals, sync, process) | ntdll: HACK: Add WINE_ALERT_SIMULATE_SCHED_QUANTUM option. | dlls/ntdll/unix/loader.c dlls/ntdll/unix/sync.c dlls/ntdll/unix/unix_private.h |
 | [`57eaadb81a4`](https://github.com/ValveSoftware/wine/commit/57eaadb81a4) | ntdll unix side (virtual memory, signals, sync, process) | ntdll: HACK: Enable WINE_ALERT_SIMULATE_SCHED_QUANTUM option for Mary Skelter 2. | dlls/ntdll/unix/loader.c |
 | [`c68af94221e`](https://github.com/ValveSoftware/wine/commit/c68af94221e) | ntdll unix side (virtual memory, signals, sync, process) | ntdll: HACK: Enable WINE_ALERT_SIMULATE_SCHED_QUANTUM option for more games. | dlls/ntdll/unix/loader.c |
-| [`89d7ee5f985`](https://github.com/ValveSoftware/wine/commit/89d7ee5f985) | audio drivers (winepulse/winealsa) & mmdevapi | mmdevapi: Round min_period_frames up in client_GetSharedModeEnginePeriod(). | dlls/mmdevapi/client.c |
-| [`f5a15b2201f`](https://github.com/ValveSoftware/wine/commit/f5a15b2201f) | audio drivers (winepulse/winealsa) & mmdevapi | winepulse.drv: Move pulse_release_stream() below. | dlls/winepulse.drv/pulse.c |
-| [`e4848caf5c3`](https://github.com/ValveSoftware/wine/commit/e4848caf5c3) | audio drivers (winepulse/winealsa) & mmdevapi | winepulse.drv: Process streams timer updates from PA main loop. | dlls/winepulse.drv/pulse.c |
 | [`c6fd0a2ff3d`](https://github.com/ValveSoftware/wine/commit/c6fd0a2ff3d) | ntdll unix side (virtual memory, signals, sync, process) | ntdll: Simulate async file read and IO cancellation to workaround AC:Odyssey out of order dialogues bug. | dlls/ntdll/unix/loader.c |
 | [`3398c7a38a4`](https://github.com/ValveSoftware/wine/commit/3398c7a38a4) | ntdll unix side (virtual memory, signals, sync, process) | ntdll: HACK: Also simulate async file read and IO cancellation for Immortals Fenyx Rising. | dlls/ntdll/unix/loader.c |
 | [`7f8f044448e`](https://github.com/ValveSoftware/wine/commit/7f8f044448e) | winevulkan / win32u Vulkan / OpenXR / vrclient | vrclient: vulkan-1: Prefer builtin. | dlls/vulkan-1/Makefile.in |
-| [`b6f7c600d36`](https://github.com/ValveSoftware/wine/commit/b6f7c600d36) | other PE-side game / app fixes | msctf: Use list to keep thread managers. | dlls/msctf/threadmgr.c |
 | [`758caa78e85`](https://github.com/ValveSoftware/wine/commit/758caa78e85) | ntdll unix side (virtual memory, signals, sync, process) | ntdll: HACK: Restore wine_nt_to_unix_file_name() as Unix call. | dlls/ntdll/ntdll.spec |
-| [`30eff977093`](https://github.com/ValveSoftware/wine/commit/30eff977093) | multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | dsound: Initialize primary buffer with device's channel layout | dlls/dsound/dsound.c dlls/dsound/primary.c |
-| [`1bd0c7edb54`](https://github.com/ValveSoftware/wine/commit/1bd0c7edb54) | d3dx / d3dcompiler / ddraw / dxgi PE side | d3dx9: Handle D3DX_FILTER_SRGB flags. | dlls/d3dx9_36/d3dx_helpers.c dlls/d3dx9_36/d3dx_helpers.h dlls/d3dx9_36/tests/surface.c |
-| [`b123817064e`](https://github.com/ValveSoftware/wine/commit/b123817064e) | d3dx / d3dcompiler / ddraw / dxgi PE side | d3dx10: Implement D3DX10LoadTextureFromTexture(). | dlls/d3dx10_43/tests/d3dx10.c dlls/d3dx10_43/texture.c |
-| [`b8cb280c21b`](https://github.com/ValveSoftware/wine/commit/b8cb280c21b) | d3dx / d3dcompiler / ddraw / dxgi PE side | d3dx10: Add support for sRGB formats. | dlls/d3dx10_43/tests/d3dx10.c |
-| [`2ff0c5e7209`](https://github.com/ValveSoftware/wine/commit/2ff0c5e7209) | d3dx / d3dcompiler / ddraw / dxgi PE side | d3dx10: Implement D3DX10FilterTexture(). | dlls/d3dx10_43/tests/d3dx10.c dlls/d3dx10_43/texture.c |
-| [`0c7d34d3fac`](https://github.com/ValveSoftware/wine/commit/0c7d34d3fac) | d3dx / d3dcompiler / ddraw / dxgi PE side | d3dx10: Add D3DX10CreateAsyncShaderResourceViewProcessor() stub. | dlls/d3dx10_43/tests/d3dx10.c |
-| [`c7b2ce3ab42`](https://github.com/ValveSoftware/wine/commit/c7b2ce3ab42) | d3dx / d3dcompiler / ddraw / dxgi PE side | d3dx10: Implement D3DX10CreateAsyncShaderResourceViewProcessor(). | dlls/d3dx10_43/async.c dlls/d3dx10_43/tests/d3dx10.c |
-| [`60a9a91b179`](https://github.com/ValveSoftware/wine/commit/60a9a91b179) | d3dx / d3dcompiler / ddraw / dxgi PE side | d3dx10: Implement D3DX10CreateShaderResourceViewFrom{File,Memory,Resource}(). | dlls/d3dx10_43/texture.c |
-| [`8448f7cdff1`](https://github.com/ValveSoftware/wine/commit/8448f7cdff1) | d3dx / d3dcompiler / ddraw / dxgi PE side | d3dx10: Add stubs for D3DX10SaveTextureTo{Memory,File}(). | dlls/d3dx10_43/tests/d3dx10.c |
 | [`e3bf5801d01`](https://github.com/ValveSoftware/wine/commit/e3bf5801d01) | d3dx / d3dcompiler / ddraw / dxgi PE side | d3dx10: Add partial support for saving to DDS files in D3DX10SaveTextureToMemory(). | dlls/d3dx10_43/tests/d3dx10.c dlls/d3dx10_43/texture.c |
 | [`2ed12ec865c`](https://github.com/ValveSoftware/wine/commit/2ed12ec865c) | d3dx / d3dcompiler / ddraw / dxgi PE side | d3dx10: Add support for saving DXT10 DDS files in D3DX10SaveTextureToMemory(). | dlls/d3dx10_43/tests/d3dx10.c dlls/d3dx10_43/texture.c dlls/d3dx9_36/d3dx_helpers.c |
 | [`347bd52e55f`](https://github.com/ValveSoftware/wine/commit/347bd52e55f) | d3dx / d3dcompiler / ddraw / dxgi PE side | d3dx10/tests: Add tests for saving textures to non-DDS file formats. | dlls/d3dx10_43/tests/d3dx10.c |
@@ -1641,9 +1659,7 @@ Generated by `wine/scripts/status-tables.py wine/series.tsv`. Links go to the Pr
 | [`21e624ea64f`](https://github.com/ValveSoftware/wine/commit/21e624ea64f) | d3dx / d3dcompiler / ddraw / dxgi PE side | d3dx{10,11}: Add support for DXGI_FORMAT_R11G11B10_FLOAT. | dlls/d3dx9_36/d3dx_helpers.c |
 | [`ed581161c2a`](https://github.com/ValveSoftware/wine/commit/ed581161c2a) | d3dx / d3dcompiler / ddraw / dxgi PE side | d3dx10: Implement D3DX10SaveTextureToFile{A,W}(). | dlls/d3dx10_43/tests/d3dx10.c dlls/d3dx10_43/texture.c |
 | [`e2c3789375c`](https://github.com/ValveSoftware/wine/commit/e2c3789375c) | d3dx / d3dcompiler / ddraw / dxgi PE side | d3dx11: Implement D3DX11SaveTextureTo{File,Memory}(). | dlls/d3dx11_43/texture.c |
-| [`764bff28f1b`](https://github.com/ValveSoftware/wine/commit/764bff28f1b) | other PE-side game / app fixes | setupapi: Support DICGF_PRESENT when looking for devices | dlls/setupapi/devinst.c |
 | [`1c95e6c0b50`](https://github.com/ValveSoftware/wine/commit/1c95e6c0b50) | winebus / HID / Steam Input / controllers | setupapi: Use HID device instance ID when checking winebus devices for presence. | dlls/setupapi/devinst.c |
-| [`13a018bc07b`](https://github.com/ValveSoftware/wine/commit/13a018bc07b) | other PE-side game / app fixes | setupapi: Remove devices without any present interfaces from the device info list. | dlls/setupapi/devinst.c |
 | [`958ab120581`](https://github.com/ValveSoftware/wine/commit/958ab120581) | winebus / HID / Steam Input / controllers | winepulse.drv: Create container ID from udev if possible. | dlls/winepulse.drv/Makefile.in |
 | [`a0b2e8c6d7e`](https://github.com/ValveSoftware/wine/commit/a0b2e8c6d7e) | ntdll unix side (virtual memory, signals, sync, process) | ntdll: HACK: Enable WINE_SIMULATE_WRITECOPY for DCS World. | dlls/ntdll/unix/loader.c |
 | [`25acfaa7551`](https://github.com/ValveSoftware/wine/commit/25acfaa7551) | winevulkan / win32u Vulkan / OpenXR / vrclient | winevulkan: Make device memory wrapper available in callbacks. | dlls/win32u/vulkan.c |
@@ -1697,19 +1713,15 @@ Generated by `wine/scripts/status-tables.py wine/series.tsv`. Links go to the Pr
 | [`e262f97e796`](https://github.com/ValveSoftware/wine/commit/e262f97e796) | multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | media-converter: Move mark_transcoded_stream() to lib.c. | dlls/winegstreamer/media-converter/lib.c dlls/winegstreamer/media-converter/media-converter.h |
 | [`d051cb54e92`](https://github.com/ValveSoftware/wine/commit/d051cb54e92) | multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | winedmo/media-converter: Use mark_transcoded_stream(). | dlls/winedmo/unix_demuxer_mediaconv.c |
 | [`3d7861b04ae`](https://github.com/ValveSoftware/wine/commit/3d7861b04ae) | multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | winegstreamer: HACK: Add alignment fix for 4:2 planar video. | dlls/winegstreamer/wg_parser.c |
-| [`4c175582270`](https://github.com/ValveSoftware/wine/commit/4c175582270) | d3dx / d3dcompiler / ddraw / dxgi PE side | ddraw: Ignore hwnd clipper in exclusive fullscreen mode. | dlls/ddraw/tests/ddraw1.c dlls/ddraw/tests/ddraw2.c dlls/ddraw/tests/ddraw4.c dlls/ddraw/tests/ddraw7.c |
-| [`17f7a76dc56`](https://github.com/ValveSoftware/wine/commit/17f7a76dc56) | other PE-side game / app fixes | msctf: HACK: Stub ITfFnReconversion function. | dlls/msctf/threadmgr.c |
 | [`d5651633f3a`](https://github.com/ValveSoftware/wine/commit/d5651633f3a) | fullscreen hack (fshack, win32u/opengl32 side) | fixup! fshack: win32u: Support vulkan scaling according to fake resolution. | dlls/win32u/vulkan.c |
 | [`9305c8e3c2c`](https://github.com/ValveSoftware/wine/commit/9305c8e3c2c) | ntdll unix side (virtual memory, signals, sync, process) | ntdll: HACK: Enable WINE_SIMULATE_WRITECOPY for Portal Worlds. | dlls/ntdll/unix/loader.c |
 | [`ab39667a111`](https://github.com/ValveSoftware/wine/commit/ab39667a111) | fullscreen hack (fshack, win32u/opengl32 side) | win32u, opengl32: fshack: Use SRGB framebuffer if target default FBO is SRGB capable. | dlls/opengl32/unix_wgl.c dlls/win32u/opengl.c |
 | [`11a9fbf6f94`](https://github.com/ValveSoftware/wine/commit/11a9fbf6f94) | fullscreen hack (fshack, win32u/opengl32 side) | win32u: fshack: Properly restore UBO binding. | dlls/win32u/opengl.c |
 | [`9af748e9df5`](https://github.com/ValveSoftware/wine/commit/9af748e9df5) | ntdll unix side (virtual memory, signals, sync, process) | ntdll: Add tests for PROCESS_PARAMS_IMAGE_KEY_MISSING flag. | dlls/ntdll/tests/info.c |
-| [`acd2f9f92fd`](https://github.com/ValveSoftware/wine/commit/acd2f9f92fd) | other PE-side game / app fixes | imm32: Strip off tralining zero in ImeSetCompositionString(). | dlls/imm32/ime.c dlls/imm32/tests/imm32.c |
 | [`a75c78b4079`](https://github.com/ValveSoftware/wine/commit/a75c78b4079) | ntdll unix side (virtual memory, signals, sync, process) | fixup! ntdll: Implement CPU topology override. | dlls/ntdll/unix/system.c |
 | [`b9ee57ddd32`](https://github.com/ValveSoftware/wine/commit/b9ee57ddd32) | fullscreen hack (fshack, win32u/opengl32 side) | opengl32: fshack: Use fixed big number for gamma_ramp UBO name on compatibility profiles. | dlls/opengl32/unix_wgl.c |
 | [`b0351fe293a`](https://github.com/ValveSoftware/wine/commit/b0351fe293a) | multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | winegstreamer/media-converter: Factor videoconv stream discarding into helper function. | dlls/winegstreamer/media-converter/lib.c dlls/winegstreamer/media-converter/media-converter.h |
 | [`3999811509e`](https://github.com/ValveSoftware/wine/commit/3999811509e) | multimedia (winegstreamer, mf*, media-converter, quartz, wm*) | winedmo: Discard transcoded streams from the dump db. | dlls/winedmo/unix_demuxer_mediaconv.c |
 
 </details>
-
 

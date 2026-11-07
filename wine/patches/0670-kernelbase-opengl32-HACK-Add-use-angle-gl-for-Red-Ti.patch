@@ -1,0 +1,27 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Fri, 15 Sep 2023 15:13:10 -0600
+Subject: [PATCH] kernelbase, opengl32: HACK: Add --use-angle=gl for Red Tie
+ Runner.
+
+And override Nvidia in GL so that works on Nvidia.
+
+CW-Bug-Id: #22742
+(cherry picked from commit 0f02fcc46b8cc2c6c936000a4a897e4f77ce07a0)
+mproton-resolved: kernelbase part only. The opengl32 part extends Proton's GL vendor override, which lives in code this tree doesn't have (Proton's override_vendor() in unix_wgl.c / winex11); it is an Nvidia-only workaround, irrelevant on macOS.
+---
+ dlls/kernelbase/process.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/dlls/kernelbase/process.c b/dlls/kernelbase/process.c
+index 6c28e787dc1..d12ae4d2fbe 100644
+--- a/dlls/kernelbase/process.c
++++ b/dlls/kernelbase/process.c
+@@ -623,6 +623,7 @@ static const WCHAR *hack_append_command_line( const WCHAR *cmd )
+         {L"PaladinLias\\Game.exe", L" --use-gl=desktop"},
+         {L"EverQuest 2\\LaunchPad.exe", L" --use-gl=swiftshader"},
+         {L"Everquest F2P\\LaunchPad.exe", L" --use-gl=swiftshader"},
++        {L"Red Tie Runner.exe", L" --use-angle=gl"},
+     };
+     unsigned int i;
+ 

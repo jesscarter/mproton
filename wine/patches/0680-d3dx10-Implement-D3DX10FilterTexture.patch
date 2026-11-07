@@ -1,0 +1,77 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Connor McAdams <cmcadams@codeweavers.com>
+Date: Mon, 12 Jan 2026 10:31:50 -0500
+Subject: [PATCH] d3dx10: Implement D3DX10FilterTexture().
+
+Signed-off-by: Connor McAdams <cmcadams@codeweavers.com>
+
+CW-Bug-Id: #20442
+CW-Bug-Id: #23084
+CW-Bug-Id: #23301
+(cherry picked from commit 2ff0c5e7209b0f7159a972a2824d511c077df28f)
+mproton-resolved: 11.20 has its own (upstream) D3DX10LoadTextureFromTexture() and staging helpers instead of the Proton code this was built on. Rewrote it on 11.20's d3d10_load_texture_from_texture(), the same call 11.20 uses for mip generation: each level below src_level is filtered from the one above. Proton's test is left out (it needs test helpers from the superseded b123817064e).
+---
+ dlls/d3dx10_43/d3dx10_43_main.c |  7 -------
+ dlls/d3dx10_43/texture.c        | 34 +++++++++++++++++++++++++++++++++
+ 2 files changed, 34 insertions(+), 7 deletions(-)
+
+diff --git a/dlls/d3dx10_43/d3dx10_43_main.c b/dlls/d3dx10_43/d3dx10_43_main.c
+index ba6de566576..9e44714fc6d 100644
+--- a/dlls/d3dx10_43/d3dx10_43_main.c
++++ b/dlls/d3dx10_43/d3dx10_43_main.c
+@@ -148,13 +148,6 @@ HRESULT WINAPI D3DX10CreateDeviceAndSwapChain(IDXGIAdapter *adapter, D3D10_DRIVE
+             D3D10_1_SDK_VERSION, desc, swapchain, (ID3D10Device1 **)device);
+ }
+ 
+-HRESULT WINAPI D3DX10FilterTexture(ID3D10Resource *texture, UINT src_level, UINT filter)
+-{
+-    FIXME("texture %p, src_level %u, filter %#x stub!\n", texture, src_level, filter);
+-
+-    return E_NOTIMPL;
+-}
+-
+ HRESULT WINAPI D3DX10GetFeatureLevel1(ID3D10Device *device, ID3D10Device1 **device1)
+ {
+     TRACE("device %p, device1 %p.\n", device, device1);
+diff --git a/dlls/d3dx10_43/texture.c b/dlls/d3dx10_43/texture.c
+index 1a341ef5220..a4019937a11 100644
+--- a/dlls/d3dx10_43/texture.c
++++ b/dlls/d3dx10_43/texture.c
+@@ -1367,3 +1367,37 @@ HRESULT WINAPI D3DX10LoadTextureFromTexture(ID3D10Resource *src_texture, D3DX10_
+ 
+     return hr;
+ }
++
++HRESULT WINAPI D3DX10FilterTexture(ID3D10Resource *texture, UINT src_level, UINT filter)
++{
++    D3D10_BOX src_box, dst_box;
++    struct d3dx_texture_info info;
++    HRESULT hr;
++
++    TRACE("texture %p, src_level %u, filter %#x.\n", texture, src_level, filter);
++
++    if (!texture)
++        return D3DERR_INVALIDCALL;
++
++    if (FAILED(hr = d3dx_texture_info_from_d3d10_resource(texture, &info)))
++        return hr;
++
++    /* Nothing to generate below the last level. */
++    if (src_level + 1 >= info.levels)
++        return S_OK;
++
++    if (info.usage == D3D10_USAGE_IMMUTABLE)
++        return D3DERR_INVALIDCALL;
++
++    if (filter == D3DX10_DEFAULT)
++        filter = D3DX10_FILTER_LINEAR;
++
++    /* Generate each level below src_level from the one above it, like the
++     * mip generation in D3DX10LoadTextureFromTexture(). */
++    init_d3d10_box(&src_box, 0, 0, info.size.width, info.size.height, 0, info.size.depth);
++    dst_box = src_box;
++    d3d10_box_get_level(&src_box, src_level);
++    d3d10_box_get_level(&dst_box, src_level + 1);
++    return d3d10_load_texture_from_texture(&info, texture, &src_box, 0, src_level, &info, texture, &dst_box, 0,
++            src_level + 1, info.layers, info.levels - src_level - 1, filter);
++}

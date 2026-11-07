@@ -1,0 +1,154 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Wed, 15 Nov 2023 21:30:12 -0600
+Subject: [PATCH] win32u: Use font AA flags when querying glyph outline with
+ GGO_METRICS.
+
+CW-Bug-Id: #22992
+(cherry picked from commit c1d74b8e154b7994ab1cb0e49ee85f0f0939fbae)
+mproton-resolved: athei's freetype.c already picks GGO_BITMAP load flags for GGO_METRICS on NONANTIALIASED_QUALITY fonts (load_format). Ported Proton's change onto that: GGO_METRICS otherwise loads with the DC's aa_flags. Restricted to GGO_METRICS, as the subject says (Proton also applied it to explicit bitmap formats), and the retry now really falls back to the requested format (Proton recomputed the same flags).
+---
+ dlls/win32u/font.c          | 16 ++++++++--------
+ dlls/win32u/freetype.c      | 20 +++++++++++++++++++-
+ dlls/win32u/ntgdi_private.h |  2 +-
+ 3 files changed, 28 insertions(+), 10 deletions(-)
+
+diff --git a/dlls/win32u/font.c b/dlls/win32u/font.c
+index 30d980338b0..ee00c088eee 100644
+--- a/dlls/win32u/font.c
++++ b/dlls/win32u/font.c
+@@ -3776,7 +3776,7 @@ static UINT get_glyph_index_linked( struct gdi_font **font, UINT glyph )
+ 
+ static DWORD get_glyph_outline( struct gdi_font *font, UINT glyph, UINT format,
+                                 GLYPHMETRICS *gm_ret, ABC *abc_ret, DWORD buflen, void *buf,
+-                                const MAT2 *mat )
++                                const MAT2 *mat, UINT aa_flags )
+ {
+     GLYPHMETRICS gm;
+     ABC abc;
+@@ -3810,7 +3810,7 @@ static DWORD get_glyph_outline( struct gdi_font *font, UINT glyph, UINT format,
+     if (format == GGO_METRICS && !mat && get_gdi_font_glyph_metrics( font, index, &gm, &abc ))
+         goto done;
+ 
+-    ret = font_funcs->get_glyph_outline( font, index, format, &gm, &abc, buflen, buf, mat, tategaki );
++    ret = font_funcs->get_glyph_outline( font, index, format, &gm, &abc, buflen, buf, mat, tategaki, aa_flags );
+     if (ret == GDI_ERROR) return ret;
+ 
+     if (format == GGO_METRICS && !mat)
+@@ -3859,7 +3859,7 @@ static BOOL font_GetCharABCWidths( PHYSDEV dev, UINT first, UINT count, WCHAR *c
+     for (i = 0; i < count; i++)
+     {
+         c = chars ? chars[i] : first + i;
+-        get_glyph_outline( physdev->font, c, GGO_METRICS, NULL, &buffer[i], 0, NULL, NULL );
++        get_glyph_outline( physdev->font, c, GGO_METRICS, NULL, &buffer[i], 0, NULL, NULL, physdev->aa_flags );
+     }
+     pthread_mutex_unlock( &font_lock );
+     return TRUE;
+@@ -3885,7 +3885,7 @@ static BOOL font_GetCharABCWidthsI( PHYSDEV dev, UINT first, UINT count, WORD *g
+     pthread_mutex_lock( &font_lock );
+     for (c = 0; c < count; c++, buffer++)
+         get_glyph_outline( physdev->font, gi ? gi[c] : first + c, GGO_METRICS | GGO_GLYPH_INDEX,
+-                           NULL, buffer, 0, NULL, NULL );
++                           NULL, buffer, 0, NULL, NULL, physdev->aa_flags );
+     pthread_mutex_unlock( &font_lock );
+     return TRUE;
+ }
+@@ -3912,7 +3912,7 @@ static BOOL font_GetCharWidth( PHYSDEV dev, UINT first, UINT count, const WCHAR
+     for (i = 0; i < count; i++)
+     {
+         c = chars ? chars[i] : i + first;
+-        if (get_glyph_outline( physdev->font, c, GGO_METRICS, NULL, &abc, 0, NULL, NULL ) == GDI_ERROR)
++        if (get_glyph_outline( physdev->font, c, GGO_METRICS, NULL, &abc, 0, NULL, NULL, physdev->aa_flags ) == GDI_ERROR)
+             buffer[i] = 0;
+         else
+             buffer[i] = abc.abcA + abc.abcB + abc.abcC;
+@@ -4091,7 +4091,7 @@ static DWORD font_GetGlyphOutline( PHYSDEV dev, UINT glyph, UINT format,
+         return dev->funcs->pGetGlyphOutline( dev, glyph, format, gm, buflen, buf, mat );
+     }
+     pthread_mutex_lock( &font_lock );
+-    ret = get_glyph_outline( physdev->font, glyph, format, gm, NULL, buflen, buf, mat );
++    ret = get_glyph_outline( physdev->font, glyph, format, gm, NULL, buflen, buf, mat, physdev->aa_flags );
+     pthread_mutex_unlock( &font_lock );
+     return ret;
+ }
+@@ -4271,7 +4271,7 @@ static BOOL font_GetTextExtentExPoint( PHYSDEV dev, const WCHAR *str, INT count,
+     pthread_mutex_lock( &font_lock );
+     for (i = pos = 0; i < count; i++)
+     {
+-        get_glyph_outline( physdev->font, str[i], GGO_METRICS, NULL, &abc, 0, NULL, NULL );
++        get_glyph_outline( physdev->font, str[i], GGO_METRICS, NULL, &abc, 0, NULL, NULL, physdev->aa_flags );
+         pos += abc.abcA + abc.abcB + abc.abcC;
+         dxs[i] = pos;
+     }
+@@ -4301,7 +4301,7 @@ static BOOL font_GetTextExtentExPointI( PHYSDEV dev, const WORD *indices, INT co
+     for (i = pos = 0; i < count; i++)
+     {
+         get_glyph_outline( physdev->font, indices[i], GGO_METRICS | GGO_GLYPH_INDEX,
+-                           NULL, &abc, 0, NULL, NULL );
++                           NULL, &abc, 0, NULL, NULL, physdev->aa_flags );
+         pos += abc.abcA + abc.abcB + abc.abcC;
+         dxs[i] = pos;
+     }
+diff --git a/dlls/win32u/freetype.c b/dlls/win32u/freetype.c
+index db05a052831..69c002aedaa 100644
+--- a/dlls/win32u/freetype.c
++++ b/dlls/win32u/freetype.c
+@@ -3116,12 +3116,18 @@ static FT_Int get_load_flags( UINT format )
+     return load_flags;
+ }
+ 
++static BOOL is_curve_format(UINT format)
++{
++    format &= ~(GGO_GLYPH_INDEX | GGO_UNHINTED);
++    return format == GGO_BEZIER || format == GGO_NATIVE;
++}
++
+ /*************************************************************
+  * freetype_get_glyph_outline
+  */
+ static UINT freetype_get_glyph_outline( struct gdi_font *font, UINT glyph, UINT format,
+                                         GLYPHMETRICS *lpgm, ABC *abc, UINT buflen, void *buf,
+-                                        const MAT2 *lpmat, BOOL tategaki )
++                                        const MAT2 *lpmat, BOOL tategaki, UINT aa_flags )
+ {
+     struct gdi_font *base_font = font->base_font ? font->base_font : font;
+     FT_Face ft_face = get_ft_face( font );
+@@ -3142,6 +3148,9 @@ static UINT freetype_get_glyph_outline( struct gdi_font *font, UINT glyph, UINT
+     /* NONANTIALIASED_QUALITY text is drawn from GGO_BITMAP glyphs, the metrics have to match them */
+     if ((format & ~GGO_UNHINTED) == GGO_METRICS && font->lf.lfQuality == NONANTIALIASED_QUALITY)
+         load_format = GGO_BITMAP | (format & GGO_UNHINTED);
++    /* otherwise, GGO_METRICS should match the antialiasing the text is drawn with */
++    else if ((format & ~GGO_UNHINTED) == GGO_METRICS && aa_flags && !is_curve_format( aa_flags ))
++        load_format = aa_flags | (format & GGO_UNHINTED);
+     load_flags = get_load_flags( load_format );
+ 
+     format &= ~GGO_UNHINTED;
+@@ -3155,6 +3164,15 @@ static UINT freetype_get_glyph_outline( struct gdi_font *font, UINT glyph, UINT
+     if (vertical_metrics) load_flags |= FT_LOAD_VERTICAL_LAYOUT;
+ 
+     err = pFT_Load_Glyph(ft_face, glyph, load_flags & FT_LOAD_NO_HINTING ? load_flags : load_flags | FT_LOAD_PEDANTIC);
++    if (err && load_format != format)
++    {
++        WARN("Failed to load glyph %#x, retrying with format %#x. Error %#x.\n", glyph, format, err);
++        load_format = format;
++        load_flags = get_load_flags( load_format );
++        if (matrices || load_format != GGO_BITMAP) load_flags |= FT_LOAD_NO_BITMAP;
++        if (vertical_metrics) load_flags |= FT_LOAD_VERTICAL_LAYOUT;
++        err = pFT_Load_Glyph(ft_face, glyph, load_flags & FT_LOAD_NO_HINTING ? load_flags : load_flags | FT_LOAD_PEDANTIC);
++    }
+     if (err && !(load_flags & FT_LOAD_NO_HINTING))
+     {
+         WARN("Failed to load glyph %#x, retrying without hinting. Error %#x.\n", glyph, err);
+diff --git a/dlls/win32u/ntgdi_private.h b/dlls/win32u/ntgdi_private.h
+index fcfbce58fea..3033425f4aa 100644
+--- a/dlls/win32u/ntgdi_private.h
++++ b/dlls/win32u/ntgdi_private.h
+@@ -331,7 +331,7 @@ struct font_backend_funcs
+     UINT  (*get_default_glyph)( struct gdi_font *gdi_font );
+     UINT  (*get_glyph_outline)( struct gdi_font *font, UINT glyph, UINT format,
+                                 GLYPHMETRICS *gm, ABC *abc, UINT buflen, void *buf,
+-                                const MAT2 *mat, BOOL tategaki );
++                                const MAT2 *mat, BOOL tategaki, UINT aa_flags );
+     UINT  (*get_unicode_ranges)( struct gdi_font *font, GLYPHSET *gs );
+     BOOL  (*get_char_width_info)( struct gdi_font *font, struct char_width_info *info );
+     BOOL  (*set_outline_text_metrics)( struct gdi_font *font );
