@@ -9,4 +9,5 @@ __pycache__/
 signing/profile-stub/build/
 xcuserdata/
 *.xcworkspace/xcuserdata/
+steam/build/
 graphics/dxvk/out/

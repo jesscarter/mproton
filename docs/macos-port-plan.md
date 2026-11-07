@@ -94,6 +94,7 @@ DXVK on a Vulkan driver keeps Proton's graphics layer **identical to upstream**.
 - Register as a compat tool in the macOS client. The Steam Play code is present but inert, and NotProton and Kaon show it can be forced on. Find out exactly how (config key? `compatibilitytools.d` path on mac?) and whether `toolmanifest.vdf` needs changes. Drop `require_tool_appid` (that's the Steam Linux Runtime).
 - **Depots:** the Windows depot is selected when a compat tool is forced. Fallback: `steamcmd +@sSteamCmdForcePlatformType windows` (unverified on macOS).
 - **lsteamclient:** already has an `__APPLE__` branch that loads `$STEAM_COMPAT_CLIENT_INSTALL_PATH/steamclient.dylib`. That needs the arm64 macOS Steam client, which is now native. Port `steam_helper` (`steam.exe`) the same way.
+  - **Status:** imported into `steam/` with a standalone build (ARM64X + i386 PE, aarch64-darwin unix side), the macOS fixes, and ABI checks. arm64-darwin struct layouts match the generated x86_64-Linux ones in all 91 SDKs. Mac verification list: [steam/README.md](../steam/README.md#must-verify-on-a-mac).
 - **Overlay, Steam Input, cloud saves:** check each one. The overlay is likely broken at first.
 
 ### 5. Launcher (`proton` script → `mproton`)
