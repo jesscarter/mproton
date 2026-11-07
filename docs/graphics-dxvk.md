@@ -270,7 +270,7 @@ lib/wine/
   the Wine build tree's winebuild (64-bit) and the Wine SDK's (i386), or mark the copies at
   bundle time.
 
-To add DXVK there:
+To add DXVK there (now done by `build/mach9-patches/0003-dxvk-backend-trees.patch` and the dxvk and bundle steps of `build/mproton-build.sh`, see [building.md](building.md); D3D8 is left on wined3d, so step 3's `d3d8.dll` part is not done):
 
 1. **Stage DXVK** with `WINEBUILD=... graphics/dxvk/build.sh` (or a `bin/build-dxvk.sh` in
    mach9's style, with a `pins/dxvk-src.ref`), giving `aarch64-windows/` (ARM64X) and

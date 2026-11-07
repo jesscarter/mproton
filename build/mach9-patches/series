@@ -1,0 +1,14 @@
+# Patches build/mproton-build.sh applies to the mach9 checkout
+# (work/mach9/scripts), in this order, with `git apply`. Paths are relative
+# to the mproton repository root. All are made against MACH9_COMMIT in
+# build/pins.env; a mach9 bump has to re-check them (`git apply --check`).
+#
+# 1. LOADER_ADHOC=1: sign the loader ad hoc instead of with a provisioning
+#    profile. Local use only, with SIP and AMFI relaxed (docs/m0-baseline.md).
+signing/mach9-adhoc-loader.patch
+# 2. build-fex.sh stages FEX through a DESTDIR, so FEX's AppConfig no longer
+#    goes to /usr/local/share/fex-emu. Upstreamable as is.
+build/mach9-patches/0002-fex-stage-data-under-destdir.patch
+# 3. DXVK as a third Direct3D tree of each family (lib/wine/dxgi/dxvk,
+#    lib/wine/d3d9/dxvk) when DXVK_DIST is set, and `dxvk` as a compatdb value.
+build/mach9-patches/0003-dxvk-backend-trees.patch

@@ -1,0 +1,260 @@
+diff --git a/bin/bundle-wine.sh b/bin/bundle-wine.sh
+index 87227ba..c169d68 100755
+--- a/bin/bundle-wine.sh
++++ b/bin/bundle-wine.sh
+@@ -2097,6 +2097,30 @@ check_vkd3d_proton_build() {
+     echo "  vkd3d-proton: $(cat "$VKD3D_PROTON_DIST/DESCRIBE") ($built)"
+ }
+ 
++# check_dxvk_build (mproton): exit unless DXVK_DIST holds DXVK's DLLs for
++# both arches, as mproton's graphics/dxvk/build.sh stages them, with the
++# 64-bit ones ARM64X. Builtin marking happens at install (Step 4), so the
++# dist stays usable as native DLLs too.
++check_dxvk_build() {
++    local f
++    for f in VERSION COMMIT "$PE64_DIR/dxgi.dll" "$PE64_DIR/d3d11.dll" \
++             "$PE64_DIR/d3d10core.dll" "$PE64_DIR/d3d9.dll" \
++             i386-windows/dxgi.dll i386-windows/d3d11.dll \
++             i386-windows/d3d10core.dll i386-windows/d3d9.dll; do
++        if [ ! -f "$DXVK_DIST/$f" ]; then
++            echo "Error: no $f in DXVK_DIST=$DXVK_DIST (run graphics/dxvk/build.sh)"
++            exit 1
++        fi
++    done
++    for f in dxgi d3d11 d3d10core d3d9; do
++        if ! pe_is_arm64x "$DXVK_DIST/$PE64_DIR/$f.dll"; then
++            echo "Error: $DXVK_DIST/$PE64_DIR/$f.dll is not ARM64X"
++            exit 1
++        fi
++    done
++    echo "  DXVK: $(cat "$DXVK_DIST/VERSION") ($(cat "$DXVK_DIST/COMMIT"))"
++}
++
+ # ── Loader app ──────────────────────────────────────────────────────────
+ # The loader needs com.apple.developer.cross-architecture-support,
+ # with which the kernel leaves most of the 4 GB __PAGEZERO replaceable, so
+@@ -2411,6 +2435,9 @@ check_fex_build
+ check_wine_sdk
+ check_dxmt_build
+ check_vkd3d_proton_build
++if in_list dxvk "$DXGI_IMPLS"; then
++    check_dxvk_build
++fi
+ check_mesa_build
+ check_gstreamer_build
+ for arch in $SMOKE_PE_ARCHS x86_64 i686; do
+@@ -2858,6 +2885,31 @@ if in_list dxmt "$DXGI_IMPLS"; then
+        "$dx32/"
+ fi
+ 
++# mproton: dxgi/dxvk, DXVK's dxgi/d3d10core/d3d11 with Wine's d3d10/d3d10_1
++# (as the dxmt tree takes them) and vkd3d-proton's d3d12/d3d12core, Proton's
++# pairing: DXVK's dxgi.dll presents vkd3d-proton's swapchains. DXVK has no
++# unix half. Its DLLs are copied and then marked as Wine builtins, which Wine
++# needs to load them from lib/wine, the 64-bit ones with the build tree's
++# winebuild and the i386 ones with the Wine SDK's, as build-vkd3d-proton.sh
++# marks vkd3d-proton's.
++if in_list dxvk "$DXGI_IMPLS"; then
++    echo "  Installing DXVK (dxgi)..."
++    echo "    $DXVK_DIST"
++    for arch in "$PE64_DIR" i386-windows; do
++        if [ "$arch" = i386-windows ]; then wb="$WINE_SDK_DIR/bin/winebuild"; else wb="$WINEBUILD"; fi
++        dest="$tree/dxvk/$arch"
++        mkdir -p "$dest"
++        for dll in dxgi d3d10core d3d11; do
++            cp "$DXVK_DIST/$arch/$dll.dll" "$dest/"
++            "$wb" --builtin "$dest/$dll.dll"
++        done
++        cp "$BUILD_DIR/dlls/d3d10/$arch/d3d10.dll"     "$dest/"
++        cp "$BUILD_DIR/dlls/d3d10_1/$arch/d3d10_1.dll" "$dest/"
++        cp "$VKD3D_PROTON_DIST/$arch/d3d12.dll" \
++           "$VKD3D_PROTON_DIST/$arch/d3d12core.dll" "$dest/"
++    done
++fi
++
+ # D3D9, the second family: mtld3d and Wine's own. mtld3d's d3d9.dll bridges
+ # to its mtld3d.dll, whose unix half is a single mtld3d.so that also serves
+ # the i386 PE through its wow64 entry points. wined3d's d3d9.dll needs only
+@@ -2909,6 +2961,19 @@ if in_list wined3d "$D3D9_IMPLS"; then
+     done
+ fi
+ 
++# mproton: d3d9/dxvk, DXVK's d3d9.dll, marked as a builtin like its dxgi
++# tree. DXVK's d3d8.dll is left out: D3D8 stays on wined3d in the default
++# dirs, as the other trees assume.
++if in_list dxvk "$D3D9_IMPLS"; then
++    echo "  Installing DXVK (d3d9)..."
++    for arch in "$PE64_DIR" i386-windows; do
++        if [ "$arch" = i386-windows ]; then wb="$WINE_SDK_DIR/bin/winebuild"; else wb="$WINEBUILD"; fi
++        mkdir -p "$d3d9tree/dxvk/$arch"
++        cp "$DXVK_DIST/$arch/d3d9.dll" "$d3d9tree/dxvk/$arch/"
++        "$wb" --builtin "$d3d9tree/dxvk/$arch/d3d9.dll"
++    done
++fi
++
+ # ── Direct3D: fake-module markers in the default dirs ───────────────────
+ # The default <arch>-windows dirs ship NO real Direct3D. compatdb.so always
+ # loads and prepends exactly one tree per family per process (the arch
+@@ -3154,6 +3219,18 @@ if in_list wined3d "$DXGI_IMPLS"; then
+            "lib/wine/dxgi/wined3d/i386-windows/dxgi.dll"
+            "lib/wine/dxgi/wined3d/i386-windows/d3d10_1.dll")
+ fi
++if in_list dxvk "$DXGI_IMPLS"; then
++    WANT+=("lib/wine/dxgi/dxvk/$PE64_DIR/dxgi.dll"
++           "lib/wine/dxgi/dxvk/$PE64_DIR/d3d11.dll"
++           "lib/wine/dxgi/dxvk/$PE64_DIR/d3d12.dll"
++           "lib/wine/dxgi/dxvk/i386-windows/dxgi.dll"
++           "lib/wine/dxgi/dxvk/i386-windows/d3d11.dll"
++           "lib/wine/dxgi/dxvk/i386-windows/d3d12.dll")
++fi
++if in_list dxvk "$D3D9_IMPLS"; then
++    WANT+=("lib/wine/d3d9/dxvk/$PE64_DIR/d3d9.dll"
++           "lib/wine/d3d9/dxvk/i386-windows/d3d9.dll")
++fi
+ if in_list mtld3d "$D3D9_IMPLS"; then
+     WANT+=("lib/wine/d3d9/mtld3d/$UNIX_DIR/mtld3d.so"
+            "lib/wine/d3d9/mtld3d/i386-windows/mtld3d.dll"
+diff --git a/bin/lib/profile.sh b/bin/lib/profile.sh
+index 88c3488..8e74530 100644
+--- a/bin/lib/profile.sh
++++ b/bin/lib/profile.sh
+@@ -184,6 +184,16 @@ RUST_TARGET=aarch64-apple-darwin
+ # name is a tree under lib/wine/dxgi or lib/wine/d3d9.
+ DXGI_IMPLS="dxmt wined3d"
+ D3D9_IMPLS="mtld3d wined3d"
++# mproton: DXVK as a third tree of each family, when DXVK_DIST names a
++# staged DXVK (mproton's graphics/dxvk/build.sh output: aarch64-windows/ with
++# ARM64X DLLs, i386-windows/, VERSION and COMMIT). Last in the order, so the
++# markers keep being stamped from the trees before it. Unset, the bundle is
++# what it was without this patch.
++DXVK_DIST="${DXVK_DIST:-}"
++if [ -n "$DXVK_DIST" ]; then
++    DXGI_IMPLS="$DXGI_IMPLS dxvk"
++    D3D9_IMPLS="$D3D9_IMPLS dxvk"
++fi
+ # The link-library tree for the x86_64 PE archives and the graphics tests,
+ # and the Wine SDK build-wine.sh stages from it and the main build.
+ X86LIBS_BUILD_DIR="${X86LIBS_BUILD_DIR:-$BUILD_TOP/x86libs}"
+diff --git a/compatdb/core/src/key.rs b/compatdb/core/src/key.rs
+index b3dfffb..b970ebc 100644
+--- a/compatdb/core/src/key.rs
++++ b/compatdb/core/src/key.rs
+@@ -348,8 +348,8 @@ impl Key {
+     #[must_use]
+     pub const fn values(self) -> &'static [&'static str] {
+         match self {
+-            Self::Dxgi => &["dxmt", "wined3d", DEFAULT_VALUE],
+-            Self::D3d9 => &["mtld3d", "wined3d", DEFAULT_VALUE],
++            Self::Dxgi => &["dxmt", "wined3d", "dxvk", DEFAULT_VALUE],
++            Self::D3d9 => &["mtld3d", "wined3d", "dxvk", DEFAULT_VALUE],
+             Self::Wined3d => &["gl", "vulkan", DEFAULT_VALUE],
+             Self::OpenGl => &["egl", "cgl", DEFAULT_VALUE],
+             Self::DpiAware
+diff --git a/compatdb/core/src/value.rs b/compatdb/core/src/value.rs
+index 7d8b22a..8a7970b 100644
+--- a/compatdb/core/src/value.rs
++++ b/compatdb/core/src/value.rs
+@@ -17,11 +17,14 @@ pub enum Dxgi {
+     /// Wine's own wined3d, what upstream Wine loads, and so what a process
+     /// gets when no rule names an implementation.
+     Wined3d,
++    /// DXVK on Vulkan, with vkd3d-proton for D3D12 (mproton). Its tree is
++    /// only in a bundle built with `DXVK_DIST`.
++    Dxvk,
+ }
+ 
+ impl Dxgi {
+     /// Every implementation.
+-    pub const ALL: &'static [Self] = &[Self::Dxmt, Self::Wined3d];
++    pub const ALL: &'static [Self] = &[Self::Dxmt, Self::Wined3d, Self::Dxvk];
+ 
+     /// The wire spelling, which is also the `lib/wine/dxgi/<name>` tree.
+     #[must_use]
+@@ -29,6 +32,7 @@ impl Dxgi {
+         match self {
+             Self::Dxmt => "dxmt",
+             Self::Wined3d => "wined3d",
++            Self::Dxvk => "dxvk",
+         }
+     }
+ }
+@@ -42,11 +46,14 @@ pub enum D3d9 {
+     /// Wine's own wined3d, what upstream Wine loads, and so what a process
+     /// gets when no rule names an implementation.
+     Wined3d,
++    /// DXVK's D3D9 on Vulkan (mproton). Its tree is only in a bundle built
++    /// with `DXVK_DIST`.
++    Dxvk,
+ }
+ 
+ impl D3d9 {
+     /// Every implementation.
+-    pub const ALL: &'static [Self] = &[Self::Mtld3d, Self::Wined3d];
++    pub const ALL: &'static [Self] = &[Self::Mtld3d, Self::Wined3d, Self::Dxvk];
+ 
+     /// The wire spelling, which is also the `lib/wine/d3d9/<name>` tree.
+     #[must_use]
+@@ -54,6 +61,7 @@ impl D3d9 {
+         match self {
+             Self::Mtld3d => "mtld3d",
+             Self::Wined3d => "wined3d",
++            Self::Dxvk => "dxvk",
+         }
+     }
+ }
+diff --git a/compatdb/core/src/value/tests.rs b/compatdb/core/src/value/tests.rs
+index f741455..c390619 100644
+--- a/compatdb/core/src/value/tests.rs
++++ b/compatdb/core/src/value/tests.rs
+@@ -4,13 +4,15 @@ use super::*;
+ fn dxgi_values_parse_and_print() {
+     assert_eq!(Dxgi::Wined3d.as_str(), "wined3d");
+     assert_eq!("DXMT".parse(), Ok(Dxgi::Dxmt));
++    assert_eq!("dxvk".parse(), Ok(Dxgi::Dxvk));
++    assert_eq!(Dxgi::Dxvk.as_str(), "dxvk");
+     // `default` resets a setting; it is no implementation.
+     assert_eq!(
+         "default".parse::<Dxgi>(),
+         Err(FieldError::BadValue {
+             key: Key::Dxgi,
+             value: "default".into(),
+-            expected: &["dxmt", "wined3d"],
++            expected: &["dxmt", "wined3d", "dxvk"],
+         })
+     );
+ }
+@@ -21,6 +23,8 @@ fn d3d9_values_parse_and_print() {
+     assert_eq!("MTLD3D".parse(), Ok(D3d9::Mtld3d));
+     assert!("gptk".parse::<D3d9>().is_err());
+     assert_eq!(D3d9::Mtld3d.as_str(), "mtld3d");
++    assert_eq!("DXVK".parse(), Ok(D3d9::Dxvk));
++    assert_eq!(D3d9::Dxvk.as_str(), "dxvk");
+ }
+ 
+ #[test]
+diff --git a/compatdb/core/src/wire/tests.rs b/compatdb/core/src/wire/tests.rs
+index a568b3e..d007242 100644
+--- a/compatdb/core/src/wire/tests.rs
++++ b/compatdb/core/src/wire/tests.rs
+@@ -1013,7 +1013,7 @@ fn one_bad_field_gives_one_diagnostic() {
+             FieldError::BadValue {
+                 key: Key::Dxgi,
+                 value: "50%".into(),
+-                expected: &["dxmt", "wined3d", "default"],
++                expected: &["dxmt", "wined3d", "dxvk", "default"],
+             },
+         ),
+         ("exe=x.exe;arguments=%%00", FieldError::Nul),
+diff --git a/docs/compatdb.md b/docs/compatdb.md
+index a063f84..a01bc44 100644
+--- a/docs/compatdb.md
++++ b/docs/compatdb.md
+@@ -31,6 +31,8 @@
+ | `dxgi` | D3D10, D3D10.1, D3D11 | `wined3d` | `lib/wine/dxgi/wined3d/` |
+ | `d3d9` | D3D9 | `mtld3d` ([mtld3d](internals.md#mtld3d)) | `lib/wine/d3d9/mtld3d/` |
+ | `d3d9` | D3D9 | `wined3d` | `lib/wine/d3d9/wined3d/` |
++| `dxgi` | D3D10, D3D11, D3D12 | `dxvk` (mproton: DXVK, D3D12 from vkd3d-proton; only with `DXVK_DIST`) | `lib/wine/dxgi/dxvk/` |
++| `d3d9` | D3D9 | `dxvk` (mproton: DXVK; only with `DXVK_DIST`) | `lib/wine/d3d9/dxvk/` |
+ 
+ - Which tree a process gets is [`Rule::dxgi`][dxgi] and
+   [`Rule::d3d9`][d3d9]. compatdb.so prepends one tree per family to the
