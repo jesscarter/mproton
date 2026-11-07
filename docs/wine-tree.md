@@ -8,7 +8,7 @@ The mproton Wine tree is athei's macOS ARM64 Wine (`athei/wine` `arm64-patched`,
 
 - **The series:** 659 patches in [`wine/patches/`](../wine/patches), on athei `5959a04b1af` ([`wine/base.ref`](../wine/base.ref)). `wine/apply.sh <dir>` clones athei and applies them as commits on branch `mproton`.
 - **Proton's 1454 commits:** 631 applied cleanly, 24 applied with a hand merge, 396 dropped as already upstream in 11.20 (or superseded), 22 dropped because Proton reverts them itself, 132 skipped as Linux-only, 3 skipped as generated-file deletions, and **246 not carried** because they don't apply on the 11.20 base. Per-commit status: [Every Proton commit](#every-proton-commit) and [`wine/series.tsv`](../wine/series.tsv).
-- **Linux build:** {{BUILD_LINE}}
+- **Linux build:** `wine/apply.sh` into a fresh directory, then `configure` and a full `make` for aarch64 Linux with PE arches `aarch64,arm64ec,i386` (llvm-mingw 20261020): **0 errors**. A control build of unmodified athei with the same setup also has 0 errors. See [Linux verification](#linux-verification).
 - **Darwin build blockers from the triage:** #4 (libdrm in `amd_ags_x64`) and #5 (`<linux/limits.h>` in protontts) are fixed with configure checks and a portable header, not `#ifdef __APPLE__`. #1 to #3 and #6 don't occur, because the code that had them (fsync/ntsync, the glibc `mallopt` hack, the win32u fshack) isn't in the series.
 - **`__APPLE__`:** the series adds no `__APPLE__` code. One Proton hunk lands inside an existing Mach-only branch (a 5-line stub in `ntdll/unix/process.c`). That stub, plus every unix-side change in the series, has only been compiled for Linux.
 - **The biggest gaps:** the 246 commits that don't apply on 11.20. They include all of the fullscreen hack, most of Proton's `virtual.c` work (`WINE_SIMULATE_WRITECOPY`, address-space limits), the winegstreamer/media-converter chain, touch and rawinput, and part of the controller work. See [Not carried](#not-carried-and-why).
@@ -135,7 +135,9 @@ What that means in practice:
 
 mach9 builds whatever Wine is checked out at `WINE_SRC`, which defaults to `<mach9>/src` (`bin/lib/profile.sh`). It requires a generated `configure` (the series has one).
 
-**Local build on the Mac:**
+**With mproton's orchestrator:** `build/mproton-build.sh` (see its header) already does this. It checks out `wine/base.ref` in its mach9 `src/`, runs `wine/apply.sh` on it, then builds with mach9.
+
+**Local build on the Mac, by hand:**
 
 ```bash
 wine/apply.sh <mach9>/src
@@ -150,7 +152,20 @@ Then run mach9's `bin/build-wine.sh --clean` as usual. `apply.sh` reuses an exis
 
 ## Linux verification
 
-{{BUILD_SECTION}}
+`wine/scripts/linux-build-check.sh <src> <build>` on an x86_64 Ubuntu 24.04 host. It builds the native tools from the same tree, then cross-compiles the unix side for `aarch64-linux-gnu` (llvm-mingw's clang, an arm64 Ubuntu sysroot, `ld.lld` as the linker) with `--enable-archs=aarch64,arm64ec,i386 --with-mingw --disable-tests`.
+
+| build | tree | result |
+|---|---|---|
+| control | athei `5959a04b1af` unmodified | **BUILD OK**, 0 compile errors |
+| mproton | `wine/apply.sh` into an empty dir → `mproton` at `bc005a6160` (`wine-11.20-695`), same tree hash as the branch the series was exported from | **BUILD OK**, 0 compile errors, from scratch |
+
+What the mproton build produced: 754 PE modules in `*/aarch64-windows/` (ARM64X: the 4215 arm64ec objects are linked into them; `ntdll.dll` carries CHPE metadata), 772 in `*/i386-windows/`, and 33 aarch64 ELF unix libs (`ntdll.so`, `win32u.so`, `winex11.so`, `winegstreamer.so`, `amd_ags_x64.so`, …) plus `wine`, `wine-preloader` and `wineserver`.
+
+Configure found X11, FreeType, GnuTLS, GStreamer, Vulkan, SDL2, PulseAudio, ALSA, udev, EGL and libdrm in the sysroot. It did **not** find Wayland, Vosk, Piper, OpenCL, V4L2, VA or FFmpeg, so code behind those wasn't compiled. In particular `protontts`'s unixlib (blocker 5's file) isn't built without libpiper, so that fix is unverified. Configure also didn't pick up the `amdgpu_drm.h` header from the sysroot, so this build compiled `amd_ags_x64`'s new stub path, which is the one macOS takes. An earlier build of the series compiled the libdrm path.
+
+The build turned up 11 problems in commits that applied cleanly. They're fixed in the series (see [How the series was built](#how-the-series-was-built), step 7). Three more were problems with the build host, not the tree: `wrc` needs `nls/` next to the tools dir, `sfnt2fon` needs a FreeType-enabled tools build, and the cross linker needs `aarch64-linux-gnu-ld` on `PATH`. The script handles all three.
+
+Not done: nothing was run (no aarch64 host or emulator here), no conformance tests, and no darwin compile.
 
 ## Every Proton commit
 
