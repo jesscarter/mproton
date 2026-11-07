@@ -353,10 +353,10 @@ index 7ae86e49be1..a9d51ea7da5 100644
      { &CLSID_wg_h264_decoder, &h264_decoder_create },
      { &CLSID_wg_h264_encoder, &h264_encoder_create },
 diff --git a/dlls/winegstreamer/wg_parser.c b/dlls/winegstreamer/wg_parser.c
-index 7f5ce835486..c6c9b053518 100644
+index f6ec1fd3b55..02a68abe930 100644
 --- a/dlls/winegstreamer/wg_parser.c
 +++ b/dlls/winegstreamer/wg_parser.c
-@@ -2065,14 +2065,22 @@ static NTSTATUS wg_parser_disconnect(void *args)
+@@ -2069,14 +2069,22 @@ static NTSTATUS wg_parser_disconnect(void *args)
  static BOOL decodebin_parser_init_gst(struct wg_parser *parser)
  {
      GstElement *element;
@@ -381,7 +381,7 @@ index 7f5ce835486..c6c9b053518 100644
      g_signal_connect(element, "pad-added", G_CALLBACK(pad_added_cb), parser);
      g_signal_connect(element, "pad-removed", G_CALLBACK(pad_removed_cb), parser);
      g_signal_connect(element, "autoplug-continue", G_CALLBACK(autoplug_continue_cb), parser);
-@@ -2086,7 +2094,7 @@ static BOOL decodebin_parser_init_gst(struct wg_parser *parser)
+@@ -2090,7 +2098,7 @@ static BOOL decodebin_parser_init_gst(struct wg_parser *parser)
      parser->no_more_pads = false;
      pthread_mutex_unlock(&parser->mutex);
  

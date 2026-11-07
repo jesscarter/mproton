@@ -5,16 +5,16 @@ Subject: [PATCH] HACK: winegstreamer/wg_parser: Use capssetter to ignore
  non-default YUV color spaces.
 
 (cherry picked from commit aed70985a036fb00d6f77c2ec80018a6e5f9c34a)
-mproton-resolved: 11.20 puts a videoconvert in front of deinterlace (to fixate the framerate). The capssetter still goes first in the chain, before that videoconvert, which is also where Proton's own tree has it now.
+mproton-resolved: 11.20 puts a videoconvert in front of deinterlace (to fixate the framerate). The capssetter still goes first in the chain, before that videoconvert, which is also where Proton's own tree has it now. capssetter (gst-plugins-good debugutilsgood) is optional here: athei's bundled GStreamer doesn't have it (found by the Mac wmadec smoke test), and requiring it would fail every raw video stream, so without it the hack is skipped with a warning.
 ---
- dlls/winegstreamer/wg_parser.c | 43 ++++++++++++++++++++++++++++++++++
- 1 file changed, 43 insertions(+)
+ dlls/winegstreamer/wg_parser.c | 47 ++++++++++++++++++++++++++++++++++
+ 1 file changed, 47 insertions(+)
 
 diff --git a/dlls/winegstreamer/wg_parser.c b/dlls/winegstreamer/wg_parser.c
-index 66e26a9d43b..76f6107b71e 100644
+index 66e26a9d43b..168de0de006 100644
 --- a/dlls/winegstreamer/wg_parser.c
 +++ b/dlls/winegstreamer/wg_parser.c
-@@ -1035,6 +1035,49 @@ static bool stream_create_post_processing_elements(GstPad *pad, struct wg_parser
+@@ -1035,6 +1035,53 @@ static bool stream_create_post_processing_elements(GstPad *pad, struct wg_parser
  
      if (!strcmp(name, "video/x-raw"))
      {
@@ -49,17 +49,21 @@ index 66e26a9d43b..76f6107b71e 100644
 +         * the front of the chain, and we remove the matrix-mode setting for the
 +         * videoconvert elements.
 +         */
-+        if (!(element = create_element("capssetter", "good"))
-+                || !append_element(parser->container, element, &first, &last))
++        if (!(element = gst_element_factory_make("capssetter", NULL)))
++            GST_WARNING("capssetter is not available, not flattening the colorimetry.");
++        else if (!append_element(parser->container, element, &first, &last))
 +            return false;
-+        gst_util_set_object_arg(G_OBJECT(element), "join", "true");
-+        /* Actually, this is invalid, but it causes videoconvert to use default
-+         * colorimetry as a result. Yes, this is depending on undocumented
-+         * implementation details. It's a hack.
-+         *
-+         * Sadly there doesn't seem to be a way to get capssetter to clear
-+         * certain fields while leaving others untouched. */
-+        gst_util_set_object_arg(G_OBJECT(element), "caps", "video/x-raw,colorimetry=0:0:0:0");
++        else
++        {
++            gst_util_set_object_arg(G_OBJECT(element), "join", "true");
++            /* Actually, this is invalid, but it causes videoconvert to use default
++             * colorimetry as a result. Yes, this is depending on undocumented
++             * implementation details. It's a hack.
++             *
++             * Sadly there doesn't seem to be a way to get capssetter to clear
++             * certain fields while leaving others untouched. */
++            gst_util_set_object_arg(G_OBJECT(element), "caps", "video/x-raw,colorimetry=0:0:0:0");
++        }
 +
          /* decodebin doesn't provide framerate for raw video. This causes the
           * the deinterlace element to reject the caps. So we need to go through

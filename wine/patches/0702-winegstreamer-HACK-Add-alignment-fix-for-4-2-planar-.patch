@@ -13,7 +13,7 @@ mproton-resolved: Same struct-field context as c53c923bd3d: fix_nv12 becomes fix
  1 file changed, 71 insertions(+), 24 deletions(-)
 
 diff --git a/dlls/winegstreamer/wg_parser.c b/dlls/winegstreamer/wg_parser.c
-index 10c45f76212..e97078abe53 100644
+index ce1e3b8713b..39293b4b60c 100644
 --- a/dlls/winegstreamer/wg_parser.c
 +++ b/dlls/winegstreamer/wg_parser.c
 @@ -120,7 +120,7 @@ struct wg_parser_stream

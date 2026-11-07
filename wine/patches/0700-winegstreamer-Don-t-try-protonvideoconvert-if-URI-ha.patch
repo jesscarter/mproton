@@ -11,7 +11,7 @@ CW-Bug-Id: #25385
  1 file changed, 10 insertions(+), 5 deletions(-)
 
 diff --git a/dlls/winegstreamer/wg_parser.c b/dlls/winegstreamer/wg_parser.c
-index c6c9b053518..bec2aa9ee3f 100644
+index 02a68abe930..cf20fb883cb 100644
 --- a/dlls/winegstreamer/wg_parser.c
 +++ b/dlls/winegstreamer/wg_parser.c
 @@ -73,6 +73,7 @@ struct wg_parser
@@ -22,7 +22,7 @@ index c6c9b053518..bec2aa9ee3f 100644
  
      pthread_t push_thread;
  
-@@ -1634,9 +1635,12 @@ static GstBusSyncReply bus_handler_cb(GstBus *bus, GstMessage *msg, gpointer use
+@@ -1638,9 +1639,12 @@ static GstBusSyncReply bus_handler_cb(GstBus *bus, GstMessage *msg, gpointer use
              pthread_mutex_lock(&parser->mutex);
              if (!parser->use_mediaconv)
              {
@@ -36,7 +36,7 @@ index c6c9b053518..bec2aa9ee3f 100644
              }
              pthread_mutex_unlock(&parser->mutex);
          }
-@@ -1867,7 +1871,7 @@ static NTSTATUS wg_parser_connect(void *args)
+@@ -1871,7 +1875,7 @@ static NTSTATUS wg_parser_connect(void *args)
  
      if (ret == GST_STATE_CHANGE_FAILURE)
      {
@@ -45,7 +45,7 @@ index c6c9b053518..bec2aa9ee3f 100644
          {
              GST_WARNING("Failed to play media, trying again with protonvideoconvert.");
              use_mediaconv = true;
-@@ -1883,7 +1887,7 @@ static NTSTATUS wg_parser_connect(void *args)
+@@ -1887,7 +1891,7 @@ static NTSTATUS wg_parser_connect(void *args)
          pthread_cond_wait(&parser->init_cond, &parser->mutex);
      if (parser->error)
      {
@@ -54,7 +54,7 @@ index c6c9b053518..bec2aa9ee3f 100644
              use_mediaconv = true;
          pthread_mutex_unlock(&parser->mutex);
          goto out;
-@@ -2067,8 +2071,9 @@ static BOOL decodebin_parser_init_gst(struct wg_parser *parser)
+@@ -2071,8 +2075,9 @@ static BOOL decodebin_parser_init_gst(struct wg_parser *parser)
      GstElement *element;
      const char *type;
  

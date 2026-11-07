@@ -35,7 +35,7 @@ index c515b79ec1b..811f7ce6f36 100644
              FIXME("Cannot calculate stride for unknown video format.\n");
      }
 diff --git a/dlls/winegstreamer/wg_parser.c b/dlls/winegstreamer/wg_parser.c
-index bec2aa9ee3f..10c45f76212 100644
+index cf20fb883cb..ce1e3b8713b 100644
 --- a/dlls/winegstreamer/wg_parser.c
 +++ b/dlls/winegstreamer/wg_parser.c
 @@ -120,7 +120,7 @@ struct wg_parser_stream
