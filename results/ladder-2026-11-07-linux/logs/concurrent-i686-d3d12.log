@@ -1,0 +1,15 @@
+LADDER	INFO	d3d12.env	build=i686 wow64_process=i386 native=amd64 wine=9.0 host=Linux 6.18.44-fc-v310
+LADDER	PASS	d3d12.device	D3D12CreateDevice(11_0) 00000000
+LADDER	INFO	d3d12.adapter	NVIDIA GeForce GTX 470, max feature level 11_1
+LADDER	PASS	d3d12.queues	direct + copy queues, lists and a fence created
+LADDER	PASS	d3d12.fence.cpu_signal	CPU Signal(5): completed value 5, event set
+LADDER	PASS	d3d12.fence.queue_signal	queue Signal(10) reached 10
+LADDER	PASS	d3d12.fence.queue_waits_cpu	queue Wait on a CPU-signalled fence: held before the signal, released after
+LADDER	PASS	d3d12.fence.many_signals	200 queued signals: completed 300
+LADDER	PASS	d3d12.clear	64x64 pixels exact, ClearRenderTargetView -> CopyTextureRegion -> readback heap
+LADDER	PASS	d3d12.draw_fullscreen	64x64 pixels exact, SV_VertexID triangle, PSO + root signature
+LADDER	PASS	d3d12.draw_vb_cbv	64x64 pixels exact, vertex-buffer quad, colour from a root CBV
+LADDER	PASS	d3d12.copy_queue	64x64 pixels exact, upload on the COPY queue, read on DIRECT after a cross-queue fence wait
+LADDER	PASS	d3d12.copy_queue.buffers	upload -> default -> readback buffer copies on the COPY queue: 0 of 1024 texels wrong
+LADDER	INFO	d3d12.device_release	final Release returned 0
+LADDER	DONE	d3d12	pass=11 fail=0 skip=0 info=3

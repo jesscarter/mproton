@@ -1,0 +1,45 @@
+phase	arch	prog	backend	tso	status	exit	seconds	log	rule
+setup	-	prefix			ok	0	0	logs/setup.log	
+serial	x86_64	threads			ok	0	3	logs/serial-x86_64-threads.log	
+serial	x86_64	seh			fail	1	1	logs/serial-x86_64-seh.log	
+serial	x86_64	callbacks			ok	0	0	logs/serial-x86_64-callbacks.log	
+serial	x86_64	memory			ok	0	0	logs/serial-x86_64-memory.log	
+serial	x86_64	ordering			ok	0	4	logs/serial-x86_64-ordering.log	
+serial	x86_64	d3d9	builtin		ok	0	1	logs/serial-x86_64-d3d9-builtin.log	
+serial	x86_64	d3d11	builtin		ok	0	1	logs/serial-x86_64-d3d11-builtin.log	
+serial	x86_64	d3d12	builtin		ok	0	1	logs/serial-x86_64-d3d12-builtin.log	
+serial	x86_64	opengl	builtin		ok	0	0	logs/serial-x86_64-opengl-builtin.log	
+serial	x86_64	vulkan	builtin		ok	0	0	logs/serial-x86_64-vulkan-builtin.log	
+serial	i686	threads			ok	0	3	logs/serial-i686-threads.log	
+serial	i686	seh			ok	0	2	logs/serial-i686-seh.log	
+serial	i686	callbacks			ok	0	1	logs/serial-i686-callbacks.log	
+serial	i686	memory			ok	0	0	logs/serial-i686-memory.log	
+serial	i686	ordering			ok	0	5	logs/serial-i686-ordering.log	
+serial	i686	d3d9	builtin		ok	0	2	logs/serial-i686-d3d9-builtin.log	
+serial	i686	d3d11	builtin		ok	0	0	logs/serial-i686-d3d11-builtin.log	
+serial	i686	d3d12	builtin		ok	0	1	logs/serial-i686-d3d12-builtin.log	
+serial	i686	opengl	builtin		ok	0	1	logs/serial-i686-opengl-builtin.log	
+serial	i686	vulkan	builtin		ok	0	0	logs/serial-i686-vulkan-builtin.log	
+concurrent	x86_64	threads			ok	0	1	logs/concurrent-x86_64-threads.log	
+concurrent	x86_64	seh			fail	1	0	logs/concurrent-x86_64-seh.log	
+concurrent	x86_64	callbacks			ok	0	1	logs/concurrent-x86_64-callbacks.log	
+concurrent	x86_64	memory			ok	0	0	logs/concurrent-x86_64-memory.log	
+concurrent	x86_64	ordering			ok	0	27	logs/concurrent-x86_64-ordering.log	
+concurrent	x86_64	d3d9			ok	0	1	logs/concurrent-x86_64-d3d9.log	
+concurrent	x86_64	d3d11			ok	0	0	logs/concurrent-x86_64-d3d11.log	
+concurrent	x86_64	d3d12			ok	0	1	logs/concurrent-x86_64-d3d12.log	
+concurrent	x86_64	opengl			ok	0	1	logs/concurrent-x86_64-opengl.log	
+concurrent	x86_64	vulkan			ok	0	0	logs/concurrent-x86_64-vulkan.log	
+concurrent	i686	threads			ok	0	1	logs/concurrent-i686-threads.log	
+concurrent	i686	seh			ok	0	0	logs/concurrent-i686-seh.log	
+concurrent	i686	callbacks			ok	0	1	logs/concurrent-i686-callbacks.log	
+concurrent	i686	memory			ok	0	0	logs/concurrent-i686-memory.log	
+concurrent	i686	ordering			ok	0	27	logs/concurrent-i686-ordering.log	
+concurrent	i686	d3d9			ok	0	0	logs/concurrent-i686-d3d9.log	
+concurrent	i686	d3d11			ok	0	1	logs/concurrent-i686-d3d11.log	
+concurrent	i686	d3d12			ok	0	1	logs/concurrent-i686-d3d12.log	
+concurrent	i686	opengl			ok	0	0	logs/concurrent-i686-opengl.log	
+concurrent	i686	vulkan			ok	0	1	logs/concurrent-i686-vulkan.log	
+concurrent	-	server			ok	0	0	logs/concurrent-server.log	
+tso	-	ordering			skipped: x86 host, no FEX				
+shutdown	-	shutdown			ok	0	0	logs/shutdown.log	

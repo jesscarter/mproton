@@ -1,0 +1,595 @@
+phase	arch	prog	backend	tso	status	check	detail
+setup	-	prefix			PASS	prefix.server_exit	wineserver -w returned after 2s: the booted prefix leaves nothing running
+setup	-	prefix			PASS	prefix.wineboot	wineboot -u exit 0 in 17s; system.reg and drive_c/windows/system32 written
+serial	x86_64	threads			INFO	threads.env	build=x86_64 wow64_process=none native=amd64 wine=9.0 host=Linux 6.18.44-fc-v310
+serial	x86_64	threads			PASS	threads.tls.static_and_dynamic	32/32 threads kept their own static and TlsAlloc values (expansion slot 64)
+serial	x86_64	threads			PASS	threads.tls.expansion_slots	TlsAlloc beyond 64 slots gave index 64
+serial	x86_64	threads			PASS	threads.tls.fls_callback	FLS destructor ran 32 times for 32 exited threads
+serial	x86_64	threads			PASS	threads.tls.image_callback	TLS directory callback ran DLL_THREAD_ATTACH in 32 of 32 new threads
+serial	x86_64	threads			PASS	threads.locks.counters	critical section 800000, SRW 800000, Interlocked 800000 (want 800000 each)
+serial	x86_64	threads			PASS	threads.locks.condvar	consumed sum 200010000 (want 200010000), in order 1
+serial	x86_64	threads			PASS	threads.apc.sleepex	wait returned 192 (want WAIT_IO_COMPLETION=192), 1 APCs ran on the target thread in order 'a' (want 'a')
+serial	x86_64	threads			PASS	threads.apc.wait_ex	wait returned 192 (want WAIT_IO_COMPLETION=192), 1 APCs ran on the target thread in order 'a' (want 'a')
+serial	x86_64	threads			PASS	threads.apc.nonalertable	wait returned 192 (want WAIT_IO_COMPLETION=192), 5 APCs ran on the target thread in order 'abcde' (want 'abcde'), none during the non-alertable wait
+serial	x86_64	threads			PASS	threads.apc.self	ran before the alertable wait=0, SleepEx(0, TRUE)=192, ran=1
+serial	x86_64	threads			PASS	threads.apc.timer	periodic waitable-timer completion routine ran 3 times in 41 ms
+serial	x86_64	threads			PASS	threads.spawn	500 short threads, 0 wrong exit codes, 215 ms
+serial	x86_64	seh			INFO	seh.env	build=x86_64 wow64_process=none native=amd64 wine=9.0 host=Linux 6.18.44-fc-v310
+serial	x86_64	seh			PASS	seh.av_read	code=c0000005 info=[0, 00007FFFFEAD0123] want [0, 00007FFFFEAD0123], ExceptionAddress=0000000140002890 context pc=0000000140002890 sp=00007FFFFE1FFCE8
+serial	x86_64	seh			PASS	seh.av_write	code=c0000005 info=[1, 00007FFFFEAD0456] want [1, 00007FFFFEAD0456], ExceptionAddress=00000001400028A0 context pc=00000001400028A0 sp=00007FFFFE1FFCE8
+serial	x86_64	seh			PASS	seh.av_null_read	code=c0000005 info=[0, 0000000000000000] want [0, 0000000000000000], ExceptionAddress=0000000140002890 context pc=0000000140002890 sp=00007FFFFE1FFCE8
+serial	x86_64	seh			PASS	seh.av_exec_noaccess	code=c0000005 info=[8, 00007FFFFEAD0200] want [8, 00007FFFFEAD0200], ExceptionAddress=00007FFFFEAD0200 context pc=00007FFFFEAD0200 sp=00007FFFFE1FFCE8
+serial	x86_64	seh			PASS	seh.div0	caught=1 code=c0000094 (want c0000094) address=0000000140002936 pc=0000000140002936
+serial	x86_64	seh			PASS	seh.breakpoint	caught=1 code=80000003
+serial	x86_64	seh			PASS	seh.nested_search	order inner-filter,outer-filter,finally-abnormal,outer-handler (want inner-filter,outer-filter,finally-abnormal,outer-handler)
+serial	x86_64	seh			PASS	seh.nested_rethrow	order inner-caught,outer-filter,outer-handler (want inner-caught,outer-filter,outer-handler)
+serial	x86_64	seh			PASS	seh.finally_normal	order body,finally-normal,
+serial	x86_64	seh			PASS	seh.raise_frames	caught=1 code=e0c0ffee params=3 [1234 ffffffff c0ffee] finally order 8a,6a,4a, (want 8a,6a,4a,)
+serial	x86_64	seh			PASS	seh.raise_continue	caught=0 resumed=1
+serial	x86_64	seh			PASS	seh.veh_fixup	frame handler reached=0, handler calls=1 (want 1), stores landed=1
+serial	x86_64	seh			PASS	seh.veh_order	first-registered handler ran first=1, then frame handler caught=1
+serial	x86_64	seh			PASS	seh.cxx_throw	caught value 42 (want 42), destructors run 9 (want 9)
+serial	x86_64	seh			XFAIL	seh.stack_overflow	caught code=00000000 (want c00000fd), thread wait=0 exit=00000000 [known: Wine 9.0 (Ubuntu 24.04) kills the thread instead of dispatching STATUS_STACK_OVERFLOW when x64 code exhausts its stack; seen on Linux 2026-11-07]
+serial	x86_64	callbacks			INFO	callbacks.env	build=x86_64 wow64_process=none native=amd64 wine=9.0 host=Linux 6.18.44-fc-v310
+serial	x86_64	callbacks			PASS	callbacks.wndproc.create	CreateWindow ok, WM_CREATE seen 1 times
+serial	x86_64	callbacks			PASS	callbacks.wndproc.send	SendMessage returned 37 (want 37)
+serial	x86_64	callbacks			PASS	callbacks.wndproc.cross_thread	cross-thread SendMessage returned 17 (want 17), procedure ran on the window's thread
+serial	x86_64	callbacks			PASS	callbacks.wndproc.subclass	subclassed SendMessage returned 1040 (want 1040)
+serial	x86_64	callbacks			PASS	callbacks.enum_windows	EnumWindows returned 1 after 11 callbacks; our 4 windows seen 1/1/1/1 times
+serial	x86_64	callbacks			PASS	callbacks.enum_windows_stop	callback returning FALSE: EnumWindows returned 0 after 2 calls (want 0 after 2)
+serial	x86_64	callbacks			PASS	callbacks.enum_child_windows	EnumChildWindows saw 4 children, ours 1/1/1/1
+serial	x86_64	callbacks			PASS	callbacks.set_timer	TIMERPROC ran 6 times in 67 ms, 0 with wrong arguments
+serial	x86_64	callbacks			PASS	callbacks.hook	WH_CALLWNDPROC hook saw 3 of 3 messages
+serial	x86_64	callbacks			PASS	callbacks.timer_queue	timer-queue callback ran 5 times, 0 with wrong arguments
+serial	x86_64	callbacks			PASS	callbacks.threadpool_work	100 work items summed to 5050 (want 5050)
+serial	x86_64	callbacks			PASS	callbacks.registered_wait	RegisterWaitForSingleObject callback ran 3 of 3 times
+serial	x86_64	callbacks			PASS	callbacks.qsort	CRT qsort with a program comparator sorted correctly
+serial	x86_64	callbacks			PASS	callbacks.enum_fonts	EnumFontFamiliesEx callback ran 471 times, 0 with bad arguments
+serial	x86_64	memory			INFO	memory.env	build=x86_64 wow64_process=none native=amd64 wine=9.0 host=Linux 6.18.44-fc-v310
+serial	x86_64	memory			PASS	memory.sysinfo	page size 4096, allocation granularity 65536
+serial	x86_64	memory			PASS	memory.alloc_granularity	0 of 20 reservations not 64K-aligned (or failed)
+serial	x86_64	memory			PASS	memory.commit_zeroed	fresh commit reads zero
+serial	x86_64	memory			PASS	memory.protect_4k.set	VirtualProtect on single 4K pages ok (0)
+serial	x86_64	memory			PASS	memory.protect_4k.access	each 4K page faults exactly per its own protection
+serial	x86_64	memory			PASS	memory.protect_4k.query	VirtualQuery reports 4K-granular regions
+serial	x86_64	memory			PASS	memory.protect_4k.contents	after protect/unprotect every page kept its data (0 bytes wrong)
+serial	x86_64	memory			PASS	memory.guard_page.read	neighbours 00000000/00000000, first touch 80000001 at +107b (want 80000001 at +107b), second touch 00000000, then unguarded
+serial	x86_64	memory			PASS	memory.guard_page.write	write: first 80000001, second 00000000
+serial	x86_64	memory			PASS	memory.reserve_commit.single_page	reserved c0000005, commit one 4K page ok, it 00000000, neighbours c0000005/c0000005, states 2000/1000(size 1000)/2000
+serial	x86_64	memory			PASS	memory.reserve_commit.decommit	decommitted page faults (c0000005) and recommits zeroed (00)
+serial	x86_64	memory			PASS	memory.write_watch	written pages 1,2,7,13,30,63; reported [1,2,7,13,30,63] at granularity 4096; after reset 0
+serial	x86_64	memory			PASS	memory.placeholder.reserve	VirtualAlloc2(MEM_RESERVE_PLACEHOLDER) ok (0)
+serial	x86_64	memory			PASS	memory.placeholder.split	VirtualFree(MEM_PRESERVE_PLACEHOLDER) split it (0)
+serial	x86_64	memory			PASS	memory.placeholder.replace_alloc	VirtualAlloc2(MEM_REPLACE_PLACEHOLDER) committed into the placeholder
+serial	x86_64	memory			PASS	memory.placeholder.map_view	MapViewOfFile3 into the placeholder aliases a second view
+serial	x86_64	memory			PASS	memory.placeholder.unmap_preserve	after UnmapViewOfFile2(MEM_PRESERVE_PLACEHOLDER) the range is a placeholder again
+serial	x86_64	memory			PASS	memory.section_alias	two views of one section see each other's writes (0 mismatches)
+serial	x86_64	memory			PASS	memory.smc.wx_cycle	2000 rewrites through RW -> RX + FlushInstructionCache, 0 stale results
+serial	x86_64	memory			PASS	memory.smc.rwx_flush	5000 in-place rewrites of RWX code with FlushInstructionCache, 0 stale results
+serial	x86_64	memory			PASS	memory.smc.rwx_noflush	5000 immediate patches without a flush (legal on x86), 0 stale results
+serial	x86_64	memory			PASS	memory.smc.same_page_data	20000 data writes next to live code, 0 wrong results
+serial	x86_64	memory			PASS	memory.smc.realloc	200 release/reallocate cycles at one address (0 moved), 0 stale results
+serial	x86_64	memory			PASS	memory.smc.neighbor_page	RX code page next to a hot RW page: 0 wrong results, write to the RX page c0000005
+serial	x86_64	memory			PASS	memory.smc.cross_thread	500 rewrites on one thread, run on another: 0 stale results (last 71f3)
+serial	x86_64	memory			PASS	memory.big_alloc	reserve 1024 MB, commit and touch 256 MB at its end: ok, 0 bad pages
+serial	x86_64	ordering			INFO	ordering.env	build=x86_64 wow64_process=none native=amd64 wine=9.0 host=Linux 6.18.44-fc-v310
+serial	x86_64	ordering			INFO	ordering.config	iterations 500000, x86 code, FEX_HARDWARE_TSO=(unset)
+serial	x86_64	ordering			PASS	ordering.mp	forbidden outcome 0/500000 times (346 ms)
+serial	x86_64	ordering			PASS	ordering.mp_fenced	forbidden outcome 0/500000 times (402 ms)
+serial	x86_64	ordering			PASS	ordering.lb	forbidden outcome 0/500000 times (355 ms)
+serial	x86_64	ordering			PASS	ordering.lb_fenced	forbidden outcome 0/500000 times (372 ms)
+serial	x86_64	ordering			PASS	ordering.iriw	forbidden outcome 0/500000 times (634 ms)
+serial	x86_64	ordering			PASS	ordering.iriw_fenced	forbidden outcome 0/500000 times (635 ms)
+serial	x86_64	ordering			INFO	ordering.sb	weak outcome 5197/500000 times (318 ms); allowed by TSO and by ARM (store buffering)
+serial	x86_64	ordering			PASS	ordering.sb_fenced	forbidden outcome 0/500000 times (389 ms)
+serial	x86_64	ordering			PASS	ordering.corr	forbidden outcome 0/500000 times (354 ms)
+serial	x86_64	ordering			PASS	ordering.mp_stream	forbidden outcome 0/5000000 times (105 ms)
+serial	x86_64	ordering			PASS	ordering.mp_stream_fenced	forbidden outcome 0/5000000 times (252 ms)
+serial	x86_64	ordering			PASS	ordering.lock	0 of 2000000 increments lost (150 ms)
+serial	x86_64	ordering			PASS	ordering.lock_fenced	0 of 2000000 increments lost (289 ms)
+serial	x86_64	ordering			PASS	ordering.atomic	0 of 2000000 increments lost (48 ms)
+serial	x86_64	ordering			INFO	ordering.calibration.overlap	sb store-buffering outcomes 5197: threads do overlap
+serial	x86_64	d3d9	builtin		INFO	d3d9.env	build=x86_64 wow64_process=none native=amd64 wine=9.0 host=Linux 6.18.44-fc-v310
+serial	x86_64	d3d9	builtin		PASS	d3d9.create	Direct3DCreate9 ok
+serial	x86_64	d3d9	builtin		PASS	d3d9.adapters	1 adapter(s)
+serial	x86_64	d3d9	builtin		INFO	d3d9.adapter0	0: NVIDIA GeForce GTX 470 (driver nvd3dum.dll, vendor 10de device 06cd), 1 X8R8G8B8 modes, current 1280x1024@60
+serial	x86_64	d3d9	builtin		PASS	d3d9.display_modes	1 X8R8G8B8 modes, current 1280x1024
+serial	x86_64	d3d9	builtin		PASS	d3d9.caps	HAL: VS 3.0 PS 3.0, max texture 16384x16384, 8 texture stages, 16 streams, 4 RTs
+serial	x86_64	d3d9	builtin		PASS	d3d9.formats	CheckDeviceFormat: all of A8R8G8B8 texture/RT, D24S8, DXT1, DXT5 supported
+serial	x86_64	d3d9	builtin		PASS	d3d9.create_ex	Direct3DCreate9Ex 00000000
+serial	x86_64	d3d9	builtin		PASS	d3d9.device	CreateDevice(HAL) 00000000
+serial	x86_64	d3d9	builtin		PASS	d3d9.clear	64x64 pixels exact, Clear -> GetRenderTargetData
+serial	x86_64	d3d9	builtin		PASS	d3d9.draw	64x64 pixels exact, fixed-function XYZRHW quad
+serial	x86_64	d3d9	builtin		INFO	d3d9.device_release	final Release returned 0
+serial	x86_64	d3d11	builtin		INFO	d3d11.env	build=x86_64 wow64_process=none native=amd64 wine=9.0 host=Linux 6.18.44-fc-v310
+serial	x86_64	d3d11	builtin		PASS	d3d11.device	D3D11CreateDevice 00000000, feature level 11_1
+serial	x86_64	d3d11	builtin		INFO	d3d11.adapter	NVIDIA GeForce GTX 470 (vendor 10de device 06cd), feature level 11_1
+serial	x86_64	d3d11	builtin		PASS	d3d11.render_target	64x64 RGBA8 render target created
+serial	x86_64	d3d11	builtin		PASS	d3d11.clear	64x64 pixels exact
+serial	x86_64	d3d11	builtin		PASS	d3d11.draw_fullscreen	64x64 pixels exact, SV_VertexID triangle + SV_Position shading
+serial	x86_64	d3d11	builtin		PASS	d3d11.draw_vb_cb	64x64 pixels exact, vertex-buffer quad over the fullscreen pass
+serial	x86_64	d3d11	builtin		PASS	d3d11.update_subresource	64x64 pixels exact
+serial	x86_64	d3d11	builtin		PASS	d3d11.copy_region	64x64 pixels exact, 16x16 box from the render target into an initialised texture
+serial	x86_64	d3d11	builtin		PASS	d3d11.copy_resource	64x64 pixels exact
+serial	x86_64	d3d11	builtin		PASS	d3d11.buffer_copy	1 KiB..3 KiB slice of an initialised buffer copied to staging: 0 words wrong
+serial	x86_64	d3d11	builtin		INFO	d3d11.device_release	final Release returned 0
+serial	x86_64	d3d12	builtin		INFO	d3d12.env	build=x86_64 wow64_process=none native=amd64 wine=9.0 host=Linux 6.18.44-fc-v310
+serial	x86_64	d3d12	builtin		PASS	d3d12.device	D3D12CreateDevice(11_0) 00000000
+serial	x86_64	d3d12	builtin		INFO	d3d12.adapter	NVIDIA GeForce GTX 470, max feature level 11_1
+serial	x86_64	d3d12	builtin		PASS	d3d12.queues	direct + copy queues, lists and a fence created
+serial	x86_64	d3d12	builtin		PASS	d3d12.fence.cpu_signal	CPU Signal(5): completed value 5, event set
+serial	x86_64	d3d12	builtin		PASS	d3d12.fence.queue_signal	queue Signal(10) reached 10
+serial	x86_64	d3d12	builtin		PASS	d3d12.fence.queue_waits_cpu	queue Wait on a CPU-signalled fence: held before the signal, released after
+serial	x86_64	d3d12	builtin		PASS	d3d12.fence.many_signals	200 queued signals: completed 300
+serial	x86_64	d3d12	builtin		PASS	d3d12.clear	64x64 pixels exact, ClearRenderTargetView -> CopyTextureRegion -> readback heap
+serial	x86_64	d3d12	builtin		PASS	d3d12.draw_fullscreen	64x64 pixels exact, SV_VertexID triangle, PSO + root signature
+serial	x86_64	d3d12	builtin		PASS	d3d12.draw_vb_cbv	64x64 pixels exact, vertex-buffer quad, colour from a root CBV
+serial	x86_64	d3d12	builtin		PASS	d3d12.copy_queue	64x64 pixels exact, upload on the COPY queue, read on DIRECT after a cross-queue fence wait
+serial	x86_64	d3d12	builtin		PASS	d3d12.copy_queue.buffers	upload -> default -> readback buffer copies on the COPY queue: 0 of 1024 texels wrong
+serial	x86_64	d3d12	builtin		INFO	d3d12.device_release	final Release returned 0
+serial	x86_64	opengl	builtin		INFO	opengl.env	build=x86_64 wow64_process=none native=amd64 wine=9.0 host=Linux 6.18.44-fc-v310
+serial	x86_64	opengl	builtin		PASS	opengl.context	window 0000000000050052, pixel format 3, context 0000000000011000
+serial	x86_64	opengl	builtin		INFO	opengl.renderer	Mesa | llvmpipe (LLVM 20.1.2, 256 bits) | 4.5 (Compatibility Profile) Mesa 25.2.8-0ubuntu0.24.04.4
+serial	x86_64	opengl	builtin		PASS	opengl.entry_points	0 of the GL 2.0/3.0 functions missing from wglGetProcAddress
+serial	x86_64	opengl	builtin		PASS	opengl.fbo	64x64 RGBA8 framebuffer object status 8cd5
+serial	x86_64	opengl	builtin		PASS	opengl.clear	64x64 pixels exact, glClear -> glReadPixels
+serial	x86_64	opengl	builtin		PASS	opengl.draw_fixed	64x64 pixels exact, immediate-mode quad
+serial	x86_64	opengl	builtin		PASS	opengl.glsl_build	GLSL 1.10 program linked
+serial	x86_64	opengl	builtin		PASS	opengl.draw_glsl	64x64 pixels exact, fullscreen GLSL pass
+serial	x86_64	opengl	builtin		PASS	opengl.gl_error	glGetError after all draws: 0000
+serial	x86_64	vulkan	builtin		INFO	vulkan.env	build=x86_64 wow64_process=none native=amd64 wine=9.0 host=Linux 6.18.44-fc-v310
+serial	x86_64	vulkan	builtin		PASS	vulkan.instance	vkCreateInstance: 0
+serial	x86_64	vulkan	builtin		PASS	vulkan.entry_points	0 functions missing from vkGetInstanceProcAddr
+serial	x86_64	vulkan	builtin		PASS	vulkan.physical_device	1 physical device(s)
+serial	x86_64	vulkan	builtin		INFO	vulkan.device	llvmpipe (LLVM 20.1.2, 256 bits), Vulkan 1.4.318, driver 06402008, vendor 10005
+serial	x86_64	vulkan	builtin		PASS	vulkan.device	graphics queue family 0, vkCreateDevice: 0
+serial	x86_64	vulkan	builtin		PASS	vulkan.clear	64x64 pixels exact, vkCmdClearColorImage -> vkCmdCopyImageToBuffer
+serial	x86_64	vulkan	builtin		PASS	vulkan.copy_region	64x64 pixels exact, buffer -> 32x32 image region with row length, then image -> buffer
+serial	x86_64	vulkan	builtin		PASS	vulkan.fill_copy_buffer	vkCmdFillBuffer x2 + vkCmdCopyBuffer at offsets: 0 of 1024 words wrong
+serial	x86_64	vulkan	builtin		PASS	vulkan.fence_reuse	50 fill + submit + wait cycles on one fence: 0 saw stale data
+serial	x86_64	vulkan	builtin		PASS	vulkan.teardown	device and instance destroyed
+serial	i686	threads			INFO	threads.env	build=i686 wow64_process=i386 native=amd64 wine=9.0 host=Linux 6.18.44-fc-v310
+serial	i686	threads			PASS	threads.tls.static_and_dynamic	32/32 threads kept their own static and TlsAlloc values (expansion slot 64)
+serial	i686	threads			PASS	threads.tls.expansion_slots	TlsAlloc beyond 64 slots gave index 64
+serial	i686	threads			PASS	threads.tls.fls_callback	FLS destructor ran 32 times for 32 exited threads
+serial	i686	threads			PASS	threads.tls.image_callback	TLS directory callback ran DLL_THREAD_ATTACH in 32 of 32 new threads
+serial	i686	threads			PASS	threads.locks.counters	critical section 800000, SRW 800000, Interlocked 800000 (want 800000 each)
+serial	i686	threads			PASS	threads.locks.condvar	consumed sum 200010000 (want 200010000), in order 1
+serial	i686	threads			PASS	threads.apc.sleepex	wait returned 192 (want WAIT_IO_COMPLETION=192), 1 APCs ran on the target thread in order 'a' (want 'a')
+serial	i686	threads			PASS	threads.apc.wait_ex	wait returned 192 (want WAIT_IO_COMPLETION=192), 1 APCs ran on the target thread in order 'a' (want 'a')
+serial	i686	threads			PASS	threads.apc.nonalertable	wait returned 192 (want WAIT_IO_COMPLETION=192), 5 APCs ran on the target thread in order 'abcde' (want 'abcde'), none during the non-alertable wait
+serial	i686	threads			PASS	threads.apc.self	ran before the alertable wait=0, SleepEx(0, TRUE)=192, ran=1
+serial	i686	threads			PASS	threads.apc.timer	periodic waitable-timer completion routine ran 3 times in 41 ms
+serial	i686	threads			PASS	threads.spawn	500 short threads, 0 wrong exit codes, 223 ms
+serial	i686	seh			INFO	seh.env	build=i686 wow64_process=i386 native=amd64 wine=9.0 host=Linux 6.18.44-fc-v310
+serial	i686	seh			PASS	seh.av_read	code=c0000005 info=[0, 00E30123] want [0, 00E30123], ExceptionAddress=00402610 context pc=00402610 sp=0059FE10
+serial	i686	seh			PASS	seh.av_write	code=c0000005 info=[1, 00E30456] want [1, 00E30456], ExceptionAddress=00402620 context pc=00402620 sp=0059FE10
+serial	i686	seh			PASS	seh.av_null_read	code=c0000005 info=[0, 00000000] want [0, 00000000], ExceptionAddress=00402610 context pc=00402610 sp=0059FE10
+serial	i686	seh			PASS	seh.av_exec_noaccess	code=c0000005 info=[8, 00E30200] want [8, 00E30200], ExceptionAddress=00E30200 context pc=00E30200 sp=0059FE10
+serial	i686	seh			PASS	seh.div0	caught=1 code=c0000094 (want c0000094) address=00402706 pc=00402706
+serial	i686	seh			PASS	seh.breakpoint	caught=1 code=80000003
+serial	i686	seh			PASS	seh.nested_search	order inner-filter,outer-filter,finally-abnormal,outer-handler (want inner-filter,outer-filter,finally-abnormal,outer-handler)
+serial	i686	seh			PASS	seh.nested_rethrow	order inner-caught,outer-filter,outer-handler (want inner-caught,outer-filter,outer-handler)
+serial	i686	seh			PASS	seh.finally_normal	order body,finally-normal,
+serial	i686	seh			PASS	seh.raise_frames	caught=1 code=e0c0ffee params=3 [1234 ffffffff c0ffee] finally order 8a,6a,4a, (want 8a,6a,4a,)
+serial	i686	seh			PASS	seh.raise_continue	caught=0 resumed=1
+serial	i686	seh			PASS	seh.veh_fixup	frame handler reached=0, handler calls=1 (want 1), stores landed=1
+serial	i686	seh			PASS	seh.veh_order	first-registered handler ran first=1, then frame handler caught=1
+serial	i686	seh			PASS	seh.cxx_throw	caught value 42 (want 42), destructors run 9 (want 9)
+serial	i686	seh			PASS	seh.stack_overflow	caught code=c00000fd (want c00000fd), thread wait=0 exit=00000000
+serial	i686	callbacks			INFO	callbacks.env	build=i686 wow64_process=i386 native=amd64 wine=9.0 host=Linux 6.18.44-fc-v310
+serial	i686	callbacks			PASS	callbacks.wndproc.create	CreateWindow ok, WM_CREATE seen 1 times
+serial	i686	callbacks			PASS	callbacks.wndproc.send	SendMessage returned 37 (want 37)
+serial	i686	callbacks			PASS	callbacks.wndproc.cross_thread	cross-thread SendMessage returned 17 (want 17), procedure ran on the window's thread
+serial	i686	callbacks			PASS	callbacks.wndproc.subclass	subclassed SendMessage returned 1040 (want 1040)
+serial	i686	callbacks			PASS	callbacks.enum_windows	EnumWindows returned 1 after 11 callbacks; our 4 windows seen 1/1/1/1 times
+serial	i686	callbacks			PASS	callbacks.enum_windows_stop	callback returning FALSE: EnumWindows returned 0 after 2 calls (want 0 after 2)
+serial	i686	callbacks			PASS	callbacks.enum_child_windows	EnumChildWindows saw 4 children, ours 1/1/1/1
+serial	i686	callbacks			PASS	callbacks.set_timer	TIMERPROC ran 6 times in 66 ms, 0 with wrong arguments
+serial	i686	callbacks			PASS	callbacks.hook	WH_CALLWNDPROC hook saw 3 of 3 messages
+serial	i686	callbacks			PASS	callbacks.timer_queue	timer-queue callback ran 5 times, 0 with wrong arguments
+serial	i686	callbacks			PASS	callbacks.threadpool_work	100 work items summed to 5050 (want 5050)
+serial	i686	callbacks			PASS	callbacks.registered_wait	RegisterWaitForSingleObject callback ran 3 of 3 times
+serial	i686	callbacks			PASS	callbacks.qsort	CRT qsort with a program comparator sorted correctly
+serial	i686	callbacks			PASS	callbacks.enum_fonts	EnumFontFamiliesEx callback ran 471 times, 0 with bad arguments
+serial	i686	memory			INFO	memory.env	build=i686 wow64_process=i386 native=amd64 wine=9.0 host=Linux 6.18.44-fc-v310
+serial	i686	memory			PASS	memory.sysinfo	page size 4096, allocation granularity 65536
+serial	i686	memory			PASS	memory.alloc_granularity	0 of 20 reservations not 64K-aligned (or failed)
+serial	i686	memory			PASS	memory.commit_zeroed	fresh commit reads zero
+serial	i686	memory			PASS	memory.protect_4k.set	VirtualProtect on single 4K pages ok (0)
+serial	i686	memory			PASS	memory.protect_4k.access	each 4K page faults exactly per its own protection
+serial	i686	memory			PASS	memory.protect_4k.query	VirtualQuery reports 4K-granular regions
+serial	i686	memory			PASS	memory.protect_4k.contents	after protect/unprotect every page kept its data (0 bytes wrong)
+serial	i686	memory			PASS	memory.guard_page.read	neighbours 00000000/00000000, first touch 80000001 at +107b (want 80000001 at +107b), second touch 00000000, then unguarded
+serial	i686	memory			PASS	memory.guard_page.write	write: first 80000001, second 00000000
+serial	i686	memory			PASS	memory.reserve_commit.single_page	reserved c0000005, commit one 4K page ok, it 00000000, neighbours c0000005/c0000005, states 2000/1000(size 1000)/2000
+serial	i686	memory			PASS	memory.reserve_commit.decommit	decommitted page faults (c0000005) and recommits zeroed (00)
+serial	i686	memory			PASS	memory.write_watch	written pages 1,2,7,13,30,63; reported [1,2,7,13,30,63] at granularity 4096; after reset 0
+serial	i686	memory			PASS	memory.placeholder.reserve	VirtualAlloc2(MEM_RESERVE_PLACEHOLDER) ok (0)
+serial	i686	memory			PASS	memory.placeholder.split	VirtualFree(MEM_PRESERVE_PLACEHOLDER) split it (0)
+serial	i686	memory			PASS	memory.placeholder.replace_alloc	VirtualAlloc2(MEM_REPLACE_PLACEHOLDER) committed into the placeholder
+serial	i686	memory			PASS	memory.placeholder.map_view	MapViewOfFile3 into the placeholder aliases a second view
+serial	i686	memory			PASS	memory.placeholder.unmap_preserve	after UnmapViewOfFile2(MEM_PRESERVE_PLACEHOLDER) the range is a placeholder again
+serial	i686	memory			PASS	memory.section_alias	two views of one section see each other's writes (0 mismatches)
+serial	i686	memory			PASS	memory.smc.wx_cycle	2000 rewrites through RW -> RX + FlushInstructionCache, 0 stale results
+serial	i686	memory			PASS	memory.smc.rwx_flush	5000 in-place rewrites of RWX code with FlushInstructionCache, 0 stale results
+serial	i686	memory			PASS	memory.smc.rwx_noflush	5000 immediate patches without a flush (legal on x86), 0 stale results
+serial	i686	memory			PASS	memory.smc.same_page_data	20000 data writes next to live code, 0 wrong results
+serial	i686	memory			PASS	memory.smc.realloc	200 release/reallocate cycles at one address (0 moved), 0 stale results
+serial	i686	memory			PASS	memory.smc.neighbor_page	RX code page next to a hot RW page: 0 wrong results, write to the RX page c0000005
+serial	i686	memory			PASS	memory.smc.cross_thread	500 rewrites on one thread, run on another: 0 stale results (last 71f3)
+serial	i686	memory			PASS	memory.big_alloc	reserve 512 MB, commit and touch 128 MB at its end: ok, 0 bad pages
+serial	i686	ordering			INFO	ordering.env	build=i686 wow64_process=i386 native=amd64 wine=9.0 host=Linux 6.18.44-fc-v310
+serial	i686	ordering			INFO	ordering.config	iterations 500000, x86 code, FEX_HARDWARE_TSO=(unset)
+serial	i686	ordering			PASS	ordering.mp	forbidden outcome 0/500000 times (379 ms)
+serial	i686	ordering			PASS	ordering.mp_fenced	forbidden outcome 0/500000 times (398 ms)
+serial	i686	ordering			PASS	ordering.lb	forbidden outcome 0/500000 times (362 ms)
+serial	i686	ordering			PASS	ordering.lb_fenced	forbidden outcome 0/500000 times (382 ms)
+serial	i686	ordering			PASS	ordering.iriw	forbidden outcome 0/500000 times (629 ms)
+serial	i686	ordering			PASS	ordering.iriw_fenced	forbidden outcome 0/500000 times (719 ms)
+serial	i686	ordering			INFO	ordering.sb	weak outcome 3601/500000 times (349 ms); allowed by TSO and by ARM (store buffering)
+serial	i686	ordering			PASS	ordering.sb_fenced	forbidden outcome 0/500000 times (389 ms)
+serial	i686	ordering			PASS	ordering.corr	forbidden outcome 0/500000 times (363 ms)
+serial	i686	ordering			PASS	ordering.mp_stream	forbidden outcome 0/5000000 times (98 ms)
+serial	i686	ordering			PASS	ordering.mp_stream_fenced	forbidden outcome 0/5000000 times (200 ms)
+serial	i686	ordering			PASS	ordering.lock	0 of 2000000 increments lost (165 ms)
+serial	i686	ordering			PASS	ordering.lock_fenced	0 of 2000000 increments lost (277 ms)
+serial	i686	ordering			PASS	ordering.atomic	0 of 2000000 increments lost (46 ms)
+serial	i686	ordering			INFO	ordering.calibration.overlap	sb store-buffering outcomes 3601: threads do overlap
+serial	i686	d3d9	builtin		INFO	d3d9.env	build=i686 wow64_process=i386 native=amd64 wine=9.0 host=Linux 6.18.44-fc-v310
+serial	i686	d3d9	builtin		PASS	d3d9.create	Direct3DCreate9 ok
+serial	i686	d3d9	builtin		PASS	d3d9.adapters	1 adapter(s)
+serial	i686	d3d9	builtin		INFO	d3d9.adapter0	0: NVIDIA GeForce GTX 470 (driver nvd3dum.dll, vendor 10de device 06cd), 1 X8R8G8B8 modes, current 1280x1024@60
+serial	i686	d3d9	builtin		PASS	d3d9.display_modes	1 X8R8G8B8 modes, current 1280x1024
+serial	i686	d3d9	builtin		PASS	d3d9.caps	HAL: VS 3.0 PS 3.0, max texture 16384x16384, 8 texture stages, 16 streams, 4 RTs
+serial	i686	d3d9	builtin		PASS	d3d9.formats	CheckDeviceFormat: all of A8R8G8B8 texture/RT, D24S8, DXT1, DXT5 supported
+serial	i686	d3d9	builtin		PASS	d3d9.create_ex	Direct3DCreate9Ex 00000000
+serial	i686	d3d9	builtin		PASS	d3d9.device	CreateDevice(HAL) 00000000
+serial	i686	d3d9	builtin		PASS	d3d9.clear	64x64 pixels exact, Clear -> GetRenderTargetData
+serial	i686	d3d9	builtin		PASS	d3d9.draw	64x64 pixels exact, fixed-function XYZRHW quad
+serial	i686	d3d9	builtin		INFO	d3d9.device_release	final Release returned 0
+serial	i686	d3d11	builtin		INFO	d3d11.env	build=i686 wow64_process=i386 native=amd64 wine=9.0 host=Linux 6.18.44-fc-v310
+serial	i686	d3d11	builtin		PASS	d3d11.device	D3D11CreateDevice 00000000, feature level 11_1
+serial	i686	d3d11	builtin		INFO	d3d11.adapter	NVIDIA GeForce GTX 470 (vendor 10de device 06cd), feature level 11_1
+serial	i686	d3d11	builtin		PASS	d3d11.render_target	64x64 RGBA8 render target created
+serial	i686	d3d11	builtin		PASS	d3d11.clear	64x64 pixels exact
+serial	i686	d3d11	builtin		PASS	d3d11.draw_fullscreen	64x64 pixels exact, SV_VertexID triangle + SV_Position shading
+serial	i686	d3d11	builtin		PASS	d3d11.draw_vb_cb	64x64 pixels exact, vertex-buffer quad over the fullscreen pass
+serial	i686	d3d11	builtin		PASS	d3d11.update_subresource	64x64 pixels exact
+serial	i686	d3d11	builtin		PASS	d3d11.copy_region	64x64 pixels exact, 16x16 box from the render target into an initialised texture
+serial	i686	d3d11	builtin		PASS	d3d11.copy_resource	64x64 pixels exact
+serial	i686	d3d11	builtin		PASS	d3d11.buffer_copy	1 KiB..3 KiB slice of an initialised buffer copied to staging: 0 words wrong
+serial	i686	d3d11	builtin		INFO	d3d11.device_release	final Release returned 0
+serial	i686	d3d12	builtin		INFO	d3d12.env	build=i686 wow64_process=i386 native=amd64 wine=9.0 host=Linux 6.18.44-fc-v310
+serial	i686	d3d12	builtin		PASS	d3d12.device	D3D12CreateDevice(11_0) 00000000
+serial	i686	d3d12	builtin		INFO	d3d12.adapter	NVIDIA GeForce GTX 470, max feature level 11_1
+serial	i686	d3d12	builtin		PASS	d3d12.queues	direct + copy queues, lists and a fence created
+serial	i686	d3d12	builtin		PASS	d3d12.fence.cpu_signal	CPU Signal(5): completed value 5, event set
+serial	i686	d3d12	builtin		PASS	d3d12.fence.queue_signal	queue Signal(10) reached 10
+serial	i686	d3d12	builtin		PASS	d3d12.fence.queue_waits_cpu	queue Wait on a CPU-signalled fence: held before the signal, released after
+serial	i686	d3d12	builtin		PASS	d3d12.fence.many_signals	200 queued signals: completed 300
+serial	i686	d3d12	builtin		PASS	d3d12.clear	64x64 pixels exact, ClearRenderTargetView -> CopyTextureRegion -> readback heap
+serial	i686	d3d12	builtin		PASS	d3d12.draw_fullscreen	64x64 pixels exact, SV_VertexID triangle, PSO + root signature
+serial	i686	d3d12	builtin		PASS	d3d12.draw_vb_cbv	64x64 pixels exact, vertex-buffer quad, colour from a root CBV
+serial	i686	d3d12	builtin		PASS	d3d12.copy_queue	64x64 pixels exact, upload on the COPY queue, read on DIRECT after a cross-queue fence wait
+serial	i686	d3d12	builtin		PASS	d3d12.copy_queue.buffers	upload -> default -> readback buffer copies on the COPY queue: 0 of 1024 texels wrong
+serial	i686	d3d12	builtin		INFO	d3d12.device_release	final Release returned 0
+serial	i686	opengl	builtin		INFO	opengl.env	build=i686 wow64_process=i386 native=amd64 wine=9.0 host=Linux 6.18.44-fc-v310
+serial	i686	opengl	builtin		PASS	opengl.context	window 00040054, pixel format 3, context 00011000
+serial	i686	opengl	builtin		INFO	opengl.renderer	Mesa | llvmpipe (LLVM 20.1.2, 256 bits) | 4.5 (Compatibility Profile) Mesa 25.2.8-0ubuntu0.24.04.4
+serial	i686	opengl	builtin		PASS	opengl.entry_points	0 of the GL 2.0/3.0 functions missing from wglGetProcAddress
+serial	i686	opengl	builtin		PASS	opengl.fbo	64x64 RGBA8 framebuffer object status 8cd5
+serial	i686	opengl	builtin		PASS	opengl.clear	64x64 pixels exact, glClear -> glReadPixels
+serial	i686	opengl	builtin		PASS	opengl.draw_fixed	64x64 pixels exact, immediate-mode quad
+serial	i686	opengl	builtin		PASS	opengl.glsl_build	GLSL 1.10 program linked
+serial	i686	opengl	builtin		PASS	opengl.draw_glsl	64x64 pixels exact, fullscreen GLSL pass
+serial	i686	opengl	builtin		PASS	opengl.gl_error	glGetError after all draws: 0000
+serial	i686	vulkan	builtin		INFO	vulkan.env	build=i686 wow64_process=i386 native=amd64 wine=9.0 host=Linux 6.18.44-fc-v310
+serial	i686	vulkan	builtin		PASS	vulkan.instance	vkCreateInstance: 0
+serial	i686	vulkan	builtin		PASS	vulkan.entry_points	0 functions missing from vkGetInstanceProcAddr
+serial	i686	vulkan	builtin		PASS	vulkan.physical_device	1 physical device(s)
+serial	i686	vulkan	builtin		INFO	vulkan.device	llvmpipe (LLVM 20.1.2, 256 bits), Vulkan 1.4.318, driver 06402008, vendor 10005
+serial	i686	vulkan	builtin		PASS	vulkan.device	graphics queue family 0, vkCreateDevice: 0
+serial	i686	vulkan	builtin		PASS	vulkan.clear	64x64 pixels exact, vkCmdClearColorImage -> vkCmdCopyImageToBuffer
+serial	i686	vulkan	builtin		PASS	vulkan.copy_region	64x64 pixels exact, buffer -> 32x32 image region with row length, then image -> buffer
+serial	i686	vulkan	builtin		PASS	vulkan.fill_copy_buffer	vkCmdFillBuffer x2 + vkCmdCopyBuffer at offsets: 0 of 1024 words wrong
+serial	i686	vulkan	builtin		PASS	vulkan.fence_reuse	50 fill + submit + wait cycles on one fence: 0 saw stale data
+serial	i686	vulkan	builtin		PASS	vulkan.teardown	device and instance destroyed
+concurrent	x86_64	threads			INFO	threads.env	build=x86_64 wow64_process=none native=amd64 wine=9.0 host=Linux 6.18.44-fc-v310
+concurrent	x86_64	threads			PASS	threads.tls.static_and_dynamic	32/32 threads kept their own static and TlsAlloc values (expansion slot 64)
+concurrent	x86_64	threads			PASS	threads.tls.expansion_slots	TlsAlloc beyond 64 slots gave index 64
+concurrent	x86_64	threads			PASS	threads.tls.fls_callback	FLS destructor ran 32 times for 32 exited threads
+concurrent	x86_64	threads			PASS	threads.tls.image_callback	TLS directory callback ran DLL_THREAD_ATTACH in 32 of 32 new threads
+concurrent	x86_64	threads			PASS	threads.locks.counters	critical section 800000, SRW 800000, Interlocked 800000 (want 800000 each)
+concurrent	x86_64	threads			PASS	threads.locks.condvar	consumed sum 200010000 (want 200010000), in order 1
+concurrent	x86_64	threads			PASS	threads.apc.sleepex	wait returned 192 (want WAIT_IO_COMPLETION=192), 1 APCs ran on the target thread in order 'a' (want 'a')
+concurrent	x86_64	threads			PASS	threads.apc.wait_ex	wait returned 192 (want WAIT_IO_COMPLETION=192), 1 APCs ran on the target thread in order 'a' (want 'a')
+concurrent	x86_64	threads			PASS	threads.apc.nonalertable	wait returned 192 (want WAIT_IO_COMPLETION=192), 5 APCs ran on the target thread in order 'abcde' (want 'abcde'), none during the non-alertable wait
+concurrent	x86_64	threads			PASS	threads.apc.self	ran before the alertable wait=0, SleepEx(0, TRUE)=192, ran=1
+concurrent	x86_64	threads			PASS	threads.apc.timer	periodic waitable-timer completion routine ran 3 times in 41 ms
+concurrent	x86_64	threads			PASS	threads.spawn	500 short threads, 0 wrong exit codes, 254 ms
+concurrent	x86_64	seh			INFO	seh.env	build=x86_64 wow64_process=none native=amd64 wine=9.0 host=Linux 6.18.44-fc-v310
+concurrent	x86_64	seh			PASS	seh.av_read	code=c0000005 info=[0, 00007FFFFEAD0123] want [0, 00007FFFFEAD0123], ExceptionAddress=0000000140002890 context pc=0000000140002890 sp=00007FFFFE1FFCE8
+concurrent	x86_64	seh			PASS	seh.av_write	code=c0000005 info=[1, 00007FFFFEAD0456] want [1, 00007FFFFEAD0456], ExceptionAddress=00000001400028A0 context pc=00000001400028A0 sp=00007FFFFE1FFCE8
+concurrent	x86_64	seh			PASS	seh.av_null_read	code=c0000005 info=[0, 0000000000000000] want [0, 0000000000000000], ExceptionAddress=0000000140002890 context pc=0000000140002890 sp=00007FFFFE1FFCE8
+concurrent	x86_64	seh			PASS	seh.av_exec_noaccess	code=c0000005 info=[8, 00007FFFFEAD0200] want [8, 00007FFFFEAD0200], ExceptionAddress=00007FFFFEAD0200 context pc=00007FFFFEAD0200 sp=00007FFFFE1FFCE8
+concurrent	x86_64	seh			PASS	seh.div0	caught=1 code=c0000094 (want c0000094) address=0000000140002936 pc=0000000140002936
+concurrent	x86_64	seh			PASS	seh.breakpoint	caught=1 code=80000003
+concurrent	x86_64	seh			PASS	seh.nested_search	order inner-filter,outer-filter,finally-abnormal,outer-handler (want inner-filter,outer-filter,finally-abnormal,outer-handler)
+concurrent	x86_64	seh			PASS	seh.nested_rethrow	order inner-caught,outer-filter,outer-handler (want inner-caught,outer-filter,outer-handler)
+concurrent	x86_64	seh			PASS	seh.finally_normal	order body,finally-normal,
+concurrent	x86_64	seh			PASS	seh.raise_frames	caught=1 code=e0c0ffee params=3 [1234 ffffffff c0ffee] finally order 8a,6a,4a, (want 8a,6a,4a,)
+concurrent	x86_64	seh			PASS	seh.raise_continue	caught=0 resumed=1
+concurrent	x86_64	seh			PASS	seh.veh_fixup	frame handler reached=0, handler calls=1 (want 1), stores landed=1
+concurrent	x86_64	seh			PASS	seh.veh_order	first-registered handler ran first=1, then frame handler caught=1
+concurrent	x86_64	seh			PASS	seh.cxx_throw	caught value 42 (want 42), destructors run 9 (want 9)
+concurrent	x86_64	seh			XFAIL	seh.stack_overflow	caught code=00000000 (want c00000fd), thread wait=0 exit=00000000 [known: Wine 9.0 (Ubuntu 24.04) kills the thread instead of dispatching STATUS_STACK_OVERFLOW when x64 code exhausts its stack; seen on Linux 2026-11-07]
+concurrent	x86_64	callbacks			INFO	callbacks.env	build=x86_64 wow64_process=none native=amd64 wine=9.0 host=Linux 6.18.44-fc-v310
+concurrent	x86_64	callbacks			PASS	callbacks.wndproc.create	CreateWindow ok, WM_CREATE seen 1 times
+concurrent	x86_64	callbacks			PASS	callbacks.wndproc.send	SendMessage returned 37 (want 37)
+concurrent	x86_64	callbacks			PASS	callbacks.wndproc.cross_thread	cross-thread SendMessage returned 17 (want 17), procedure ran on the window's thread
+concurrent	x86_64	callbacks			PASS	callbacks.wndproc.subclass	subclassed SendMessage returned 1040 (want 1040)
+concurrent	x86_64	callbacks			PASS	callbacks.enum_windows	EnumWindows returned 1 after 11 callbacks; our 4 windows seen 1/1/1/1 times
+concurrent	x86_64	callbacks			PASS	callbacks.enum_windows_stop	callback returning FALSE: EnumWindows returned 0 after 2 calls (want 0 after 2)
+concurrent	x86_64	callbacks			PASS	callbacks.enum_child_windows	EnumChildWindows saw 4 children, ours 1/1/1/1
+concurrent	x86_64	callbacks			PASS	callbacks.set_timer	TIMERPROC ran 6 times in 66 ms, 0 with wrong arguments
+concurrent	x86_64	callbacks			PASS	callbacks.hook	WH_CALLWNDPROC hook saw 3 of 3 messages
+concurrent	x86_64	callbacks			PASS	callbacks.timer_queue	timer-queue callback ran 6 times, 0 with wrong arguments
+concurrent	x86_64	callbacks			PASS	callbacks.threadpool_work	100 work items summed to 5050 (want 5050)
+concurrent	x86_64	callbacks			PASS	callbacks.registered_wait	RegisterWaitForSingleObject callback ran 3 of 3 times
+concurrent	x86_64	callbacks			PASS	callbacks.qsort	CRT qsort with a program comparator sorted correctly
+concurrent	x86_64	callbacks			PASS	callbacks.enum_fonts	EnumFontFamiliesEx callback ran 471 times, 0 with bad arguments
+concurrent	x86_64	memory			INFO	memory.env	build=x86_64 wow64_process=none native=amd64 wine=9.0 host=Linux 6.18.44-fc-v310
+concurrent	x86_64	memory			PASS	memory.sysinfo	page size 4096, allocation granularity 65536
+concurrent	x86_64	memory			PASS	memory.alloc_granularity	0 of 20 reservations not 64K-aligned (or failed)
+concurrent	x86_64	memory			PASS	memory.commit_zeroed	fresh commit reads zero
+concurrent	x86_64	memory			PASS	memory.protect_4k.set	VirtualProtect on single 4K pages ok (0)
+concurrent	x86_64	memory			PASS	memory.protect_4k.access	each 4K page faults exactly per its own protection
+concurrent	x86_64	memory			PASS	memory.protect_4k.query	VirtualQuery reports 4K-granular regions
+concurrent	x86_64	memory			PASS	memory.protect_4k.contents	after protect/unprotect every page kept its data (0 bytes wrong)
+concurrent	x86_64	memory			PASS	memory.guard_page.read	neighbours 00000000/00000000, first touch 80000001 at +107b (want 80000001 at +107b), second touch 00000000, then unguarded
+concurrent	x86_64	memory			PASS	memory.guard_page.write	write: first 80000001, second 00000000
+concurrent	x86_64	memory			PASS	memory.reserve_commit.single_page	reserved c0000005, commit one 4K page ok, it 00000000, neighbours c0000005/c0000005, states 2000/1000(size 1000)/2000
+concurrent	x86_64	memory			PASS	memory.reserve_commit.decommit	decommitted page faults (c0000005) and recommits zeroed (00)
+concurrent	x86_64	memory			PASS	memory.write_watch	written pages 1,2,7,13,30,63; reported [1,2,7,13,30,63] at granularity 4096; after reset 0
+concurrent	x86_64	memory			PASS	memory.placeholder.reserve	VirtualAlloc2(MEM_RESERVE_PLACEHOLDER) ok (0)
+concurrent	x86_64	memory			PASS	memory.placeholder.split	VirtualFree(MEM_PRESERVE_PLACEHOLDER) split it (0)
+concurrent	x86_64	memory			PASS	memory.placeholder.replace_alloc	VirtualAlloc2(MEM_REPLACE_PLACEHOLDER) committed into the placeholder
+concurrent	x86_64	memory			PASS	memory.placeholder.map_view	MapViewOfFile3 into the placeholder aliases a second view
+concurrent	x86_64	memory			PASS	memory.placeholder.unmap_preserve	after UnmapViewOfFile2(MEM_PRESERVE_PLACEHOLDER) the range is a placeholder again
+concurrent	x86_64	memory			PASS	memory.section_alias	two views of one section see each other's writes (0 mismatches)
+concurrent	x86_64	memory			PASS	memory.smc.wx_cycle	2000 rewrites through RW -> RX + FlushInstructionCache, 0 stale results
+concurrent	x86_64	memory			PASS	memory.smc.rwx_flush	5000 in-place rewrites of RWX code with FlushInstructionCache, 0 stale results
+concurrent	x86_64	memory			PASS	memory.smc.rwx_noflush	5000 immediate patches without a flush (legal on x86), 0 stale results
+concurrent	x86_64	memory			PASS	memory.smc.same_page_data	20000 data writes next to live code, 0 wrong results
+concurrent	x86_64	memory			PASS	memory.smc.realloc	200 release/reallocate cycles at one address (0 moved), 0 stale results
+concurrent	x86_64	memory			PASS	memory.smc.neighbor_page	RX code page next to a hot RW page: 0 wrong results, write to the RX page c0000005
+concurrent	x86_64	memory			PASS	memory.smc.cross_thread	500 rewrites on one thread, run on another: 0 stale results (last 71f3)
+concurrent	x86_64	memory			PASS	memory.big_alloc	reserve 1024 MB, commit and touch 256 MB at its end: ok, 0 bad pages
+concurrent	x86_64	ordering			INFO	ordering.env	build=x86_64 wow64_process=none native=amd64 wine=9.0 host=Linux 6.18.44-fc-v310
+concurrent	x86_64	ordering			INFO	ordering.config	iterations 500000, x86 code, FEX_HARDWARE_TSO=(unset)
+concurrent	x86_64	ordering			PASS	ordering.mp	forbidden outcome 0/500000 times (396 ms)
+concurrent	x86_64	ordering			PASS	ordering.mp_fenced	forbidden outcome 0/500000 times (453 ms)
+concurrent	x86_64	ordering			PASS	ordering.lb	forbidden outcome 0/500000 times (358 ms)
+concurrent	x86_64	ordering			PASS	ordering.lb_fenced	forbidden outcome 0/500000 times (646 ms)
+concurrent	x86_64	ordering			PASS	ordering.iriw	forbidden outcome 0/500000 times (20698 ms)
+concurrent	x86_64	ordering			PASS	ordering.iriw_fenced	forbidden outcome 0/500000 times (2037 ms)
+concurrent	x86_64	ordering			INFO	ordering.sb	weak outcome 2680/500000 times (357 ms); allowed by TSO and by ARM (store buffering)
+concurrent	x86_64	ordering			PASS	ordering.sb_fenced	forbidden outcome 0/500000 times (378 ms)
+concurrent	x86_64	ordering			PASS	ordering.corr	forbidden outcome 0/500000 times (359 ms)
+concurrent	x86_64	ordering			PASS	ordering.mp_stream	forbidden outcome 0/5000000 times (99 ms)
+concurrent	x86_64	ordering			PASS	ordering.mp_stream_fenced	forbidden outcome 0/5000000 times (232 ms)
+concurrent	x86_64	ordering			PASS	ordering.lock	0 of 2000000 increments lost (60 ms)
+concurrent	x86_64	ordering			PASS	ordering.lock_fenced	0 of 2000000 increments lost (255 ms)
+concurrent	x86_64	ordering			PASS	ordering.atomic	0 of 2000000 increments lost (39 ms)
+concurrent	x86_64	ordering			INFO	ordering.calibration.overlap	sb store-buffering outcomes 2680: threads do overlap
+concurrent	x86_64	d3d9			INFO	d3d9.env	build=x86_64 wow64_process=none native=amd64 wine=9.0 host=Linux 6.18.44-fc-v310
+concurrent	x86_64	d3d9			PASS	d3d9.create	Direct3DCreate9 ok
+concurrent	x86_64	d3d9			PASS	d3d9.adapters	1 adapter(s)
+concurrent	x86_64	d3d9			INFO	d3d9.adapter0	0: NVIDIA GeForce GTX 470 (driver nvd3dum.dll, vendor 10de device 06cd), 1 X8R8G8B8 modes, current 1280x1024@60
+concurrent	x86_64	d3d9			PASS	d3d9.display_modes	1 X8R8G8B8 modes, current 1280x1024
+concurrent	x86_64	d3d9			PASS	d3d9.caps	HAL: VS 3.0 PS 3.0, max texture 16384x16384, 8 texture stages, 16 streams, 4 RTs
+concurrent	x86_64	d3d9			PASS	d3d9.formats	CheckDeviceFormat: all of A8R8G8B8 texture/RT, D24S8, DXT1, DXT5 supported
+concurrent	x86_64	d3d9			PASS	d3d9.create_ex	Direct3DCreate9Ex 00000000
+concurrent	x86_64	d3d9			PASS	d3d9.device	CreateDevice(HAL) 00000000
+concurrent	x86_64	d3d9			PASS	d3d9.clear	64x64 pixels exact, Clear -> GetRenderTargetData
+concurrent	x86_64	d3d9			PASS	d3d9.draw	64x64 pixels exact, fixed-function XYZRHW quad
+concurrent	x86_64	d3d9			INFO	d3d9.device_release	final Release returned 0
+concurrent	x86_64	d3d11			INFO	d3d11.env	build=x86_64 wow64_process=none native=amd64 wine=9.0 host=Linux 6.18.44-fc-v310
+concurrent	x86_64	d3d11			PASS	d3d11.device	D3D11CreateDevice 00000000, feature level 11_1
+concurrent	x86_64	d3d11			INFO	d3d11.adapter	NVIDIA GeForce GTX 470 (vendor 10de device 06cd), feature level 11_1
+concurrent	x86_64	d3d11			PASS	d3d11.render_target	64x64 RGBA8 render target created
+concurrent	x86_64	d3d11			PASS	d3d11.clear	64x64 pixels exact
+concurrent	x86_64	d3d11			PASS	d3d11.draw_fullscreen	64x64 pixels exact, SV_VertexID triangle + SV_Position shading
+concurrent	x86_64	d3d11			PASS	d3d11.draw_vb_cb	64x64 pixels exact, vertex-buffer quad over the fullscreen pass
+concurrent	x86_64	d3d11			PASS	d3d11.update_subresource	64x64 pixels exact
+concurrent	x86_64	d3d11			PASS	d3d11.copy_region	64x64 pixels exact, 16x16 box from the render target into an initialised texture
+concurrent	x86_64	d3d11			PASS	d3d11.copy_resource	64x64 pixels exact
+concurrent	x86_64	d3d11			PASS	d3d11.buffer_copy	1 KiB..3 KiB slice of an initialised buffer copied to staging: 0 words wrong
+concurrent	x86_64	d3d11			INFO	d3d11.device_release	final Release returned 0
+concurrent	x86_64	d3d12			INFO	d3d12.env	build=x86_64 wow64_process=none native=amd64 wine=9.0 host=Linux 6.18.44-fc-v310
+concurrent	x86_64	d3d12			PASS	d3d12.device	D3D12CreateDevice(11_0) 00000000
+concurrent	x86_64	d3d12			INFO	d3d12.adapter	NVIDIA GeForce GTX 470, max feature level 11_1
+concurrent	x86_64	d3d12			PASS	d3d12.queues	direct + copy queues, lists and a fence created
+concurrent	x86_64	d3d12			PASS	d3d12.fence.cpu_signal	CPU Signal(5): completed value 5, event set
+concurrent	x86_64	d3d12			PASS	d3d12.fence.queue_signal	queue Signal(10) reached 10
+concurrent	x86_64	d3d12			PASS	d3d12.fence.queue_waits_cpu	queue Wait on a CPU-signalled fence: held before the signal, released after
+concurrent	x86_64	d3d12			PASS	d3d12.fence.many_signals	200 queued signals: completed 300
+concurrent	x86_64	d3d12			PASS	d3d12.clear	64x64 pixels exact, ClearRenderTargetView -> CopyTextureRegion -> readback heap
+concurrent	x86_64	d3d12			PASS	d3d12.draw_fullscreen	64x64 pixels exact, SV_VertexID triangle, PSO + root signature
+concurrent	x86_64	d3d12			PASS	d3d12.draw_vb_cbv	64x64 pixels exact, vertex-buffer quad, colour from a root CBV
+concurrent	x86_64	d3d12			PASS	d3d12.copy_queue	64x64 pixels exact, upload on the COPY queue, read on DIRECT after a cross-queue fence wait
+concurrent	x86_64	d3d12			PASS	d3d12.copy_queue.buffers	upload -> default -> readback buffer copies on the COPY queue: 0 of 1024 texels wrong
+concurrent	x86_64	d3d12			INFO	d3d12.device_release	final Release returned 0
+concurrent	x86_64	opengl			INFO	opengl.env	build=x86_64 wow64_process=none native=amd64 wine=9.0 host=Linux 6.18.44-fc-v310
+concurrent	x86_64	opengl			PASS	opengl.context	window 0000000000070064, pixel format 3, context 0000000000011000
+concurrent	x86_64	opengl			INFO	opengl.renderer	Mesa | llvmpipe (LLVM 20.1.2, 256 bits) | 4.5 (Compatibility Profile) Mesa 25.2.8-0ubuntu0.24.04.4
+concurrent	x86_64	opengl			PASS	opengl.entry_points	0 of the GL 2.0/3.0 functions missing from wglGetProcAddress
+concurrent	x86_64	opengl			PASS	opengl.fbo	64x64 RGBA8 framebuffer object status 8cd5
+concurrent	x86_64	opengl			PASS	opengl.clear	64x64 pixels exact, glClear -> glReadPixels
+concurrent	x86_64	opengl			PASS	opengl.draw_fixed	64x64 pixels exact, immediate-mode quad
+concurrent	x86_64	opengl			PASS	opengl.glsl_build	GLSL 1.10 program linked
+concurrent	x86_64	opengl			PASS	opengl.draw_glsl	64x64 pixels exact, fullscreen GLSL pass
+concurrent	x86_64	opengl			PASS	opengl.gl_error	glGetError after all draws: 0000
+concurrent	x86_64	vulkan			INFO	vulkan.env	build=x86_64 wow64_process=none native=amd64 wine=9.0 host=Linux 6.18.44-fc-v310
+concurrent	x86_64	vulkan			PASS	vulkan.instance	vkCreateInstance: 0
+concurrent	x86_64	vulkan			PASS	vulkan.entry_points	0 functions missing from vkGetInstanceProcAddr
+concurrent	x86_64	vulkan			PASS	vulkan.physical_device	1 physical device(s)
+concurrent	x86_64	vulkan			INFO	vulkan.device	llvmpipe (LLVM 20.1.2, 256 bits), Vulkan 1.4.318, driver 06402008, vendor 10005
+concurrent	x86_64	vulkan			PASS	vulkan.device	graphics queue family 0, vkCreateDevice: 0
+concurrent	x86_64	vulkan			PASS	vulkan.clear	64x64 pixels exact, vkCmdClearColorImage -> vkCmdCopyImageToBuffer
+concurrent	x86_64	vulkan			PASS	vulkan.copy_region	64x64 pixels exact, buffer -> 32x32 image region with row length, then image -> buffer
+concurrent	x86_64	vulkan			PASS	vulkan.fill_copy_buffer	vkCmdFillBuffer x2 + vkCmdCopyBuffer at offsets: 0 of 1024 words wrong
+concurrent	x86_64	vulkan			PASS	vulkan.fence_reuse	50 fill + submit + wait cycles on one fence: 0 saw stale data
+concurrent	x86_64	vulkan			PASS	vulkan.teardown	device and instance destroyed
+concurrent	i686	threads			INFO	threads.env	build=i686 wow64_process=i386 native=amd64 wine=9.0 host=Linux 6.18.44-fc-v310
+concurrent	i686	threads			PASS	threads.tls.static_and_dynamic	32/32 threads kept their own static and TlsAlloc values (expansion slot 64)
+concurrent	i686	threads			PASS	threads.tls.expansion_slots	TlsAlloc beyond 64 slots gave index 64
+concurrent	i686	threads			PASS	threads.tls.fls_callback	FLS destructor ran 32 times for 32 exited threads
+concurrent	i686	threads			PASS	threads.tls.image_callback	TLS directory callback ran DLL_THREAD_ATTACH in 32 of 32 new threads
+concurrent	i686	threads			PASS	threads.locks.counters	critical section 800000, SRW 800000, Interlocked 800000 (want 800000 each)
+concurrent	i686	threads			PASS	threads.locks.condvar	consumed sum 200010000 (want 200010000), in order 1
+concurrent	i686	threads			PASS	threads.apc.sleepex	wait returned 192 (want WAIT_IO_COMPLETION=192), 1 APCs ran on the target thread in order 'a' (want 'a')
+concurrent	i686	threads			PASS	threads.apc.wait_ex	wait returned 192 (want WAIT_IO_COMPLETION=192), 1 APCs ran on the target thread in order 'a' (want 'a')
+concurrent	i686	threads			PASS	threads.apc.nonalertable	wait returned 192 (want WAIT_IO_COMPLETION=192), 5 APCs ran on the target thread in order 'abcde' (want 'abcde'), none during the non-alertable wait
+concurrent	i686	threads			PASS	threads.apc.self	ran before the alertable wait=0, SleepEx(0, TRUE)=192, ran=1
+concurrent	i686	threads			PASS	threads.apc.timer	periodic waitable-timer completion routine ran 3 times in 41 ms
+concurrent	i686	threads			PASS	threads.spawn	500 short threads, 0 wrong exit codes, 263 ms
+concurrent	i686	seh			INFO	seh.env	build=i686 wow64_process=i386 native=amd64 wine=9.0 host=Linux 6.18.44-fc-v310
+concurrent	i686	seh			PASS	seh.av_read	code=c0000005 info=[0, 00E30123] want [0, 00E30123], ExceptionAddress=00402610 context pc=00402610 sp=0059FE10
+concurrent	i686	seh			PASS	seh.av_write	code=c0000005 info=[1, 00E30456] want [1, 00E30456], ExceptionAddress=00402620 context pc=00402620 sp=0059FE10
+concurrent	i686	seh			PASS	seh.av_null_read	code=c0000005 info=[0, 00000000] want [0, 00000000], ExceptionAddress=00402610 context pc=00402610 sp=0059FE10
+concurrent	i686	seh			PASS	seh.av_exec_noaccess	code=c0000005 info=[8, 00E30200] want [8, 00E30200], ExceptionAddress=00E30200 context pc=00E30200 sp=0059FE10
+concurrent	i686	seh			PASS	seh.div0	caught=1 code=c0000094 (want c0000094) address=00402706 pc=00402706
+concurrent	i686	seh			PASS	seh.breakpoint	caught=1 code=80000003
+concurrent	i686	seh			PASS	seh.nested_search	order inner-filter,outer-filter,finally-abnormal,outer-handler (want inner-filter,outer-filter,finally-abnormal,outer-handler)
+concurrent	i686	seh			PASS	seh.nested_rethrow	order inner-caught,outer-filter,outer-handler (want inner-caught,outer-filter,outer-handler)
+concurrent	i686	seh			PASS	seh.finally_normal	order body,finally-normal,
+concurrent	i686	seh			PASS	seh.raise_frames	caught=1 code=e0c0ffee params=3 [1234 ffffffff c0ffee] finally order 8a,6a,4a, (want 8a,6a,4a,)
+concurrent	i686	seh			PASS	seh.raise_continue	caught=0 resumed=1
+concurrent	i686	seh			PASS	seh.veh_fixup	frame handler reached=0, handler calls=1 (want 1), stores landed=1
+concurrent	i686	seh			PASS	seh.veh_order	first-registered handler ran first=1, then frame handler caught=1
+concurrent	i686	seh			PASS	seh.cxx_throw	caught value 42 (want 42), destructors run 9 (want 9)
+concurrent	i686	seh			PASS	seh.stack_overflow	caught code=c00000fd (want c00000fd), thread wait=0 exit=00000000
+concurrent	i686	callbacks			INFO	callbacks.env	build=i686 wow64_process=i386 native=amd64 wine=9.0 host=Linux 6.18.44-fc-v310
+concurrent	i686	callbacks			PASS	callbacks.wndproc.create	CreateWindow ok, WM_CREATE seen 1 times
+concurrent	i686	callbacks			PASS	callbacks.wndproc.send	SendMessage returned 37 (want 37)
+concurrent	i686	callbacks			PASS	callbacks.wndproc.cross_thread	cross-thread SendMessage returned 17 (want 17), procedure ran on the window's thread
+concurrent	i686	callbacks			PASS	callbacks.wndproc.subclass	subclassed SendMessage returned 1040 (want 1040)
+concurrent	i686	callbacks			PASS	callbacks.enum_windows	EnumWindows returned 1 after 11 callbacks; our 4 windows seen 1/1/1/1 times
+concurrent	i686	callbacks			PASS	callbacks.enum_windows_stop	callback returning FALSE: EnumWindows returned 0 after 2 calls (want 0 after 2)
+concurrent	i686	callbacks			PASS	callbacks.enum_child_windows	EnumChildWindows saw 4 children, ours 1/1/1/1
+concurrent	i686	callbacks			PASS	callbacks.set_timer	TIMERPROC ran 6 times in 66 ms, 0 with wrong arguments
+concurrent	i686	callbacks			PASS	callbacks.hook	WH_CALLWNDPROC hook saw 3 of 3 messages
+concurrent	i686	callbacks			PASS	callbacks.timer_queue	timer-queue callback ran 5 times, 0 with wrong arguments
+concurrent	i686	callbacks			PASS	callbacks.threadpool_work	100 work items summed to 5050 (want 5050)
+concurrent	i686	callbacks			PASS	callbacks.registered_wait	RegisterWaitForSingleObject callback ran 3 of 3 times
+concurrent	i686	callbacks			PASS	callbacks.qsort	CRT qsort with a program comparator sorted correctly
+concurrent	i686	callbacks			PASS	callbacks.enum_fonts	EnumFontFamiliesEx callback ran 471 times, 0 with bad arguments
+concurrent	i686	memory			INFO	memory.env	build=i686 wow64_process=i386 native=amd64 wine=9.0 host=Linux 6.18.44-fc-v310
+concurrent	i686	memory			PASS	memory.sysinfo	page size 4096, allocation granularity 65536
+concurrent	i686	memory			PASS	memory.alloc_granularity	0 of 20 reservations not 64K-aligned (or failed)
+concurrent	i686	memory			PASS	memory.commit_zeroed	fresh commit reads zero
+concurrent	i686	memory			PASS	memory.protect_4k.set	VirtualProtect on single 4K pages ok (0)
+concurrent	i686	memory			PASS	memory.protect_4k.access	each 4K page faults exactly per its own protection
+concurrent	i686	memory			PASS	memory.protect_4k.query	VirtualQuery reports 4K-granular regions
+concurrent	i686	memory			PASS	memory.protect_4k.contents	after protect/unprotect every page kept its data (0 bytes wrong)
+concurrent	i686	memory			PASS	memory.guard_page.read	neighbours 00000000/00000000, first touch 80000001 at +107b (want 80000001 at +107b), second touch 00000000, then unguarded
+concurrent	i686	memory			PASS	memory.guard_page.write	write: first 80000001, second 00000000
+concurrent	i686	memory			PASS	memory.reserve_commit.single_page	reserved c0000005, commit one 4K page ok, it 00000000, neighbours c0000005/c0000005, states 2000/1000(size 1000)/2000
+concurrent	i686	memory			PASS	memory.reserve_commit.decommit	decommitted page faults (c0000005) and recommits zeroed (00)
+concurrent	i686	memory			PASS	memory.write_watch	written pages 1,2,7,13,30,63; reported [1,2,7,13,30,63] at granularity 4096; after reset 0
+concurrent	i686	memory			PASS	memory.placeholder.reserve	VirtualAlloc2(MEM_RESERVE_PLACEHOLDER) ok (0)
+concurrent	i686	memory			PASS	memory.placeholder.split	VirtualFree(MEM_PRESERVE_PLACEHOLDER) split it (0)
+concurrent	i686	memory			PASS	memory.placeholder.replace_alloc	VirtualAlloc2(MEM_REPLACE_PLACEHOLDER) committed into the placeholder
+concurrent	i686	memory			PASS	memory.placeholder.map_view	MapViewOfFile3 into the placeholder aliases a second view
+concurrent	i686	memory			PASS	memory.placeholder.unmap_preserve	after UnmapViewOfFile2(MEM_PRESERVE_PLACEHOLDER) the range is a placeholder again
+concurrent	i686	memory			PASS	memory.section_alias	two views of one section see each other's writes (0 mismatches)
+concurrent	i686	memory			PASS	memory.smc.wx_cycle	2000 rewrites through RW -> RX + FlushInstructionCache, 0 stale results
+concurrent	i686	memory			PASS	memory.smc.rwx_flush	5000 in-place rewrites of RWX code with FlushInstructionCache, 0 stale results
+concurrent	i686	memory			PASS	memory.smc.rwx_noflush	5000 immediate patches without a flush (legal on x86), 0 stale results
+concurrent	i686	memory			PASS	memory.smc.same_page_data	20000 data writes next to live code, 0 wrong results
+concurrent	i686	memory			PASS	memory.smc.realloc	200 release/reallocate cycles at one address (0 moved), 0 stale results
+concurrent	i686	memory			PASS	memory.smc.neighbor_page	RX code page next to a hot RW page: 0 wrong results, write to the RX page c0000005
+concurrent	i686	memory			PASS	memory.smc.cross_thread	500 rewrites on one thread, run on another: 0 stale results (last 71f3)
+concurrent	i686	memory			PASS	memory.big_alloc	reserve 512 MB, commit and touch 128 MB at its end: ok, 0 bad pages
+concurrent	i686	ordering			INFO	ordering.env	build=i686 wow64_process=i386 native=amd64 wine=9.0 host=Linux 6.18.44-fc-v310
+concurrent	i686	ordering			INFO	ordering.config	iterations 500000, x86 code, FEX_HARDWARE_TSO=(unset)
+concurrent	i686	ordering			PASS	ordering.mp	forbidden outcome 0/500000 times (360 ms)
+concurrent	i686	ordering			PASS	ordering.mp_fenced	forbidden outcome 0/500000 times (402 ms)
+concurrent	i686	ordering			PASS	ordering.lb	forbidden outcome 0/500000 times (327 ms)
+concurrent	i686	ordering			PASS	ordering.lb_fenced	forbidden outcome 0/500000 times (357 ms)
+concurrent	i686	ordering			PASS	ordering.iriw	forbidden outcome 0/500000 times (21564 ms)
+concurrent	i686	ordering			PASS	ordering.iriw_fenced	forbidden outcome 0/500000 times (1800 ms)
+concurrent	i686	ordering			INFO	ordering.sb	weak outcome 1319/500000 times (454 ms); allowed by TSO and by ARM (store buffering)
+concurrent	i686	ordering			PASS	ordering.sb_fenced	forbidden outcome 0/500000 times (350 ms)
+concurrent	i686	ordering			PASS	ordering.corr	forbidden outcome 0/500000 times (313 ms)
+concurrent	i686	ordering			PASS	ordering.mp_stream	forbidden outcome 0/5000000 times (97 ms)
+concurrent	i686	ordering			PASS	ordering.mp_stream_fenced	forbidden outcome 0/5000000 times (251 ms)
+concurrent	i686	ordering			PASS	ordering.lock	0 of 2000000 increments lost (135 ms)
+concurrent	i686	ordering			PASS	ordering.lock_fenced	0 of 2000000 increments lost (170 ms)
+concurrent	i686	ordering			PASS	ordering.atomic	0 of 2000000 increments lost (16 ms)
+concurrent	i686	ordering			INFO	ordering.calibration.overlap	sb store-buffering outcomes 1319: threads do overlap
+concurrent	i686	d3d9			INFO	d3d9.env	build=i686 wow64_process=i386 native=amd64 wine=9.0 host=Linux 6.18.44-fc-v310
+concurrent	i686	d3d9			PASS	d3d9.create	Direct3DCreate9 ok
+concurrent	i686	d3d9			PASS	d3d9.adapters	1 adapter(s)
+concurrent	i686	d3d9			INFO	d3d9.adapter0	0: NVIDIA GeForce GTX 470 (driver nvd3dum.dll, vendor 10de device 06cd), 1 X8R8G8B8 modes, current 1280x1024@60
+concurrent	i686	d3d9			PASS	d3d9.display_modes	1 X8R8G8B8 modes, current 1280x1024
+concurrent	i686	d3d9			PASS	d3d9.caps	HAL: VS 3.0 PS 3.0, max texture 16384x16384, 8 texture stages, 16 streams, 4 RTs
+concurrent	i686	d3d9			PASS	d3d9.formats	CheckDeviceFormat: all of A8R8G8B8 texture/RT, D24S8, DXT1, DXT5 supported
+concurrent	i686	d3d9			PASS	d3d9.create_ex	Direct3DCreate9Ex 00000000
+concurrent	i686	d3d9			PASS	d3d9.device	CreateDevice(HAL) 00000000
+concurrent	i686	d3d9			PASS	d3d9.clear	64x64 pixels exact, Clear -> GetRenderTargetData
+concurrent	i686	d3d9			PASS	d3d9.draw	64x64 pixels exact, fixed-function XYZRHW quad
+concurrent	i686	d3d9			INFO	d3d9.device_release	final Release returned 0
+concurrent	i686	d3d11			INFO	d3d11.env	build=i686 wow64_process=i386 native=amd64 wine=9.0 host=Linux 6.18.44-fc-v310
+concurrent	i686	d3d11			PASS	d3d11.device	D3D11CreateDevice 00000000, feature level 11_1
+concurrent	i686	d3d11			INFO	d3d11.adapter	NVIDIA GeForce GTX 470 (vendor 10de device 06cd), feature level 11_1
+concurrent	i686	d3d11			PASS	d3d11.render_target	64x64 RGBA8 render target created
+concurrent	i686	d3d11			PASS	d3d11.clear	64x64 pixels exact
+concurrent	i686	d3d11			PASS	d3d11.draw_fullscreen	64x64 pixels exact, SV_VertexID triangle + SV_Position shading
+concurrent	i686	d3d11			PASS	d3d11.draw_vb_cb	64x64 pixels exact, vertex-buffer quad over the fullscreen pass
+concurrent	i686	d3d11			PASS	d3d11.update_subresource	64x64 pixels exact
+concurrent	i686	d3d11			PASS	d3d11.copy_region	64x64 pixels exact, 16x16 box from the render target into an initialised texture
+concurrent	i686	d3d11			PASS	d3d11.copy_resource	64x64 pixels exact
+concurrent	i686	d3d11			PASS	d3d11.buffer_copy	1 KiB..3 KiB slice of an initialised buffer copied to staging: 0 words wrong
+concurrent	i686	d3d11			INFO	d3d11.device_release	final Release returned 0
+concurrent	i686	d3d12			INFO	d3d12.env	build=i686 wow64_process=i386 native=amd64 wine=9.0 host=Linux 6.18.44-fc-v310
+concurrent	i686	d3d12			PASS	d3d12.device	D3D12CreateDevice(11_0) 00000000
+concurrent	i686	d3d12			INFO	d3d12.adapter	NVIDIA GeForce GTX 470, max feature level 11_1
+concurrent	i686	d3d12			PASS	d3d12.queues	direct + copy queues, lists and a fence created
+concurrent	i686	d3d12			PASS	d3d12.fence.cpu_signal	CPU Signal(5): completed value 5, event set
+concurrent	i686	d3d12			PASS	d3d12.fence.queue_signal	queue Signal(10) reached 10
+concurrent	i686	d3d12			PASS	d3d12.fence.queue_waits_cpu	queue Wait on a CPU-signalled fence: held before the signal, released after
+concurrent	i686	d3d12			PASS	d3d12.fence.many_signals	200 queued signals: completed 300
+concurrent	i686	d3d12			PASS	d3d12.clear	64x64 pixels exact, ClearRenderTargetView -> CopyTextureRegion -> readback heap
+concurrent	i686	d3d12			PASS	d3d12.draw_fullscreen	64x64 pixels exact, SV_VertexID triangle, PSO + root signature
+concurrent	i686	d3d12			PASS	d3d12.draw_vb_cbv	64x64 pixels exact, vertex-buffer quad, colour from a root CBV
+concurrent	i686	d3d12			PASS	d3d12.copy_queue	64x64 pixels exact, upload on the COPY queue, read on DIRECT after a cross-queue fence wait
+concurrent	i686	d3d12			PASS	d3d12.copy_queue.buffers	upload -> default -> readback buffer copies on the COPY queue: 0 of 1024 texels wrong
+concurrent	i686	d3d12			INFO	d3d12.device_release	final Release returned 0
+concurrent	i686	opengl			INFO	opengl.env	build=i686 wow64_process=i386 native=amd64 wine=9.0 host=Linux 6.18.44-fc-v310
+concurrent	i686	opengl			PASS	opengl.context	window 0007005C, pixel format 3, context 00011000
+concurrent	i686	opengl			INFO	opengl.renderer	Mesa | llvmpipe (LLVM 20.1.2, 256 bits) | 4.5 (Compatibility Profile) Mesa 25.2.8-0ubuntu0.24.04.4
+concurrent	i686	opengl			PASS	opengl.entry_points	0 of the GL 2.0/3.0 functions missing from wglGetProcAddress
+concurrent	i686	opengl			PASS	opengl.fbo	64x64 RGBA8 framebuffer object status 8cd5
+concurrent	i686	opengl			PASS	opengl.clear	64x64 pixels exact, glClear -> glReadPixels
+concurrent	i686	opengl			PASS	opengl.draw_fixed	64x64 pixels exact, immediate-mode quad
+concurrent	i686	opengl			PASS	opengl.glsl_build	GLSL 1.10 program linked
+concurrent	i686	opengl			PASS	opengl.draw_glsl	64x64 pixels exact, fullscreen GLSL pass
+concurrent	i686	opengl			PASS	opengl.gl_error	glGetError after all draws: 0000
+concurrent	i686	vulkan			INFO	vulkan.env	build=i686 wow64_process=i386 native=amd64 wine=9.0 host=Linux 6.18.44-fc-v310
+concurrent	i686	vulkan			PASS	vulkan.instance	vkCreateInstance: 0
+concurrent	i686	vulkan			PASS	vulkan.entry_points	0 functions missing from vkGetInstanceProcAddr
+concurrent	i686	vulkan			PASS	vulkan.physical_device	1 physical device(s)
+concurrent	i686	vulkan			INFO	vulkan.device	llvmpipe (LLVM 20.1.2, 256 bits), Vulkan 1.4.318, driver 06402008, vendor 10005
+concurrent	i686	vulkan			PASS	vulkan.device	graphics queue family 0, vkCreateDevice: 0
+concurrent	i686	vulkan			PASS	vulkan.clear	64x64 pixels exact, vkCmdClearColorImage -> vkCmdCopyImageToBuffer
+concurrent	i686	vulkan			PASS	vulkan.copy_region	64x64 pixels exact, buffer -> 32x32 image region with row length, then image -> buffer
+concurrent	i686	vulkan			PASS	vulkan.fill_copy_buffer	vkCmdFillBuffer x2 + vkCmdCopyBuffer at offsets: 0 of 1024 words wrong
+concurrent	i686	vulkan			PASS	vulkan.fence_reuse	50 fill + submit + wait cycles on one fence: 0 saw stale data
+concurrent	i686	vulkan			PASS	vulkan.teardown	device and instance destroyed
+concurrent	-	server			PASS	server.one_lifetime	the sentinel (x86_64) held one wineserver for every concurrent run
+concurrent	-	server			PASS	server.sentinel_stop	sentinel saw C:\ladder-stop and exited
+shutdown	-	shutdown			PASS	shutdown.graceful	wineserver -w returned after 2s: no process outlived the ladder
+shutdown	-	shutdown			PASS	shutdown.kill	wineserver -k: server socket gone, no ladder process left

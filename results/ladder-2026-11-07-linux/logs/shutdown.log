@@ -1,0 +1,3 @@
+LADDER	PASS	shutdown.graceful	wineserver -w returned after 2s: no process outlived the ladder
+LADDER	PASS	shutdown.kill	wineserver -k: server socket gone, no ladder process left
+LADDER	DONE	shutdown	pass=2 fail=0 skip=0 info=0
