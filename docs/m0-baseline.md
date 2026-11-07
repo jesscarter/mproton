@@ -70,6 +70,11 @@ athei/mach9's loader refuses to start without `com.apple.developer.cross-archite
 - **CrossOver Preview** (ARM64 + FEX) is only available to holders of a paid CrossOver license, so we aren't using it.
 - **Full Xcode** (not just the Command Line Tools) is needed for the Metal toolchain (`xcrun metal`, used for DXMT's shaders) and for managing the profile.
 
+**Free Personal Team: tested 2026-11-07, doesn't work.** `signing/profile-stub/` is a stub Xcode project whose only purpose is to get a profile from Xcode's automatic signing. Results:
+- `com.apple.developer.cross-architecture-support-unmanaged`: "not found … likely is not a valid entitlement". The `-unmanaged` name from the wine-devel post doesn't exist.
+- `com.apple.developer.cross-architecture-support`: "Personal development teams … do not support the Cross-architecture Compatibility Framework capability". Xcode's name for this capability is **Cross-architecture Compatibility Framework**.
+- So a paid membership is required (or SIP disabled, which we're not doing). Once the paid team is active, the same stub project should work. Pick the paid team in Signing & Capabilities and click Try Again; Xcode then creates a Mac App Development profile for this Mac, which is enough to run locally. A Developer ID profile is only needed for distribution.
+
 ### ARM64 build from source (in progress)
 
 athei/mach9 checks out its sources into `work/mach9/` (gitignored):

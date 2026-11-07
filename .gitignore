@@ -6,3 +6,6 @@ bench/out/
 work/
 __pycache__/
 .pytest_cache/
+signing/profile-stub/build/
+xcuserdata/
+*.xcworkspace/xcuserdata/
