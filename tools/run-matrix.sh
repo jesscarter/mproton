@@ -24,7 +24,10 @@
 #               tree is flagged as a backend mismatch. Rosetta has no compatdb: wined3d only.
 #
 # Every runtime gets a fresh prefix. Every run has a timeout; a crash, a timeout or missing JSON
-# is recorded (a stub JSON with a "run" object) and the matrix carries on.
+# is recorded (a stub JSON with a "run" object) and the matrix carries on. Scenes mpbench skips
+# because their API's DLL is missing on that tree (e.g. no d3d12.dll in wined3d) are not
+# failures: summary.md lists them under "Not available on this backend" and the tables show
+# "n/a: <reason>".
 #
 # Environment:
 #   MATRIX_RUNTIMES  default "rosetta arm64-tso1 arm64-tso0"
@@ -76,7 +79,7 @@ mkdir -p "$out/logs" "$prefixes"
 work=$(mktemp -d "${TMPDIR:-/tmp}/run-matrix.XXXXXX")
 trap 'rm -rf "$work"' EXIT
 tsv="$out/matrix.tsv"
-printf 'file\truntime\tarch\tpart\tstatus\texit\tseconds\tresults\tordering_errors\tbackend\n' >"$tsv"
+printf 'file\truntime\tarch\tpart\tstatus\texit\tseconds\tresults\tordering_errors\tbackend\tnot_available\n' >"$tsv"
 
 # run_limited SECS LOG CMD...: run CMD (stdin from /dev/null, output to LOG), stop it after
 # SECS. Sets rc and timed_out. macOS has no timeout(1) by default.
@@ -142,7 +145,7 @@ stop_wineserver() {   # stop_wineserver kill|wait
 }
 
 skip() {   # skip RUNTIME ARCH PART REASON
-    printf '%s\t%s\t%s\t%s\tskipped: %s\t\t\t\t\t\n' "-" "$1" "$2" "$3" "$4" >>"$tsv"
+    printf '%s\t%s\t%s\t%s\tskipped: %s\t\t\t\t\t\t\n' "-" "$1" "$2" "$3" "$4" >>"$tsv"
     echo "   skip $1 $2 $3: $4"
 }
 
@@ -211,8 +214,9 @@ for rt in $runtimes; do
                 --seconds "$secs" --log "$log" --runtime "$rt" --arch "$arch" --part "$part" \
                 --note "$note" ${want:+--want-dxgi "$want"})
             echo "$line" >>"$tsv"
-            echo "$line" | awk -F'\t' '{ printf "%s (exit %s, %ss, %s results%s%s)\n", $5, $6, $7, $8,
-                ($9 != "" && $9 != "0") ? ", " $9 " ORDERING ERRORS" : "", ($10 != "") ? ", backend " $10 : "" }'
+            echo "$line" | awk -F'\t' '{ printf "%s (exit %s, %ss, %s results%s%s%s)\n", $5, $6, $7, $8,
+                ($9 != "" && $9 != "0") ? ", " $9 " ORDERING ERRORS" : "", ($10 != "") ? ", backend " $10 : "",
+                ($11 != "") ? ", not available: " $11 : "" }'
         done
     done
     stop_wineserver kill
@@ -258,6 +262,15 @@ compare() {   # compare TITLE FILE... : a highlighted table, or nothing if no fi
     if [ -n "$problems" ]; then echo "$problems"; else echo "None at the run level. Scene-level flags are under each table."; fi
     skipped=$(awk -F'\t' 'NR > 1 && $5 ~ /^skipped/ { printf "- %s %s %s: %s\n", $2, $3, $4, substr($5, 10) }' "$tsv")
     if [ -n "$skipped" ]; then echo; echo "Not run:"; echo; echo "$skipped"; fi
+    na=$(awk -F'\t' 'NR > 1 && $11 != "" { printf "- %s: %s\n", $1, $11 }' "$tsv")
+    if [ -n "$na" ]; then
+        echo
+        echo "## Not available on this backend"
+        echo
+        echo "mpbench skipped these APIs because a DLL or entry point is missing on that tree. Not failures; the tables show them as n/a."
+        echo
+        echo "$na"
+    fi
     echo
     for arch in $archs; do
         cpu_files="" gpu_files=""

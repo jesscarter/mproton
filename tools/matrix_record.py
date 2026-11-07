@@ -11,7 +11,12 @@ object; ok with no JSON becomes "no-json", and a crash with JSON keeps its resul
 --want-dxgi checks the compatdb.so block that mpbench's own process wrote to the log
 ("compatdb: mpbench-x86_64.exe [x86_64 (arm64ec)]" then "compatdb: dxgi = dxmt (from ...)"):
 the run is marked "confirmed", or "mismatch" with the tree it actually got, or "unchecked"
-when the log has no compatdb block for mpbench. Standard library only.
+when the log has no compatdb block for mpbench.
+
+Scenes mpbench reported as skipped ("unit": "skipped", e.g. "d3d12.dll not available" on a
+Direct3D tree without d3d12.dll) are not failures: they are listed in run["not_available"]
+and in the last matrix.tsv column ("gpu12: d3d12.dll not available"), which run-matrix.sh
+puts under "Not available on this backend" in summary.md. Standard library only.
 """
 import argparse
 import json
@@ -40,6 +45,18 @@ def compatdb_dxgi(log):
     except OSError:
         pass
     return got, arch
+
+
+def not_available(results):
+    """{api prefix: reason} for skipped scenes, e.g. {"gpu12": "d3d12.dll not available"}."""
+    out = {}
+    for r in results:
+        if r.get("unit") == "skipped":
+            api = r.get("name", "?").split(".")[0]
+            reason = str(r.get("skipped") or "not available")
+            if reason not in out.setdefault(api, []):
+                out[api].append(reason)
+    return {api: "; ".join(reasons) for api, reasons in out.items()}
 
 
 def main():
@@ -73,6 +90,9 @@ def main():
         got, arch = compatdb_dxgi(a.log)
         check = "unchecked" if got is None else ("confirmed" if got == a.want_dxgi else "mismatch")
         run["backend"] = {"want": a.want_dxgi, "got": got, "check": check, "compatdb_arch": arch}
+    na = not_available(data.get("results", []))
+    if na:
+        run["not_available"] = na
     data["run"] = run
     with open(a.json, "w") as f:
         json.dump(data, f, indent=1)
@@ -81,8 +101,9 @@ def main():
     pingpong = next((r for r in data.get("results", []) if r.get("name") == "cpu.pingpong"), None)
     errors = pingpong.get("ordering_errors", "") if pingpong else ""
     backend = run.get("backend", {}).get("check", "")
+    na_text = "; ".join(f"{api}: {why}" for api, why in na.items()).replace("\t", " ")
     print("\t".join(str(x) for x in (os.path.basename(a.json), a.runtime, a.arch, a.part, status,
-                                      a.exit, a.seconds, len(data.get("results", [])), errors, backend)))
+                                      a.exit, a.seconds, len(data.get("results", [])), errors, backend, na_text)))
 
 
 if __name__ == "__main__":

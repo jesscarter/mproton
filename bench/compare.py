@@ -11,6 +11,8 @@ value's ratio to the first column. Version 1 files (gpu.* scene names) are read 
 FAIL cells, and scenes that ran in another column but not in this one ("not run"). Files written
 by run-matrix carry a "run" object (status crash/timeout/no-json, exit code, compatdb backend
 check); with --highlight it becomes a "run" row, and a "Flags" list follows the table.
+Scenes mpbench skipped because their API's DLL is missing ("unit": "skipped") show as
+"n/a: <reason>": not available on that backend, which is not a problem and is never flagged.
 Standard library only.
 """
 import argparse
@@ -82,6 +84,8 @@ def cell(name, r):
     """(text, numeric value or None) for one result row."""
     if r is None:
         return "–", None
+    if r.get("unit") == "skipped":
+        return "n/a: " + short(r.get("skipped", "not available"), 50), None
     if r.get("unit") == "error" or (r.get("ok") is False and "error" in r and not name.startswith("gpu12.features")):
         return "error: " + short(r.get("error", "?")), None
     if name.endswith(".device"):
@@ -152,7 +156,7 @@ def main():
         unit = ""
         for _, rows in loaded:
             r = rows.get(n)
-            if r and r.get("unit") not in (None, "", "error", "ok", "fl<11_0"):
+            if r and r.get("unit") not in (None, "", "error", "ok", "fl<11_0", "skipped"):
                 unit = UNITS.get(r["unit"], r["unit"])
                 break
         cells = [cell(n, rows.get(n)) for _, rows in loaded]
@@ -193,6 +197,8 @@ def main():
                     bits.append(f"{k} {data[k]}")
             if "frames" in data:
                 bits.append(f"{data['frames']} frames at {data.get('width')}x{data.get('height')}")
+            if data.get("present_mode", "default") != "default":
+                bits.append(f"--present-mode {data['present_mode']}")
             line = f"- **{label}**: `{path}` ({', '.join(bits)})"
             if data.get("note"):
                 line += f". {data['note']}"

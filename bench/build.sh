@@ -26,6 +26,6 @@ done
 
 for arch in $archs; do
     "$tc/$arch-w64-mingw32-clang++" -O2 -std=c++17 -static -Wall -Wno-missing-field-initializers \
-        -o "$here/out/mpbench-$arch.exe" "$here/mpbench.cpp" -ld3d11 -ld3d12 -ldxgi -ld3dcompiler
+        -o "$here/out/mpbench-$arch.exe" "$here/mpbench.cpp"
     echo "built out/mpbench-$arch.exe"
 done

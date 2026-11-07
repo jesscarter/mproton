@@ -3,7 +3,7 @@
 //
 // Usage: mpbench.exe [--out results.json] [--frames N] [--width W] [--height H]
 //                    [--api d3d11|d3d12|vk|all[,...]] [--scenes PREFIX[,PREFIX...]]
-//                    [--d3d12-shaders dxil|dxbc] [--note TEXT] [--no-gpu] [--no-cpu] [--list]
+//                    [--d3d12-shaders dxil|dxbc] [--present-mode MODE] [--note TEXT] [--no-gpu] [--no-cpu] [--list]
 //
 // --scenes takes scene names or prefixes ("cpu", "gpu12", "gpu12.features", "vk.fill").
 // --api restricts the GPU APIs; CPU scenes are unaffected (use --no-cpu or --scenes).
@@ -40,15 +40,34 @@
 //   not 5.1: the shaders use nothing 5.1-specific (no register spaces or descriptor arrays),
 //   D3D12 accepts 5.0 bytecode, and Wine 9's d3dcompiler cannot target 5.1 at all.
 //   Vulkan uses SPIR-V 1.0 from the same HLSL (dxc -spirv), also embedded.
-// Nothing beyond system DLLs is needed at runtime. vulkan-1.dll is loaded dynamically, so
-// D3D-only stacks still run, and the Vulkan declarations below are a minimal subset
-// copied from vulkan_core.h (build.sh checks them against the real header when present).
+// Nothing beyond system DLLs is needed at runtime. Every graphics DLL (d3d11, dxgi, d3d12,
+// d3dcompiler_47, vulkan-1) is loaded with LoadLibrary/GetProcAddress, so the exe starts on
+// any stack: when a DLL or entry point is missing, that API's scenes are reported as
+// {"unit": "skipped", "skipped": "d3d12.dll not available"} and the other APIs still run
+// (a Wine Direct3D tree without d3d12.dll used to stop the loader with c0000135).
+// The Vulkan declarations below are a minimal subset copied from vulkan_core.h (build.sh
+// checks them against the real header when present).
+//
+// Presentation: every presenting scene (gpu11.*, gpu12.drawcalls/fill, vk.*) records a
+// "present" object: sync interval / present mode, flags, swap effect, buffer count, whether
+// DXGI_FEATURE_PRESENT_ALLOW_TEARING is supported, the display refresh rate, the time spent
+// inside Present and the present-to-present interval stats, plus DXGI frame statistics when
+// the swap chain provides them. --present-mode changes the D3D11/D3D12 swap chain; it takes
+// comma-separated tokens (default "sync0,flip", i.e. Present(0, 0) on FLIP_DISCARD):
+//   sync0 | sync1                 Present sync interval
+//   tearing                       ALLOW_TEARING swap chain flag + DXGI_PRESENT_ALLOW_TEARING
+//                                 (needs sync0 and a flip model; dropped, and recorded, when
+//                                 the factory reports no support)
+//   flip | flip-sequential        DXGI_SWAP_EFFECT_FLIP_DISCARD / FLIP_SEQUENTIAL
+//   blit | blit-sequential        DXGI_SWAP_EFFECT_DISCARD / SEQUENTIAL (D3D11 only: D3D12
+//                                 has no blit model, so its present scenes are skipped)
+// Vulkan keeps its own choice (immediate > mailbox > fifo) and records it the same way.
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <d3d11.h>
 #include <d3d12.h>
-#include <dxgi1_4.h>
+#include <dxgi1_5.h>
 #include <d3dcompiler.h>
 #include <algorithm>
 #include <cmath>
@@ -57,6 +76,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <functional>
 #include <string>
 #include <vector>
 #include "mpbench_shaders.h"
@@ -98,6 +118,12 @@ static void report_error(const char *name, const std::string &why) {
     report(name, 0, "error", "\"ok\": false, \"error\": " + jstr(why));
 }
 
+static bool want(const char *scene);
+
+// An API whose DLL or entry point is missing: not an error, just "not available on this
+// stack". Reports the API's device row and every selected scene with the given prefix.
+static void report_skipped(const char *prefix, const std::string &why);
+
 static const char *k_scenes[] = {
     "cpu.scalar", "cpu.vector", "cpu.memcpy", "cpu.atomic", "cpu.pingpong",
     "gpu11.drawcalls", "gpu11.fill",
@@ -118,6 +144,13 @@ static bool want(const char *scene) {
     for (auto &f : g_filters)
         if (f == "all" || !strncmp(scene, f.c_str(), f.size())) return true;
     return false;
+}
+
+static void report_skipped(const char *prefix, const std::string &why) {
+    std::string extra = "\"skipped\": " + jstr(why);
+    report((std::string(prefix) + "device").c_str(), 0, "skipped", extra);
+    for (auto s : k_scenes)
+        if (!strncmp(s, prefix, strlen(prefix)) && want(s)) report(s, 0, "skipped", extra);
 }
 
 static std::vector<std::string> split(const char *s) {
@@ -206,10 +239,191 @@ static void cpu_pingpong() {
     report("cpu.pingpong", PP_ROUNDS / dt, "Krt/s", fmt("\"ordering_errors\": %d", (int)g_errors));
 }
 
+// COM pointer that releases on scope exit.
+template <class T> struct Com {
+    T *p = nullptr;
+    Com() = default; Com(const Com &) = delete; Com &operator=(const Com &) = delete;
+    ~Com() { if (p) p->Release(); }
+    T *operator->() const { return p; }
+    T **operator&() { return &p; }
+    operator T *() const { return p; }
+};
+
+static const int WARM_FRAMES = 30, DRAWS_PER_FRAME = 4000;
+
+// ---------------------------------------------------------------- optional DLLs
+//
+// Nothing graphics-related is imported: each API's DLLs are loaded on first use. An empty
+// string from need_*() means the API is usable; otherwise it is the reason to skip it.
+
+static PFN_D3D11_CREATE_DEVICE_AND_SWAP_CHAIN p_D3D11CreateDeviceAndSwapChain;
+static HRESULT (WINAPI *p_CreateDXGIFactory1)(REFIID, void **);
+static PFN_D3D12_CREATE_DEVICE p_D3D12CreateDevice;
+static PFN_D3D12_SERIALIZE_ROOT_SIGNATURE p_D3D12SerializeRootSignature;
+static pD3DCompile p_D3DCompile;
+static std::vector<std::pair<std::string, std::string>> g_dlls;   // loaded DLL (lower case) -> path
+
+// JSON object of the loaded DLLs whose names start with one of `prefixes`, for the device rows.
+static std::string dlls_json(std::initializer_list<const char *> prefixes) {
+    std::string s;
+    for (auto &d : g_dlls)
+        for (const char *p : prefixes)
+            if (!d.first.compare(0, strlen(p), p)) { s += (s.empty() ? "" : ", ") + jstr(d.first) + ": " + jstr(d.second); break; }
+    return "\"dlls\": {" + s + "}";
+}
+
+static std::string module_path(HMODULE m) {
+    char buf[MAX_PATH] = ""; GetModuleFileNameA(m, buf, sizeof buf); return buf;
+}
+
+// Load the first DLL of `names` that exists and resolve `fn` from it; "" on success.
+template <class F> static std::string load_fn(std::initializer_list<const char *> names, const char *fn, F &out) {
+    HMODULE m = nullptr; const char *got = nullptr;
+    for (const char *n : names) if ((m = LoadLibraryA(n))) { got = n; break; }
+    if (!m) return fmt("%s not available", *names.begin());
+    out = (F)(void *)GetProcAddress(m, fn);
+    if (!out) return fmt("%s has no %s", got, fn);
+    std::string key = got; for (auto &c : key) c = (char)tolower((unsigned char)c);
+    if (std::none_of(g_dlls.begin(), g_dlls.end(), [&](auto &d) { return d.first == key; })) g_dlls.push_back({key, module_path(m)});
+    return "";
+}
+
+static std::string need_dxgi() {
+    static std::string why = load_fn({"dxgi.dll"}, "CreateDXGIFactory1", p_CreateDXGIFactory1);
+    return why;
+}
+static std::string need_d3dcompiler() {
+    static std::string why = load_fn({"d3dcompiler_47.dll", "d3dcompiler_43.dll"}, "D3DCompile", p_D3DCompile);
+    return why;
+}
+static std::string need_d3d11() {
+    static std::string why = [] {
+        std::string w = load_fn({"d3d11.dll"}, "D3D11CreateDeviceAndSwapChain", p_D3D11CreateDeviceAndSwapChain);
+        return w.empty() ? need_d3dcompiler() : w;   // the D3D11 scenes compile HLSL at runtime
+    }();
+    return why;
+}
+static std::string need_d3d12(bool dxil) {
+    static std::string why = [] {
+        std::string w = load_fn({"d3d12.dll"}, "D3D12CreateDevice", p_D3D12CreateDevice);
+        if (w.empty()) w = load_fn({"d3d12.dll"}, "D3D12SerializeRootSignature", p_D3D12SerializeRootSignature);
+        return w.empty() ? need_dxgi() : w;
+    }();
+    return why.empty() && !dxil ? need_d3dcompiler() : why;
+}
+
+// ---------------------------------------------------------------- presentation diagnostics
+
+struct PresentMode {
+    int sync = 0; bool tearing = false, blit = false, sequential = false;
+    std::string arg = "default";
+    DXGI_SWAP_EFFECT effect() const {
+        return blit ? (sequential ? DXGI_SWAP_EFFECT_SEQUENTIAL : DXGI_SWAP_EFFECT_DISCARD)
+                    : (sequential ? DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL : DXGI_SWAP_EFFECT_FLIP_DISCARD);
+    }
+    const char *effect_name() const {
+        return blit ? (sequential ? "sequential" : "discard") : (sequential ? "flip_sequential" : "flip_discard");
+    }
+    bool parse(const char *s, std::string &err) {
+        arg = s;
+        for (auto &t : split(s)) {
+            if (t == "default") *this = PresentMode(), arg = s;
+            else if (t == "sync0") sync = 0; else if (t == "sync1") sync = 1;
+            else if (t == "tearing") tearing = true;
+            else if (t == "flip") blit = false, sequential = false;
+            else if (t == "flip-sequential") blit = false, sequential = true;
+            else if (t == "blit") blit = true, sequential = false;
+            else if (t == "blit-sequential") blit = true, sequential = true;
+            else { err = "unknown --present-mode token " + t; return false; }
+        }
+        if (tearing && sync) { err = "--present-mode: tearing needs sync0"; return false; }
+        if (tearing && blit) { err = "--present-mode: tearing needs a flip swap effect"; return false; }
+        return true;
+    }
+};
+
+// DXGI_FEATURE_PRESENT_ALLOW_TEARING: 1 yes, 0 no, -1 could not ask (no dxgi / no factory).
+static int tearing_supported() {
+    static int r = [] {
+        if (!need_dxgi().empty()) return -1;
+        Com<IDXGIFactory1> f1; Com<IDXGIFactory5> f5; BOOL b = FALSE;
+        if (FAILED(p_CreateDXGIFactory1(__uuidof(IDXGIFactory1), (void **)&f1))) return -1;
+        if (FAILED(f1->QueryInterface(__uuidof(IDXGIFactory5), (void **)&f5))) return 0;
+        if (FAILED(f5->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING, &b, sizeof b))) return 0;
+        return b ? 1 : 0;
+    }();
+    return r;
+}
+
+// Refresh rate of the primary display as Windows sees it: "null" when unknown (0 and 1 mean
+// "hardware default").
+static std::string display_hz() {
+    DEVMODEA dm = {}; dm.dmSize = sizeof dm;
+    if (!EnumDisplaySettingsA(nullptr, ENUM_CURRENT_SETTINGS, &dm) || dm.dmDisplayFrequency <= 1) return "null";
+    return fmt("%lu", (unsigned long)dm.dmDisplayFrequency);
+}
+
+// Per-scene present timing over the timed frames: time inside the present call, and the
+// interval between the starts of consecutive present calls.
+struct PresentStats {
+    std::vector<double> call_ms, interval_ms; double last = -1; int failures = 0; HRESULT first_failure = S_OK;
+    bool fs_have[2] = {}; DXGI_FRAME_STATISTICS fs[2] = {}; HRESULT fs_hr = S_OK;
+    void reset() { *this = PresentStats(); }
+    template <class F> HRESULT timed(int f, F &&present) {
+        double t0 = now_ms(); HRESULT hr = present(); double t1 = now_ms();
+        if (f >= WARM_FRAMES) {
+            call_ms.push_back(t1 - t0);
+            if (last >= 0) interval_ms.push_back(t0 - last);
+            if (FAILED(hr) && !failures++) first_failure = hr;
+        }
+        last = t0;
+        return hr;
+    }
+    // DXGI frame statistics at the start (0) and end (1) of the timed frames, if supported.
+    void frame_statistics(IDXGISwapChain *sc, int which) {
+        HRESULT hr = sc->GetFrameStatistics(&fs[which]);
+        fs_have[which] = SUCCEEDED(hr);
+        if (FAILED(hr)) fs_hr = hr;
+    }
+    static std::string dist(std::vector<double> v) {
+        if (v.empty()) return "null";
+        std::sort(v.begin(), v.end()); double sum = 0; for (double x : v) sum += x;
+        auto pct = [&](double p) { return v[(size_t)std::min<double>(v.size() - 1, p * v.size())]; };
+        return fmt("{\"mean\": %.3f, \"p50\": %.3f, \"p99\": %.3f, \"min\": %.3f, \"max\": %.3f}",
+                   sum / v.size(), pct(0.5), pct(0.99), v.front(), v.back());
+    }
+    // `config` is the JSON fragment describing the swap chain; dxgi adds the frame statistics.
+    std::string json(const std::string &config, bool dxgi) const {
+        double sum = 0; for (double x : interval_ms) sum += x;
+        std::string s = "\"present\": {" + config + ", \"display_hz\": " + display_hz();
+        s += ", \"call_ms\": " + dist(call_ms) + ", \"interval_ms\": " + dist(interval_ms);
+        if (!interval_ms.empty() && sum > 0) s += fmt(", \"rate_hz\": %.2f", interval_ms.size() * 1000.0 / sum);
+        if (failures) s += fmt(", \"failures\": %d, \"first_failure\": \"0x%08lx\"", failures, (unsigned long)first_failure);
+        if (dxgi) {
+            if (fs_have[0] && fs_have[1])
+                s += fmt(", \"dxgi_frame_statistics\": {\"presents\": %u, \"present_refreshes\": %u, \"sync_refreshes\": %u}",
+                         fs[1].PresentCount - fs[0].PresentCount, fs[1].PresentRefreshCount - fs[0].PresentRefreshCount,
+                         fs[1].SyncRefreshCount - fs[0].SyncRefreshCount);
+            else s += fmt(", \"dxgi_frame_statistics\": \"unavailable (0x%08lx)\"", (unsigned long)fs_hr);
+        }
+        return s + "}";
+    }
+};
+
+// DXGI swap chain description for the "present" object.
+static std::string dxgi_present_config(const PresentMode &pm, bool tearing_on, UINT buffers) {
+    int ts = tearing_supported();
+    return fmt("\"api\": \"dxgi\", \"mode\": %s, \"sync_interval\": %d, \"flags\": \"%s\", \"swap_effect\": \"%s\", "
+               "\"buffers\": %u, \"tearing_supported\": %s%s",
+               jstr(pm.arg).c_str(), pm.sync, tearing_on ? "ALLOW_TEARING" : "0", pm.effect_name(), buffers,
+               ts < 0 ? "null" : ts ? "true" : "false",
+               pm.tearing && !tearing_on ? ", \"tearing_dropped\": \"requested, but the factory reports no support\"" : "");
+}
+
 // ---------------------------------------------------------------- shared GPU helpers
 
-struct Opts { int frames = 600, width = 1280, height = 720; bool dxil = true; };
-static const int WARM_FRAMES = 30, DRAWS_PER_FRAME = 4000;
+struct Opts { int frames = 600, width = 1280, height = 720; bool dxil = true; PresentMode present; };
+
 
 static LRESULT CALLBACK wndproc(HWND h, UINT m, WPARAM w, LPARAM l) {
     if (m == WM_CLOSE) { PostQuitMessage(0); return 0; }
@@ -236,7 +450,9 @@ static void draw_consts(int i, int f, float out[8]) {
 }
 
 // Shared frame loop: record+submit one frame, keep at most 2 in flight, collect frame times.
-template <class Frame> static bool frame_loop(const char *name, int frames, Frame &&frame, std::string &err) {
+// `extra`, if given, adds JSON (the present stats) to the scene's result.
+template <class Frame> static bool frame_loop(const char *name, int frames, Frame &&frame, std::string &err,
+                                              const std::function<std::string()> &extra = nullptr) {
     std::vector<double> ft; ft.reserve(frames);
     double start = 0;
     for (int f = 0; f < frames + WARM_FRAMES; f++) {
@@ -248,7 +464,9 @@ template <class Frame> static bool frame_loop(const char *name, int frames, Fram
     }
     if (!frame(-1)) return false;   // -1: drain the GPU
     double total = now_ms() - start;
-    report(name, frames * 1000.0 / total, "fps", frame_stats(ft));
+    std::string x = frame_stats(ft);
+    if (extra) x += ", " + extra();
+    report(name, frames * 1000.0 / total, "fps", x);
     return true;
 }
 
@@ -267,7 +485,7 @@ static const char *feature_macro(const char *entry) {
 static bool compile(const char *entry, const char *target, ID3DBlob **out) {
     ID3DBlob *err = nullptr;
     D3D_SHADER_MACRO defs[] = {{feature_macro(entry), "1"}, {nullptr, nullptr}};
-    HRESULT hr = D3DCompile(k_hlsl, strlen(k_hlsl), "mpbench.hlsl", defs[0].Name ? defs : nullptr, nullptr, entry, target, 0, 0, out, &err);
+    HRESULT hr = p_D3DCompile(k_hlsl, strlen(k_hlsl), "mpbench.hlsl", defs[0].Name ? defs : nullptr, nullptr, entry, target, 0, 0, out, &err);
     if (FAILED(hr)) {
         std::string msg = err ? std::string((const char *)err->GetBufferPointer(), err->GetBufferSize()) : "";
         msg = msg.substr(0, msg.find('\0'));
@@ -283,15 +501,6 @@ static std::string wide_to_utf8(const WCHAR *w) {
     char buf[256]; WideCharToMultiByte(CP_UTF8, 0, w, -1, buf, sizeof buf, nullptr, nullptr); return buf;
 }
 
-template <class T> struct Com {
-    T *p = nullptr;
-    Com() = default; Com(const Com &) = delete; Com &operator=(const Com &) = delete;
-    ~Com() { if (p) p->Release(); }
-    T *operator->() const { return p; }
-    T **operator&() { return &p; }
-    operator T *() const { return p; }
-};
-
 // ---------------------------------------------------------------- D3D11
 
 static bool d3d11_run(const Opts &o) {
@@ -302,17 +511,23 @@ static bool d3d11_run(const Opts &o) {
     DXGI_SWAP_CHAIN_DESC sd = {};
     sd.BufferCount = 2; sd.BufferDesc.Width = width; sd.BufferDesc.Height = height;
     sd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM; sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-    sd.OutputWindow = hwnd; sd.SampleDesc.Count = 1; sd.Windowed = TRUE; sd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+    sd.OutputWindow = hwnd; sd.SampleDesc.Count = 1; sd.Windowed = TRUE; sd.SwapEffect = o.present.effect();
+    // Default (--present-mode sync0,flip): Present(0, 0) on FLIP_DISCARD, as in mpbench v2.
+    const bool tearing = o.present.tearing && tearing_supported() == 1;
+    if (tearing) sd.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
+    const UINT present_flags = tearing ? DXGI_PRESENT_ALLOW_TEARING : 0;
+    const std::string present_cfg = dxgi_present_config(o.present, tearing, sd.BufferCount);
 
     Com<ID3D11Device> dev; Com<ID3D11DeviceContext> ctx; Com<IDXGISwapChain> sc; D3D_FEATURE_LEVEL fl;
-    CHECK(D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, 0, nullptr, 0, D3D11_SDK_VERSION,
+    CHECK(p_D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, 0, nullptr, 0, D3D11_SDK_VERSION,
                                         &sd, &sc, &dev, &fl, &ctx));
 
     // Adapter name tells us which translation layer/driver we landed on.
     Com<IDXGIDevice> dxgidev; Com<IDXGIAdapter> adapter; DXGI_ADAPTER_DESC ad;
     CHECK(dev->QueryInterface(__uuidof(IDXGIDevice), (void **)&dxgidev)); CHECK(dxgidev->GetAdapter(&adapter)); CHECK(adapter->GetDesc(&ad));
     std::string aname = wide_to_utf8(ad.Description);
-    std::string ainfo = fmt("\"adapter\": %s, \"feature_level\": \"0x%x\"", jstr(aname).c_str(), (unsigned)fl);
+    std::string ainfo = fmt("\"adapter\": %s, \"feature_level\": \"0x%x\", %s", jstr(aname).c_str(), (unsigned)fl,
+                            dlls_json({"d3d11", "dxgi", "d3dcompiler"}).c_str());
     if (fl < D3D_FEATURE_LEVEL_11_0) {
         // e.g. stock Wine on macOS: wined3d over Apple's GL 4.1 tops out at 9_3.
         report("gpu11.device", 0, "fl<11_0", ainfo);
@@ -345,9 +560,15 @@ static bool d3d11_run(const Opts &o) {
         memcpy(m.pData, d, 32); ctx->Unmap(cb, 0);
     };
 
+    PresentStats ps;
     auto run_scene = [&](const char *name, auto &&draw) -> bool {
+        ps.reset();
         return frame_loop(name, frames, [&](int f) -> bool {
-            if (f < 0) { ctx->End(q[0]); while (ctx->GetData(q[0], nullptr, 0, 0) == S_FALSE) YieldProcessor(); return true; }
+            if (f < 0) {
+                ctx->End(q[0]); while (ctx->GetData(q[0], nullptr, 0, 0) == S_FALSE) YieldProcessor();
+                ps.frame_statistics(sc, 1); return true;
+            }
+            if (f == WARM_FRAMES) ps.frame_statistics(sc, 0);
             ID3D11RenderTargetView *rt = rtv; ID3D11Buffer *cbp = cb;
             ctx->OMSetRenderTargets(1, &rt, nullptr); ctx->RSSetViewports(1, &vp);
             ctx->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -355,11 +576,11 @@ static bool d3d11_run(const Opts &o) {
             float clear[4] = {0.1f, 0.1f, 0.15f, 1}; ctx->ClearRenderTargetView(rtv, clear);
             draw(f);
             ctx->End(q[f % 3]);
-            sc->Present(0, 0);
+            ps.timed(f, [&] { return sc->Present(o.present.sync, present_flags); });   // result recorded, not fatal
             // Keep at most 2 frames in flight so CPU frame times reflect GPU work.
             if (f >= 2) while (ctx->GetData(q[(f - 2) % 3], nullptr, 0, 0) == S_FALSE) YieldProcessor();
             return true;
-        }, g_err);
+        }, g_err, [&] { return ps.json(present_cfg, true); });
     };
 
     bool ok = true;
@@ -425,7 +646,7 @@ struct D12 {
         rp.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
         D3D12_ROOT_SIGNATURE_DESC rs = {1, &rp, 0, nullptr, flags};
         Com<ID3DBlob> blob, err;
-        HRESULT hr = D3D12SerializeRootSignature(&rs, D3D_ROOT_SIGNATURE_VERSION_1, &blob, &err);
+        HRESULT hr = p_D3D12SerializeRootSignature(&rs, D3D_ROOT_SIGNATURE_VERSION_1, &blob, &err);
         if (FAILED(hr)) { g_err = fmt("D3D12SerializeRootSignature: 0x%08lx %s", (unsigned long)hr, err ? (char *)err->GetBufferPointer() : ""); return false; }
         CHECK(dev->CreateRootSignature(0, blob->GetBufferPointer(), blob->GetBufferSize(), __uuidof(ID3D12RootSignature), (void **)out));
         return true;
@@ -468,8 +689,13 @@ static bool d3d12_present_scenes(D12 &d, const Opts &o, Com<IDXGIFactory4> &fact
 
     DXGI_SWAP_CHAIN_DESC1 sd = {};
     sd.Width = width; sd.Height = height; sd.Format = DXGI_FORMAT_R8G8B8A8_UNORM; sd.SampleDesc.Count = 1;
-    sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT; sd.BufferCount = 2; sd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+    sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT; sd.BufferCount = 2; sd.SwapEffect = o.present.effect();
     sd.Scaling = DXGI_SCALING_STRETCH;
+    // Default (--present-mode sync0,flip): Present(0, 0) on FLIP_DISCARD, as in mpbench v2.
+    const bool tearing = o.present.tearing && tearing_supported() == 1;
+    if (tearing) sd.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
+    const UINT present_flags = tearing ? DXGI_PRESENT_ALLOW_TEARING : 0;
+    const std::string present_cfg = dxgi_present_config(o.present, tearing, sd.BufferCount);
     Com<IDXGISwapChain1> sc1; Com<IDXGISwapChain3> sc;
     CHECK(factory->CreateSwapChainForHwnd(d.queue, hwnd, &sd, nullptr, nullptr, &sc1));
     CHECK(sc1->QueryInterface(__uuidof(IDXGISwapChain3), (void **)&sc));
@@ -499,9 +725,12 @@ static bool d3d12_present_scenes(D12 &d, const Opts &o, Com<IDXGIFactory4> &fact
     D3D12_RECT scissor = {0, 0, width, height};
     UINT64 slot_fence[2] = {0, 0};
 
+    PresentStats ps;
     auto run_scene = [&](const char *name, ID3D12PipelineState *pso, auto &&draw) -> bool {
+        ps.reset();
         return frame_loop(name, o.frames, [&](int f) -> bool {
-            if (f < 0) { d.flush(); return !d.removed(); }
+            if (f < 0) { d.flush(); ps.frame_statistics(sc, 1); return !d.removed(); }
+            if (f == WARM_FRAMES) ps.frame_statistics(sc, 0);
             int slot = f & 1;
             d.wait(slot_fence[slot]);
             if (!d.begin(slot)) return false;
@@ -515,10 +744,10 @@ static bool d3d12_present_scenes(D12 &d, const Opts &o, Com<IDXGIFactory4> &fact
             draw(f, slot);
             d.barrier(bb[bbi], D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
             d.submit();
-            CHECK(sc->Present(0, 0));
+            CHECK(ps.timed(f, [&] { return sc->Present(o.present.sync, present_flags); }));
             slot_fence[slot] = d.signal();
             return true;
-        }, g_err);
+        }, g_err, [&] { return ps.json(present_cfg, true); });
     };
 
     bool ok = true;
@@ -748,9 +977,9 @@ static void d3d12_features(D12 &d) {
 static bool d3d12_run(const Opts &o) {
     D12 d; d.dxil = o.dxil;
     Com<IDXGIFactory1> f1; Com<IDXGIFactory4> factory;
-    CHECK(CreateDXGIFactory1(__uuidof(IDXGIFactory1), (void **)&f1));
+    CHECK(p_CreateDXGIFactory1(__uuidof(IDXGIFactory1), (void **)&f1));
     CHECK(f1->QueryInterface(__uuidof(IDXGIFactory4), (void **)&factory));
-    CHECK(D3D12CreateDevice(nullptr, D3D_FEATURE_LEVEL_11_0, __uuidof(ID3D12Device), (void **)&d.dev));
+    CHECK(p_D3D12CreateDevice(nullptr, D3D_FEATURE_LEVEL_11_0, __uuidof(ID3D12Device), (void **)&d.dev));
 
     std::string aname = "?";
     Com<IDXGIAdapter1> adapter;
@@ -765,9 +994,11 @@ static bool d3d12_run(const Opts &o) {
         sm.HighestShaderModel = (D3D_SHADER_MODEL)(sm.HighestShaderModel - 1);
     std::string hint = o.dxil && sm.HighestShaderModel < D3D_SHADER_MODEL_6_0
                            ? ", \"hint\": \"device reports SM < 6.0, DXIL pipelines will likely fail; try --d3d12-shaders dxbc\"" : "";
-    report("gpu12.device", 1, "ok", fmt("\"adapter\": %s, \"feature_level\": \"0x%x\", \"shader_model\": \"%d.%d\", \"shaders\": \"%s\"%s",
+    report("gpu12.device", 1, "ok", fmt("\"adapter\": %s, \"feature_level\": \"0x%x\", \"shader_model\": \"%d.%d\", \"shaders\": \"%s\"%s, "
+                                        "%s",
                                         jstr(aname).c_str(), (unsigned)fls.MaxSupportedFeatureLevel, sm.HighestShaderModel >> 4,
-                                        sm.HighestShaderModel & 15, o.dxil ? "dxil" : "dxbc", hint.c_str()));
+                                        sm.HighestShaderModel & 15, o.dxil ? "dxil" : "dxbc", hint.c_str(),
+                                        dlls_json({"d3d12", "dxgi", "d3dcompiler"}).c_str()));
 
     D3D12_COMMAND_QUEUE_DESC qd = {D3D12_COMMAND_LIST_TYPE_DIRECT, 0, D3D12_COMMAND_QUEUE_FLAG_NONE, 0};
     CHECK(d.dev->CreateCommandQueue(&qd, __uuidof(ID3D12CommandQueue), (void **)&d.queue));
@@ -776,7 +1007,11 @@ static bool d3d12_run(const Opts &o) {
     CHECK(d.dev->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, d.alloc[0], nullptr, __uuidof(ID3D12GraphicsCommandList), (void **)&d.cl));
     d.cl->Close();
 
-    if ((want("gpu12.drawcalls") || want("gpu12.fill")) && !d3d12_present_scenes(d, o, factory)) {
+    if (o.present.blit) {
+        // D3D12 swap chains must use a flip model; don't ask the backend for something invalid.
+        for (const char *n : {"gpu12.drawcalls", "gpu12.fill"})
+            if (want(n)) report(n, 0, "skipped", "\"skipped\": \"blit swap effects are not valid on D3D12 (flip model only)\"");
+    } else if ((want("gpu12.drawcalls") || want("gpu12.fill")) && !d3d12_present_scenes(d, o, factory)) {
         if (!g_err.empty()) report_error("gpu12.present", g_err);
         g_err.clear();
         if (d.removed()) return false;
@@ -1107,13 +1342,21 @@ static bool vk_pipeline(Vk &v, VkShaderModule vs, const char *vs_name, VkShaderM
     return true;
 }
 
-static bool vk_run(const Opts &o) {
+// The Vulkan loader, or why it can't be used ("" = usable). Missing means skipped, not an error.
+static std::string vk_load(HMODULE &lib, PFN_vkGetInstanceProcAddr &gipa) {
+    lib = LoadLibraryA("vulkan-1.dll");
+    if (!lib) return "vulkan-1.dll not available";
+    gipa = (PFN_vkGetInstanceProcAddr)(void *)GetProcAddress(lib, "vkGetInstanceProcAddr");
+    if (!gipa) { FreeLibrary(lib); lib = nullptr; return "vulkan-1.dll has no vkGetInstanceProcAddr"; }
+    g_dlls.push_back({"vulkan-1.dll", module_path(lib)});
+    return "";
+}
+
+static bool vk_run(const Opts &o, HMODULE lib, PFN_vkGetInstanceProcAddr gipa) {
     Vk v;
-    v.lib = LoadLibraryA("vulkan-1.dll");
-    if (!v.lib) { g_err = "vulkan-1.dll not found (no Vulkan loader on this stack)"; return false; }
-    v.vkGetInstanceProcAddr = (PFN_vkGetInstanceProcAddr)(void *)GetProcAddress(v.lib, "vkGetInstanceProcAddr");
-    if (!v.vkGetInstanceProcAddr) { g_err = "vkGetInstanceProcAddr missing"; return false; }
+    v.lib = lib; v.vkGetInstanceProcAddr = gipa;
     auto vkCreateInstance = (PFN_vkCreateInstance)v.vkGetInstanceProcAddr(nullptr, "vkCreateInstance");
+    if (!vkCreateInstance) { g_err = "vkGetInstanceProcAddr(vkCreateInstance) returned NULL"; return false; }
 
     VkApplicationInfo app = {VK_STRUCTURE_TYPE_APPLICATION_INFO, nullptr, "mpbench", 2, "mpbench", 2, (1u << 22)};   // Vulkan 1.0
     const char *iext[] = {VK_KHR_SURFACE_EXTENSION_NAME, VK_KHR_WIN32_SURFACE_EXTENSION_NAME};
@@ -1178,9 +1421,14 @@ static bool vk_run(const Opts &o) {
 
     const char *pm_name = pm == VK_PRESENT_MODE_IMMEDIATE_KHR ? "immediate" : pm == VK_PRESENT_MODE_MAILBOX_KHR ? "mailbox" : "fifo";
     report("vk.device", 1, "ok", fmt("\"adapter\": %s, \"api_version\": \"%u.%u.%u\", \"driver_version\": \"0x%x\", "
-                                     "\"vendor_id\": \"0x%04x\", \"present_mode\": \"%s\", \"swapchain_images\": %u",
+                                     "\"vendor_id\": \"0x%04x\", \"present_mode\": \"%s\", \"swapchain_images\": %u, %s",
                                      jstr(props.deviceName).c_str(), props.apiVersion >> 22, (props.apiVersion >> 12) & 0x3ff,
-                                     props.apiVersion & 0xfff, props.driverVersion, props.vendorID, pm_name, in));
+                                     props.apiVersion & 0xfff, props.driverVersion, props.vendorID, pm_name, in,
+                                     dlls_json({"vulkan-1"}).c_str()));
+    std::string modes;
+    for (auto m : pms) modes += fmt("%s%d", modes.empty() ? "" : ", ", (int)m);
+    const std::string present_cfg = fmt("\"api\": \"vulkan\", \"present_mode\": \"%s\", \"surface_present_modes\": [%s], "
+                                        "\"swapchain_images\": %u", pm_name, modes.c_str(), in);
 
     VkAttachmentDescription att = {0, sf.format, VK_SAMPLE_COUNT_1_BIT, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE,
                                    VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE,
@@ -1223,7 +1471,9 @@ static bool vk_run(const Opts &o) {
 
     VkViewport vp = {0, 0, (float)ext.width, (float)ext.height, 0, 1};
     VkRect2D scissor = {{0, 0}, ext};
+    PresentStats ps;
     auto run_scene = [&](const char *name, VkPipeline pipe, auto &&draw) -> bool {
+        ps.reset();
         return frame_loop(name, o.frames, [&](int f) -> bool {
             if (f < 0) { VK_CHECK(v.vkDeviceWaitIdle(v.dev)); return true; }
             int slot = f & 1; VkCommandBuffer cb = v.cmd[slot];
@@ -1246,9 +1496,11 @@ static bool vk_run(const Opts &o) {
             VkSubmitInfo si = {VK_STRUCTURE_TYPE_SUBMIT_INFO, nullptr, 1, &v.acquired[slot], &ws, 1, &cb, 1, &v.done[idx]};
             VK_CHECK(v.vkQueueSubmit(v.queue, 1, &si, v.fences[slot]));
             VkPresentInfoKHR pi = {VK_STRUCTURE_TYPE_PRESENT_INFO_KHR, nullptr, 1, &v.done[idx], 1, &v.swapchain, &idx, nullptr};
-            VK_CHECK(v.vkQueuePresentKHR(v.queue, &pi));
+            VkResult pr = 0;
+            ps.timed(f, [&] { pr = v.vkQueuePresentKHR(v.queue, &pi); return pr < 0 ? E_FAIL : S_OK; });
+            VK_CHECK(pr);
             return true;
-        }, g_err);
+        }, g_err, [&] { return ps.json(present_cfg, false); });
     };
     const VkShaderStageFlags pcs = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
     bool ok = true;
@@ -1295,7 +1547,8 @@ static void write_json(const char *path, const Opts &o, const std::string &note,
     const char *arch = "unknown";
 #endif
     fprintf(f, "{\n  \"bench\": \"mpbench\", \"version\": 2, \"pe_arch\": \"%s\"%s,\n", arch, runtime_info().c_str());
-    fprintf(f, "  \"frames\": %d, \"width\": %d, \"height\": %d, \"d3d12_shaders\": \"%s\",\n", o.frames, o.width, o.height, o.dxil ? "dxil" : "dxbc");
+    fprintf(f, "  \"frames\": %d, \"width\": %d, \"height\": %d, \"d3d12_shaders\": \"%s\", \"present_mode\": %s,\n", o.frames, o.width,
+            o.height, o.dxil ? "dxil" : "dxbc", jstr(o.present.arg).c_str());
     fprintf(f, "  \"note\": %s,\n  \"args\": %s,\n  \"results\": [\n", jstr(note).c_str(), jstr(args).c_str());
     for (size_t i = 0; i < g_results.size(); i++) {
         auto &r = g_results[i];
@@ -1307,7 +1560,9 @@ static void write_json(const char *path, const Opts &o, const std::string &note,
 
 static int usage(int rc) {
     printf("usage: mpbench [--out FILE] [--frames N] [--width W] [--height H] [--api d3d11|d3d12|vk|all[,...]]\n"
-           "               [--scenes NAME|PREFIX[,...]] [--d3d12-shaders dxil|dxbc] [--note TEXT] [--no-gpu] [--no-cpu] [--list]\nscenes:\n");
+           "               [--scenes NAME|PREFIX[,...]] [--d3d12-shaders dxil|dxbc] [--note TEXT] [--no-gpu] [--no-cpu] [--list]\n"
+           "               [--present-mode sync0|sync1,tearing,flip|flip-sequential|blit|blit-sequential]  (D3D11/D3D12;\n"
+           "                default sync0,flip = Present(0, 0) on FLIP_DISCARD)\nscenes:\n");
     for (auto s : k_scenes) printf("  %s\n", s);
     return rc;
 }
@@ -1327,6 +1582,10 @@ int main(int argc, char **argv) {
         else if (arg("--height")) o.height = atoi(argv[++i]);
         else if (arg("--note")) note = argv[++i];
         else if (arg("--scenes")) g_filters = split(argv[++i]);
+        else if (arg("--present-mode")) {
+            std::string err;
+            if (!o.present.parse(argv[++i], err)) { printf("%s\n", err.c_str()); return usage(2); }
+        }
         else if (arg("--d3d12-shaders")) {
             std::string s = argv[++i];
             if (s == "dxil") o.dxil = true; else if (s == "dxbc") o.dxil = false;
@@ -1357,11 +1616,23 @@ int main(int argc, char **argv) {
     if (want("cpu.atomic")) cpu_atomic();
     if (want("cpu.pingpong")) cpu_pingpong();
     auto any = [](std::initializer_list<const char *> l) { for (auto s : l) if (want(s)) return true; return false; };
-    if (any({"gpu11.drawcalls", "gpu11.fill"})) { g_err.clear(); if (!d3d11_run(o)) report_error("gpu11.device", g_err); }
-    if (any({"gpu12.drawcalls", "gpu12.fill", "gpu12.features.gs", "gpu12.features.so", "gpu12.features.tess"})) {
-        g_err.clear(); if (!d3d12_run(o)) report_error("gpu12.device", g_err);
+    // A missing DLL or entry point skips that API (reported as "skipped"); the others still run.
+    if (any({"gpu11.drawcalls", "gpu11.fill"})) {
+        std::string why = need_d3d11();
+        if (!why.empty()) { printf("d3d11: skipped: %s\n", why.c_str()); report_skipped("gpu11.", why); }
+        else { g_err.clear(); if (!d3d11_run(o)) report_error("gpu11.device", g_err); }
     }
-    if (any({"vk.drawcalls", "vk.fill"})) { g_err.clear(); if (!vk_run(o)) report_error("vk.device", g_err); }
+    if (any({"gpu12.drawcalls", "gpu12.fill", "gpu12.features.gs", "gpu12.features.so", "gpu12.features.tess"})) {
+        std::string why = need_d3d12(o.dxil);
+        if (!why.empty()) { printf("d3d12: skipped: %s\n", why.c_str()); report_skipped("gpu12.", why); }
+        else { g_err.clear(); if (!d3d12_run(o)) report_error("gpu12.device", g_err); }
+    }
+    if (any({"vk.drawcalls", "vk.fill"})) {
+        HMODULE lib; PFN_vkGetInstanceProcAddr gipa = nullptr;
+        std::string why = vk_load(lib, gipa);
+        if (!why.empty()) { printf("vulkan: skipped: %s\n", why.c_str()); report_skipped("vk.", why); }
+        else { g_err.clear(); if (!vk_run(o, lib, gipa)) report_error("vk.device", g_err); }
+    }
     write_json(out, o, note, args);
     return g_errors_total ? 1 : 0;
 }

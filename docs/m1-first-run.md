@@ -43,11 +43,40 @@ ARM64 Wine 11.20 runs on the M2 (macOS 27.2) with FEX, signed with our own Apple
   - Vulkan on KosmicKrisp is about 2× Rosetta's MoltenVK.
   - Rosetta Wine can't do any of this.
 - **D3D11 fps caveat:** D3D11 is stuck at 119.6 fps in every configuration, which looks like a present/refresh cap in DXMT, not throughput. Don't compare D3D11 fps until we know where it comes from (the DXMT present path, or the Mac's display refresh rate).
-- **wined3d failures are a benchmark bug:** the "crashes" (exit 53) come from `mpbench` linking `d3d12.dll` statically. The wined3d tree has no `d3d12.dll`, so the loader refuses to start it (`import_dll Library d3d12.dll … not found`, `c0000135`). mpbench should load D3D12 dynamically.
+- **wined3d failures are a benchmark bug:** the "crashes" (exit 53) come from `mpbench` linking `d3d12.dll` statically. The wined3d tree has no `d3d12.dll`, so the loader refuses to start it (`import_dll Library d3d12.dll … not found`, `c0000135`). This is fixed: mpbench now loads D3D12 dynamically (see below).
+
+## Fixed since this run (mpbench)
+
+- **No more static graphics imports.** mpbench loads `d3d11.dll`, `dxgi.dll`, `d3d12.dll`, `d3dcompiler_47.dll` (falling back to `d3dcompiler_43.dll`) and `vulkan-1.dll` with `LoadLibrary`/`GetProcAddress`. `bench/build.sh` no longer links `-ld3d11 -ld3d12 -ldxgi -ld3dcompiler`. `llvm-readobj --coff-imports` shows only `KERNEL32.dll`, `USER32.dll` and the UCRT `api-ms-win-crt-*` DLLs for all four builds (x86_64, i686, aarch64, arm64ec). Before this, they also imported `d3d11.dll`, `d3d12.dll`, `dxgi.dll` and `D3DCOMPILER_47.dll`.
+- **A missing DLL or entry point skips that API instead of failing.** Its device row and scenes are reported as `{"unit": "skipped", "skipped": "d3d12.dll not available"}`, the other APIs still run, and skipped scenes don't count towards the exit code. Each device row now carries a `dlls` object with the path every DLL was loaded from, which shows which Direct3D tree a run actually got.
+- **Present diagnostics for the 119.6 fps question.** Every presenting scene (`gpu11.*`, `gpu12.drawcalls`/`fill`, `vk.*`) records a `present` object with:
+  - the sync interval, flags, swap effect and buffer count (Vulkan: the present mode and the surface's supported modes)
+  - whether `DXGI_FEATURE_PRESENT_ALLOW_TEARING` is supported
+  - the display refresh rate Windows reports
+  - `call_ms`: time spent inside Present
+  - `interval_ms` and `rate_hz`: present-to-present intervals
+  - DXGI frame statistics, when the swap chain implements them
+  
+  The default is unchanged: `Present(0, 0)` on `FLIP_DISCARD`.
+- **`--present-mode` for D3D11/D3D12.** It takes comma-separated tokens: `sync0`/`sync1`, `tearing` (the ALLOW_TEARING swap chain flag plus `DXGI_PRESENT_ALLOW_TEARING`; it's dropped and recorded if the factory reports no support), and `flip`/`flip-sequential`/`blit`/`blit-sequential`. D3D12 has no blit model, so with `blit` its present scenes are skipped.
+- **Tooling.** `tools/matrix_record.py` records skipped APIs in `run.not_available` and in a new `not_available` column of `matrix.tsv`. `tools/run-matrix.sh` lists them in `summary.md` under "Not available on this backend", not under Problems. `bench/compare.py` shows those cells as `n/a: <reason>` and never flags them.
+
+**Linux validation** (Wine 9.0, lavapipe, Xvfb; x86_64 and i686 builds):
+
+- **Full run:** D3D11 and Vulkan ran. D3D12 loaded `d3d12.dll`. As before, Wine 9's vkd3d rejects the DXIL pipelines (SM 5.1 device), and `--d3d12-shaders dxbc` runs the D3D12 present scenes.
+- **`WINEDLLOVERRIDES=d3d12=`:** the exe starts and exits 0, D3D12 is reported as `skipped: d3d12.dll not available`, and the D3D11 and Vulkan scenes run normally. This was also checked through `tools/run-matrix.sh`, using a stand-in bundle that wraps the system Wine.
+- **Every `--present-mode` variant** ran and recorded the requested configuration, and invalid combinations (`sync1,tearing`, `blit,tearing`) are rejected.
+
+Xvfb has no vsync, so `sync1` doesn't cap there. The cap itself has to be measured on the Mac.
+
+**How to use it on the Mac:** run the DXMT column with `--present-mode sync0` (the default), `sync1`, `tearing` and `blit`, then compare `present.call_ms` and `present.rate_hz` against `display_hz`:
+
+- **A ~8.3 ms `call_ms` at sync0, with or without tearing:** the cap is in DXMT's present path, not in mpbench.
+- **A short `call_ms` but intervals still at ~8.36 ms:** the wait is elsewhere (the query throttle or the backend's frame pacing).
 
 ## Next
 
-1. Fix mpbench's D3D12 import, then re-run the wined3d column.
+1. ~~Fix mpbench's D3D12 import~~ (done, see above), then re-run the wined3d column.
 2. Rebuild with `build/mproton-build.sh`, which adds our Proton Wine series, DXVK as an ARM64X backend, and `lsteamclient`. Then re-run the matrix with the DXVK column.
-3. Find the source of the 119.6 fps D3D11 cap.
+3. Find the source of the 119.6 fps D3D11 cap: re-run the DXMT column with the `--present-mode` variants above (`MATRIX_ARGS="--present-mode sync1"` etc.).
 4. Re-enable SIP: the paid profile works, so SIP is no longer needed.

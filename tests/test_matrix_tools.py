@@ -66,8 +66,14 @@ if [ "$part" = cpu ]; then
 else
     res='{"name": "gpu11.device", "value": 1, "unit": "ok", "adapter": "Apple M2 ('$got')", "feature_level": "0xb000"},
          {"name": "gpu11.fill", "value": 300.0, "unit": "fps"}'
-    [ "$action" = notess ] || res="$res"',
+    if [ "$action" = nod3d12 ]; then   # a Direct3D tree without d3d12.dll: mpbench skips D3D12
+        res="$res"',
+         {"name": "gpu12.device", "value": 0, "unit": "skipped", "skipped": "d3d12.dll not available"},
+         {"name": "gpu12.features.tess", "value": 0, "unit": "skipped", "skipped": "d3d12.dll not available"}'
+    elif [ "$action" != notess ]; then
+        res="$res"',
          {"name": "gpu12.features.tess", "value": 50.0, "unit": "passes/s", "ok": true}'
+    fi
 fi
 cat > "$out" <<EOF
 {"bench": "mpbench", "version": 2, "pe_arch": "$arch", "wine": "@VER@", "results": [$res]}
@@ -195,6 +201,30 @@ def test_matrix_flags_backend_mismatch(tmp_path):
                          MOCK_DXVK_KNOWN="1", MATRIX_OUT=str(tmp_path / "results2"))
     rows = {r["file"]: r for r in tsv_rows(res2)}
     assert rows["arm64-tso1-x86_64-dxvk.json"]["backend"] == "confirmed"
+
+
+def test_matrix_skipped_scenes_are_not_failures(tmp_path):
+    bundle, app, mp = setup_matrix(tmp_path, plan="""
+        arm64-tso1-x86_64-gpu-wined3d nod3d12
+    """)
+    res, out = run_matrix(tmp_path, bundle, app, mp, MATRIX_RUNTIMES="arm64-tso1", MATRIX_ARCHS="x86_64")
+    rows = {r["file"]: r for r in tsv_rows(res)}
+    row = rows["arm64-tso1-x86_64-wined3d.json"]
+    assert row["status"] == "ok" and row["not_available"] == "gpu12: d3d12.dll not available"
+    assert rows["arm64-tso1-x86_64-dxmt.json"]["not_available"] == ""
+    assert "not available: gpu12: d3d12.dll not available" in out
+    data = json.loads((res / "arm64-tso1-x86_64-wined3d.json").read_text())
+    assert data["run"]["not_available"] == {"gpu12": "d3d12.dll not available"}
+    summary = (res / "summary.md").read_text()
+    problems = summary.split("## Problems")[1].split("## Not available on this backend")[0]
+    assert "None at the run level" in problems
+    na = summary.split("## Not available on this backend")[1].split("## x86_64")[0]
+    assert "- arm64-tso1-x86_64-wined3d.json: gpu12: d3d12.dll not available" in na
+    table = summary.split("### x86_64 GPU")[1]
+    assert "| gpu12.features.tess (passes/s) | n/a: d3d12.dll not available | PASS 50.0 |" in table
+    assert "| gpu12.device | n/a: d3d12.dll not available | " in table
+    flags = table.split("Flags:")[1].split("\n\n")[0]
+    assert "TSO=1 wined3d" not in flags    # n/a is not a problem
 
 
 def test_matrix_skips_missing_runtime(tmp_path):
