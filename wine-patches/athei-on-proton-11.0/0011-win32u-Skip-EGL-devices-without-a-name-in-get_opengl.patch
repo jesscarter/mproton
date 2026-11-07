@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Alexander=20Thei=C3=9Fen?= <alex@theissen.io>
 Date: Fri, 23 Oct 2026 12:56:12 +0800
-Subject: [PATCH 12/16] win32u: Skip EGL devices without a name in
+Subject: [PATCH 11/15] win32u: Skip EGL devices without a name in
  get_opengl_gpus().
 
 A device gets its name only from a context made current on it, and

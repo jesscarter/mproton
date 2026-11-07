@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Alexander=20Thei=C3=9Fen?= <alex@theissen.io>
 Date: Fri, 23 Oct 2026 12:51:22 +0800
-Subject: [PATCH 07/16] server: Return STATUS_PARTIAL_COPY for writes to
+Subject: [PATCH 06/15] server: Return STATUS_PARTIAL_COPY for writes to
  read-only memory on macOS.
 
 Windows writes up to the first page that cannot be written and returns

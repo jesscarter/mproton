@@ -43,7 +43,7 @@ for base in proton:$PROTON_WINE wine11.0:wine-11.0 wine11.20:wine-11.20 master:$
     "$here/try-apply.sh" "$W" "$ref" wine-11.20 $METALSHARP "$out/iso-ms-on-$name.tsv" isolated
 done
 
-# 3. The combined tree: Proton 11 + the 16 athei patches that can be carried (conflicts resolved by hand)
+# 3. The combined tree: Proton 11 + the 15 athei patches that can be carried (conflicts resolved by hand)
 rm -rf "$work/comb"
 git -C "$W" worktree add -q -B mproton/athei-on-proton "$work/comb" $PROTON_WINE
 cd "$work/comb"

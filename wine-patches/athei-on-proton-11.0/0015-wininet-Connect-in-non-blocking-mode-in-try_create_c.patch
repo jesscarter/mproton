@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Alexander=20Thei=C3=9Fen?= <alex@theissen.io>
 Date: Sat, 31 Oct 2026 12:56:56 +0800
-Subject: [PATCH 16/16] wininet: Connect in non-blocking mode in
+Subject: [PATCH 15/15] wininet: Connect in non-blocking mode in
  try_create_connect_socket().
 
 The FIONBIO values were inverted, so connect() blocked and the select()

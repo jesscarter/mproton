@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Alexander=20Thei=C3=9Fen?= <alex@theissen.io>
 Date: Thu, 15 Oct 2026 21:23:55 +0800
-Subject: [PATCH 01/16] configure, loader, ntdll: Support the arm64 macOS
+Subject: [PATCH 01/15] configure, loader, ntdll: Support the arm64 macOS
  address space and app bundles.
 
 configure: Use the default 4GB __PAGEZERO for the arm64 macOS loader:

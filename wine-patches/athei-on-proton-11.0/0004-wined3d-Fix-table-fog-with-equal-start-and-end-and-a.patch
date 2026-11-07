@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Alexander=20Thei=C3=9Fen?= <alex@theissen.io>
 Date: Fri, 16 Oct 2026 23:28:16 +0800
-Subject: [PATCH 05/16] wined3d: Fix table fog with equal start and end and an
+Subject: [PATCH 04/15] wined3d: Fix table fog with equal start and end and an
  Apple GL buffer texture crash.
 
 Table fog with FOGSTART equal to FOGEND leaves coordinates below the

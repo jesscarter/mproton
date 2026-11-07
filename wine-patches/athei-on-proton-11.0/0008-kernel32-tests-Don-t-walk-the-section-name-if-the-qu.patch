@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Alexander=20Thei=C3=9Fen?= <alex@theissen.io>
 Date: Fri, 23 Oct 2026 12:51:35 +0800
-Subject: [PATCH 09/16] kernel32/tests: Don't walk the section name if the
+Subject: [PATCH 08/15] kernel32/tests: Don't walk the section name if the
  query fails in test_Wow64Transition.
 
 The name buffer is not filled when the query fails, and the test went on

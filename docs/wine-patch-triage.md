@@ -10,12 +10,12 @@ This is the input for milestone 3 in [macos-port-plan.md](macos-port-plan.md) ("
 
   | stack | onto wine-11.20 | onto WineHQ master (11.21+) | onto vanilla wine-11.0 | onto Proton 11 (`proton_11.0`) |
   |---|---|---|---|---|
-  | athei `arm64-patched` (36 commits) | 36 | 27 | 14 | 12 → **16** after 4 hand merges |
+  | athei `arm64-patched` (36 commits) | 36 | 27 | 14 | 12 → **15 carried** (4 hand merges, 1 dropped for a missing dependency) |
   | MetalSharp `source/wine` (131 commits, cumulative) | 131 | 108 | 65 | 47 |
 
   Only 4 of the 36 athei patches conflict *because of* Proton, and each was a small hand merge (below). The other 20 that fail on Proton also fail on vanilla 11.0, because they depend on 11.x code: the virtual-memory rewrite, win32u client surfaces and EGL, and inproc-sync API changes.
 - **Recommendation:** don't backport the macOS stack to 11.0. Carry it on WineHQ master now, and do the real Proton merge on **Proton 12** (wine-12.0 base; wine-12.0 is due around January 2027, and recent Proton majors have followed each wine X.0 by a few months). Roughly 275 of Proton's 1454 commits are already upstream, so about 1180 Proton commits will need to come across. Until then, use [CrossOver 26](#crossover) (also wine-11.0) as the source for msync and winemac fixes if we need a working Proton 11 tree sooner.
-- **Proton's Wine has darwin build blockers of its own**, found by reading the code: an unguarded `<linux/types.h>` via `ntsync_tmp.h`, unguarded futex code in `fsync.c`, glibc `mallopt`/`<malloc.h>` in `ntdll/unix/loader.c`, and a hard libdrm dependency in `amd_ags_x64`. The libdrm one breaks this Linux build too. All of these are small `#ifdef`/configure fixes. They're listed [below](#darwin-build-blockers-in-protons-tree).
+- **Proton's Wine has darwin build blockers of its own**, found by reading the code: an unguarded `<linux/types.h>` via `ntsync_tmp.h`, unguarded futex code in `fsync.c`, glibc `mallopt`/`<malloc.h>` in `ntdll/unix/loader.c`, a hard libdrm dependency in `amd_ags_x64`, and a win32u fshack that doesn't build without EGL. The last two also break this Linux build. All of these are small `#ifdef`/configure fixes. They're listed [below](#darwin-build-blockers-in-protons-tree).
 - Proton's 1454 commits split roughly into **853 portable, 369 likely-conflict, 181 needs-a-macOS-equivalent, 51 Linux-only** (heuristic classification; per-commit list in `wine-patches/triage/proton-commits.tsv`).
 
 ## Inputs and pins
@@ -146,7 +146,7 @@ Method (`wine-patches/scripts/try-apply.sh`): cherry-pick each stack commit by c
 
 ### Conflicts caused by Proton (clean on wine-11.0, conflict on Proton)
 
-athei, all four resolved by hand on branch `mproton/athei-on-proton` (series in `wine-patches/athei-on-proton-11.0/`):
+athei, all four resolved by hand on a local `mproton/athei-on-proton` branch (series in `wine-patches/athei-on-proton-11.0/`):
 
 | athei patch | file | why | resolution |
 |---|---|---|---|
@@ -181,12 +181,13 @@ Found by reading the code, not by compiling for darwin. Each fails on a darwin h
 3. `dlls/ntdll/unix/loader.c:41`: `#include <malloc.h>`, and `mallopt(M_PERTURB, …)` at lines 2518 and 2528 (`HACK: Zero memory from glibc.malloc`). Neither exists on macOS. Fix: `#ifdef __GLIBC__`.
 4. `dlls/amd_ags_x64/unixlib.c:34`: `#include <xf86drm.h>` with `DRM_LIBS` and no configure check. **Also fails on this Linux box (no libdrm-dev), see below.** Fix: a `WINE_PACKAGE_FLAGS(DRM,…)` check and building the unixlib only when found, as protontts does with Piper.
 5. `dlls/protontts/unixlib.c:30`: `<linux/limits.h>`. Built only with libpiper; use `<limits.h>`.
+6. `dlls/win32u/opengl.c`: Proton's win32u fshack (lines ~1960–2422) uses `framebuffer_surface_funcs` and `needs_framebuffer_surface()`, which only exist under `#ifdef SONAME_LIBEGL`. **Confirmed by the Linux build without EGL.** On macOS, win32u is built without EGL unless Mesa's EGL is bundled (athei bundles it for Zink/KosmicKrisp). Fix: put the fshack under the same guard, or give it a non-EGL stub. That also matches the plan to gate the fshack off on macOS at first.
 
 Runtime-only Linux paths that fail gracefully (`/proc/self/status`, `/proc/self/cmdline`, `/sys/class/drm`, `/sys/devices/system/cpu`, ftrace's `/sys/kernel/tracing`), and paths that are already guarded (`USE_UFFD_WRITEWATCH`, `HAVE_MEMFD_CREATE`, `MAP_FIXED_NOREPLACE`, `HAVE_SCHED_SETAFFINITY`, `SO_PEERCRED`, xattr with Apple signatures, `signal_x86_64.c` seccomp), aren't blockers.
 
 ### Linux build check of the combined tree
 
-Tree: Proton `proton_11.0` + the 16 carried athei patches (`wine-patches/athei-on-proton-11.0/`), with generated files regenerated as Proton's `Makefile.in` does (`autoreconf`, `make_requests`, `make_vulkan -x vk.xml -X video.xml`, `make_specfiles`).
+Tree: Proton `proton_11.0` + the 15 carried athei patches (`wine-patches/athei-on-proton-11.0/`), with generated files regenerated as Proton's `Makefile.in` does (`autoreconf`, `make_requests`, `make_vulkan -x vk.xml -X video.xml`, `make_specfiles`).
 
 Toolchain: llvm-mingw couldn't be downloaded (GitHub release assets are blocked here). Wine's `--with-mingw=clang` path was used instead, with Ubuntu's clang-20 + lld-20 (`-target aarch64-windows` / `arm64ec-windows`). Host: x86_64 Ubuntu 24.04.
 
@@ -196,14 +197,22 @@ configure --enable-archs=aarch64,arm64ec --with-mingw=clang --disable-tests \
 make -k
 ```
 
-BUILD_RESULT_PLACEHOLDER
+**Result: configure passes, and most of the tree builds. The PE side builds for both aarch64 and arm64ec. The 3 remaining errors are all in Proton's own code or come from the toolchain, not from the carried patches.**
+
+- configure: OK. `PE_ARCHS = aarch64 arm64ec`, `aarch64_TARGET = aarch64-windows`, `arm64ec_TARGET = arm64ec-windows`.
+- PE side: 755 modules in `*/aarch64-windows/`. 597 of them are ARM64X, meaning they carry CHPE metadata from their 3930 arm64ec objects (ntdll, kernel32, …). The unix side (x86_64 host): `ntdll.so`, `wineserver`, the `wine` loader and 23 unixlibs built.
+- Errors left with `make -k` (none of these files are touched by the 15 patches):
+  1. `dlls/win32u/opengl.c`: `framebuffer_surface_funcs` undeclared. **This is Proton's fshack** (`5d7b91f302b` "fshack: win32u: Support opengl scaling according to fake resolution", `2e5709e1432`). It uses the framebuffer surface outside the `#ifdef SONAME_LIBEGL` block that defines it, so win32u doesn't build without EGL. That's darwin blocker 6 below.
+  2. `dlls/amd_ags_x64/unixlib.c`: `xf86drm.h` not found. Proton's unconditional libdrm dependency (darwin blocker 4).
+  3. `libs/sqlite3/sqlite3.c` (Proton's `winsqlite3` import), aarch64 PE: `_ReadWriteBarrier` undeclared. This is a toolchain artifact: plain `clang -target aarch64-windows` is in MSVC mode without `__GNUC__`, so sqlite takes its MSVC branch. llvm-mingw defines `__GNUC__` and shouldn't hit it. Not verified with llvm-mingw.
+- The first build found one bug in my own series: athei `f1fe4a2` ("compatdb keeps no-exec on") calls `get_compat_force_nx()`, which is defined in `2245b85`, a patch that isn't carried, so `ntdll.so` failed to link. It was dropped from the series, which is now **15 patches**, and `ntdll.so` links.
 
 ## 4. Recommended rebase order
 
 The plan stays option A, sequenced by base version rather than by trying to land everything on Proton 11:
 
 1. **Now: macOS core on WineHQ master, not on Proton.** Rebase athei's stack onto master (27/36 clean; the 9 conflicts are listed above). This is the tree milestone 1 brings up on a Mac. Pin it to the same FEX (`athei/FEX` `macos-patched`).
-2. **Darwin-proofing patches for Proton's tree** (the 5 blockers above). They're small and independent of the macOS stack, and worth sending upstream to Valve. Apply them first in any Proton-based tree.
+2. **Darwin-proofing patches for Proton's tree** (the 6 blockers above). They're small and independent of the macOS stack, and worth sending upstream to Valve. Apply them first in any Proton-based tree.
 3. **When Proton 12 branches from wine-12.0**, rebase onto it in layers, from low to high level. Each layer should build on darwin before the next one goes on:
    1. build system and loader: athei `39d1ebc`, `f0cc31b`, `2245b85` (bundle and spawn); drop Proton's `wine64-preloader` and `/run/host` commits;
    2. ntdll memory and signals: athei `7d58e47`, `e8e8cc4`, `f1fe4a2`, ARM64EC fixes (`8d91fb6`, `0564227`, `df5ee72`), then Proton's ARM64/FEX group on top;
@@ -217,12 +226,13 @@ The plan stays option A, sequenced by base version rather than by trying to land
 
 ## What this could not verify
 
-- **Nothing was built or run for darwin.** There's no Mac and no macOS SDK here. The darwin build blockers come from reading the code, and the darwin unix side (loader, ntdll.so, winemac.drv, msync, wineserver) was never compiled. Whether the 16-patch combined tree works on macOS is unknown.
+- **Nothing was built or run for darwin.** There's no Mac and no macOS SDK here. The darwin build blockers come from reading the code, and the darwin unix side (loader, ntdll.so, winemac.drv, msync, wineserver) was never compiled. Whether the 15-patch combined tree works on macOS is unknown.
 - Hand-resolved conflicts were checked only by the Linux compile of the touched files. In particular, the `signal_arm64ec.c` APC merge needs a test on ARM64.
 - The entitlement claims (4K pages, replaceable PAGEZERO, `thread_set_x86_64_compat`, the x18 toggle, x18 preservation with SDK 12) come from the athei/MetalSharp docs and code, not from testing.
 - CrossOver: the official source wasn't reachable; the "CrossOver 26 = wine-11.0 with msync" finding comes from a third-party mirror. Whether CrossOver Preview's ARM64 source is published is unknown.
 - `classify-proton.py` is a heuristic over subjects and paths. Spot checks looked right, but individual commits will be misfiled. The TSV is meant to be corrected by hand.
-- The build check used plain clang-20 instead of llvm-mingw, and left out X11, Wayland, GStreamer, Vulkan and FreeType. Unix-side code behind those options wasn't compiled.
+- The build check used plain clang-20 instead of llvm-mingw, and left out X11, Wayland, GStreamer, Vulkan, FreeType and EGL. Unix-side code behind those options wasn't compiled. Nothing was run (no aarch64 host or emulator), and no conformance tests ran.
+- The 3 remaining build errors were attributed to Proton or the toolchain by `git blame` and by the 15 patches not touching those files. A vanilla `proton_11.0` control build wasn't run.
 
 ## Reproducing
 
@@ -236,4 +246,4 @@ It clones Proton Wine and adds the WineHQ, athei and MetalSharp remotes at the p
 - `wine-patches/scripts/try-apply.sh`: per-commit apply test (cumulative or isolated)
 - `wine-patches/triage/proton-commits.tsv`, `proton-groups.txt`: per-commit classification and the group summary
 - `wine-patches/triage/{athei,ms,iso-athei,iso-ms}-on-{proton,wine11.0,wine11.20,master}.tsv`: apply results
-- `wine-patches/athei-on-proton-11.0/`: the 16 athei patches as carried on `proton_11.0` (LGPL-2.1+, from `athei/wine`; authorship kept)
+- `wine-patches/athei-on-proton-11.0/`: the 15 athei patches as carried on `proton_11.0` (LGPL-2.1+, from `athei/wine`; authorship kept)

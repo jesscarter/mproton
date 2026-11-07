@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Alexander=20Thei=C3=9Fen?= <alex@theissen.io>
 Date: Thu, 15 Oct 2026 22:14:48 +0800
-Subject: [PATCH 02/16] makedep: Link the resources of modules built only for
+Subject: [PATCH 02/15] makedep: Link the resources of modules built only for
  the hybrid arch.
 
 A module that is disabled for aarch64 but enabled for arm64ec, such as

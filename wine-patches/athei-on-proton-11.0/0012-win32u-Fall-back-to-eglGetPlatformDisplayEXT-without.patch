@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Alexander=20Thei=C3=9Fen?= <alex@theissen.io>
 Date: Fri, 23 Oct 2026 12:56:18 +0800
-Subject: [PATCH 13/16] win32u: Fall back to eglGetPlatformDisplayEXT() without
+Subject: [PATCH 12/15] win32u: Fall back to eglGetPlatformDisplayEXT() without
  eglGetPlatformDisplay().
 
 egl_init() only requires EGL_EXT_platform_base, so with an EGL 1.4

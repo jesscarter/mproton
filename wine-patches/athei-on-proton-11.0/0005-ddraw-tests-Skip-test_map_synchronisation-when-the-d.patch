@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Alexander=20Thei=C3=9Fen?= <alex@theissen.io>
 Date: Sat, 17 Oct 2026 09:59:41 +0800
-Subject: [PATCH 06/16] ddraw/tests: Skip test_map_synchronisation() when the
+Subject: [PATCH 05/15] ddraw/tests: Skip test_map_synchronisation() when the
  draw time can't be estimated.
 
 test_map_synchronisation() sizes its vertex buffer from the difference

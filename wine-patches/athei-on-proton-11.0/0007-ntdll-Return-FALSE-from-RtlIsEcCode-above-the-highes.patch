@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Alexander=20Thei=C3=9Fen?= <alex@theissen.io>
 Date: Fri, 23 Oct 2026 12:51:33 +0800
-Subject: [PATCH 08/16] ntdll: Return FALSE from RtlIsEcCode() above the
+Subject: [PATCH 07/15] ntdll: Return FALSE from RtlIsEcCode() above the
  highest user address.
 
 The EC code bitmap only covers user address space. An unwound pc can be

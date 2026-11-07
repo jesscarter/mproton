@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Alexander=20Thei=C3=9Fen?= <alex@theissen.io>
 Date: Thu, 15 Oct 2026 21:24:17 +0800
-Subject: [PATCH 03/16] ntdll: Load compatdb.so before the first PE code runs.
+Subject: [PATCH 03/15] ntdll: Load compatdb.so before the first PE code runs.
 
 Port CrossOver's CW Hack 24067 to upstream. The unix side of ntdll
 dlopens <ntdll_dir>/compatdb.so in start_main_thread(), once ntdll, the

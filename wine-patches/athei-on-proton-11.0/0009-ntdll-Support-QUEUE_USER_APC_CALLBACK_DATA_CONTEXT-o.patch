@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Alexander=20Thei=C3=9Fen?= <alex@theissen.io>
 Date: Fri, 23 Oct 2026 13:31:27 +0800
-Subject: [PATCH 10/16] ntdll: Support QUEUE_USER_APC_CALLBACK_DATA_CONTEXT on
+Subject: [PATCH 09/15] ntdll: Support QUEUE_USER_APC_CALLBACK_DATA_CONTEXT on
  ARM64.
 
 The arm64 call_user_apc_dispatcher() ignored the flag and passed the
