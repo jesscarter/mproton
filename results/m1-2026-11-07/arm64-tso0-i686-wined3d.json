@@ -1,0 +1,21 @@
+{
+ "bench": "mpbench",
+ "version": 2,
+ "pe_arch": "i686",
+ "note": "m1 matrix: ARM64 Wine + FEX, FEX_HARDWARE_TSO=0 (/Users/jess/mproton/work/mach9/dist/wine); wine-11.20; part wined3d; WINE_COMPATDB=exe=mpbench-i686.exe;dxgi=wined3d",
+ "results": [],
+ "run": {
+  "status": "crash",
+  "exit_code": 53,
+  "seconds": 1,
+  "runtime": "arm64-tso0",
+  "part": "wined3d",
+  "log": "logs/arm64-tso0-i686-wined3d.log",
+  "backend": {
+   "want": "wined3d",
+   "got": "wined3d",
+   "check": "confirmed",
+   "compatdb_arch": "i386"
+  }
+ }
+}

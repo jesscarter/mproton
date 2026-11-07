@@ -1,0 +1,129 @@
+{
+ "bench": "mpbench",
+ "version": 2,
+ "pe_arch": "i386",
+ "wine": "11.20",
+ "host": "Darwin 27.2.0",
+ "cpus": 8,
+ "frames": 600,
+ "width": 1280,
+ "height": 720,
+ "d3d12_shaders": "dxil",
+ "note": "m1 matrix: ARM64 Wine + FEX, FEX_HARDWARE_TSO=0 (/Users/jess/mproton/work/mach9/dist/wine); wine-11.20; part dxmt; WINE_COMPATDB=exe=mpbench-i686.exe;dxgi=dxmt",
+ "args": "--no-cpu --api all --frames 600 --width 1280 --height 720",
+ "results": [
+  {
+   "name": "gpu11.device",
+   "value": 1.0,
+   "unit": "ok",
+   "adapter": "Apple M2",
+   "feature_level": "0xb000"
+  },
+  {
+   "name": "gpu11.drawcalls",
+   "value": 119.5917,
+   "unit": "fps",
+   "p50_ms": 13.693,
+   "p99_ms": 16.387,
+   "max_ms": 18.072
+  },
+  {
+   "name": "gpu11.fill",
+   "value": 119.5988,
+   "unit": "fps",
+   "p50_ms": 13.623,
+   "p99_ms": 14.527,
+   "max_ms": 14.631
+  },
+  {
+   "name": "gpu12.device",
+   "value": 1.0,
+   "unit": "ok",
+   "adapter": "Apple M2",
+   "feature_level": "0xc000",
+   "shader_model": "6.6",
+   "shaders": "dxil"
+  },
+  {
+   "name": "gpu12.drawcalls",
+   "value": 235.0653,
+   "unit": "fps",
+   "p50_ms": 4.08,
+   "p99_ms": 7.377,
+   "max_ms": 16.512
+  },
+  {
+   "name": "gpu12.fill",
+   "value": 403.3258,
+   "unit": "fps",
+   "p50_ms": 2.212,
+   "p99_ms": 6.213,
+   "max_ms": 19.335
+  },
+  {
+   "name": "gpu12.features.gs",
+   "value": 1600.087,
+   "unit": "passes/s",
+   "ok": true,
+   "ms_per_pass": 0.625,
+   "check": "0/128 probe pixels wrong; timed: 65536 points -> quads"
+  },
+  {
+   "name": "gpu12.features.so",
+   "value": 112.9042,
+   "unit": "passes/s",
+   "ok": true,
+   "ms_per_pass": 8.8571,
+   "check": "filled_size 65536 (want 65536), 0/4096 vertices wrong; timed: 1048576 vertices"
+  },
+  {
+   "name": "gpu12.features.tess",
+   "value": 649.0362,
+   "unit": "passes/s",
+   "ok": true,
+   "ms_per_pass": 1.5407,
+   "check": "0/12 probe pixels wrong; timed: 4 draws x 64 patches x factor 16 = 131072 triangles"
+  },
+  {
+   "name": "vk.device",
+   "value": 1.0,
+   "unit": "ok",
+   "adapter": "Apple M2",
+   "api_version": "1.4.363",
+   "driver_version": "0x6863063",
+   "vendor_id": "0x106b",
+   "present_mode": "immediate",
+   "swapchain_images": 3
+  },
+  {
+   "name": "vk.drawcalls",
+   "value": 202.5252,
+   "unit": "fps",
+   "p50_ms": 3.625,
+   "p99_ms": 10.296,
+   "max_ms": 13.269
+  },
+  {
+   "name": "vk.fill",
+   "value": 279.4389,
+   "unit": "fps",
+   "p50_ms": 3.488,
+   "p99_ms": 11.258,
+   "max_ms": 20.828
+  }
+ ],
+ "run": {
+  "status": "ok",
+  "exit_code": 0,
+  "seconds": 25,
+  "runtime": "arm64-tso0",
+  "part": "dxmt",
+  "log": "logs/arm64-tso0-i686-dxmt.log",
+  "backend": {
+   "want": "dxmt",
+   "got": "dxmt",
+   "check": "confirmed",
+   "compatdb_arch": "i386"
+  }
+ }
+}

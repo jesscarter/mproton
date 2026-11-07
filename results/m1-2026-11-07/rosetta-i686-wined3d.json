@@ -1,0 +1,65 @@
+{
+ "bench": "mpbench",
+ "version": 2,
+ "pe_arch": "i386",
+ "wine": "10.0",
+ "host": "Darwin 27.2.0",
+ "cpus": 8,
+ "frames": 600,
+ "width": 1280,
+ "height": 720,
+ "d3d12_shaders": "dxil",
+ "note": "m1 matrix: Rosetta Wine (/Applications/Wine Stable.app/Contents/Resources/wine/bin/wine); wine-10.0; part wined3d",
+ "args": "--no-cpu --api all --frames 600 --width 1280 --height 720",
+ "results": [
+  {
+   "name": "gpu11.device",
+   "value": 0.0,
+   "unit": "fl<11_0",
+   "adapter": "NVIDIA GeForce 6800",
+   "feature_level": "0x9300"
+  },
+  {
+   "name": "gpu12.device",
+   "value": 0.0,
+   "unit": "error",
+   "ok": false,
+   "error": "D3D12CreateDevice(nullptr, D3D_FEATURE_LEVEL_11_0, __uuidof(ID3D12Device), (void **)&d.dev): 0x80004005"
+  },
+  {
+   "name": "vk.device",
+   "value": 1.0,
+   "unit": "ok",
+   "adapter": "Apple M2",
+   "api_version": "1.0.0",
+   "driver_version": "0x283c",
+   "vendor_id": "0x106b",
+   "present_mode": "immediate",
+   "swapchain_images": 2
+  },
+  {
+   "name": "vk.drawcalls",
+   "value": 125.4288,
+   "unit": "fps",
+   "p50_ms": 7.959,
+   "p99_ms": 9.708,
+   "max_ms": 16.687
+  },
+  {
+   "name": "vk.fill",
+   "value": 96.382,
+   "unit": "fps",
+   "p50_ms": 0.64,
+   "p99_ms": 12.311,
+   "max_ms": 21.418
+  }
+ ],
+ "run": {
+  "status": "crash",
+  "exit_code": 1,
+  "seconds": 15,
+  "runtime": "rosetta",
+  "part": "wined3d",
+  "log": "logs/rosetta-i686-wined3d.log"
+ }
+}

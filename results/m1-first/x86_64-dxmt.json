@@ -1,0 +1,16 @@
+{
+  "bench": "mpbench", "version": 2, "pe_arch": "x86_64", "wine": "11.20", "host": "Darwin 27.2.0", "cpus": 8,
+  "frames": 300, "width": 1280, "height": 720, "d3d12_shaders": "dxil",
+  "note": "",
+  "args": "--api d3d11 --frames 300",
+  "results": [
+    {"name": "cpu.scalar", "value": 152.9148, "unit": "Miter/s"},
+    {"name": "cpu.vector", "value": 7.6526, "unit": "GFLOP/s(x2)"},
+    {"name": "cpu.memcpy", "value": 21.8557, "unit": "GB/s"},
+    {"name": "cpu.atomic", "value": 57.2400, "unit": "Mops/s"},
+    {"name": "cpu.pingpong", "value": 12060.1803, "unit": "Krt/s", "ordering_errors": 0},
+    {"name": "gpu11.device", "value": 1.0000, "unit": "ok", "adapter": "Apple M2", "feature_level": "0xb000"},
+    {"name": "gpu11.drawcalls", "value": 119.1758, "unit": "fps", "p50_ms": 15.661, "p99_ms": 16.339, "max_ms": 16.351},
+    {"name": "gpu11.fill", "value": 119.2028, "unit": "fps", "p50_ms": 13.640, "p99_ms": 14.489, "max_ms": 14.506}
+  ]
+}

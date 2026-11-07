@@ -1,0 +1,160 @@
+msync: bootstrapped mach port on wine-1000010-1503e43-msync.
+msync: up and running.
+compatdb: wineboot.exe [aarch64]
+compatdb:   dxgi = dxmt (from /Users/jess/mproton/work/mach9/dist/wine/lib/wine/dxgi/dxmt), built-in
+compatdb:   d3d9 = mtld3d (from /Users/jess/mproton/work/mach9/dist/wine/lib/wine/d3d9/mtld3d), built-in
+compatdb:   wined3d = unset (upstream: the OpenGL renderer, unless WINE_D3D_CONFIG or wined3d's registry settings name another)
+compatdb:   metal_hud = unset (upstream: the MTL_HUD_ variables of the environment the process was started with)
+compatdb:   dll_overrides = mscoree,mshtml= (built-in)
+compatdb:   dpi_aware = true, built-in
+compatdb:   large_address_aware = unset (upstream: the executable's large-address-aware flag)
+compatdb:   gcmouse = true, built-in
+compatdb:   force_nx = true, built-in; no effect in a 64-bit process
+compatdb:   opengl = egl, built-in
+compatdb:   arguments = unset (upstream: the command line the process was started with)
+compatdb:   debug_channels = unset (upstream: the WINEDEBUG the process was started with)
+compatdb:   env FEX_X87REDUCEDPRECISION=1, built-in: set
+compatdb: winemenubuilder.exe [aarch64]
+compatdb:   dxgi = dxmt (from /Users/jess/mproton/work/mach9/dist/wine/lib/wine/dxgi/dxmt), built-in
+compatdb:   d3d9 = mtld3d (from /Users/jess/mproton/work/mach9/dist/wine/lib/wine/d3d9/mtld3d), built-in
+compatdb:   wined3d = unset (upstream: the OpenGL renderer, unless WINE_D3D_CONFIG or wined3d's registry settings name another)
+compatdb:   metal_hud = unset (upstream: the MTL_HUD_ variables of the environment the process was started with)
+compatdb:   dll_overrides = mscoree,mshtml= (built-in)
+compatdb:   dpi_aware = true, built-in
+compatdb:   large_address_aware = unset (upstream: the executable's large-address-aware flag)
+compatdb:   gcmouse = true, built-in
+compatdb:   force_nx = true, built-in; no effect in a 64-bit process
+compatdb:   opengl = egl, built-in
+compatdb:   arguments = unset (upstream: the command line the process was started with)
+compatdb:   debug_channels = unset (upstream: the WINEDEBUG the process was started with)
+compatdb:   env FEX_X87REDUCEDPRECISION=1, built-in: left alone, the process has FEX_X87REDUCEDPRECISION=1
+compatdb: services.exe [aarch64]
+compatdb:   dxgi = dxmt (from /Users/jess/mproton/work/mach9/dist/wine/lib/wine/dxgi/dxmt), built-in
+compatdb:   d3d9 = mtld3d (from /Users/jess/mproton/work/mach9/dist/wine/lib/wine/d3d9/mtld3d), built-in
+compatdb:   wined3d = unset (upstream: the OpenGL renderer, unless WINE_D3D_CONFIG or wined3d's registry settings name another)
+compatdb:   metal_hud = unset (upstream: the MTL_HUD_ variables of the environment the process was started with)
+compatdb:   dll_overrides = mscoree,mshtml= (built-in)
+compatdb:   dpi_aware = true, built-in
+compatdb:   large_address_aware = unset (upstream: the executable's large-address-aware flag)
+compatdb:   gcmouse = true, built-in
+compatdb:   force_nx = true, built-in; no effect in a 64-bit process
+compatdb:   opengl = egl, built-in
+compatdb:   arguments = unset (upstream: the command line the process was started with)
+compatdb:   debug_channels = unset (upstream: the WINEDEBUG the process was started with)
+compatdb:   env FEX_X87REDUCEDPRECISION=1, built-in: left alone, the process has FEX_X87REDUCEDPRECISION=1
+compatdb: winedevice.exe [aarch64]
+compatdb:   dxgi = dxmt (from /Users/jess/mproton/work/mach9/dist/wine/lib/wine/dxgi/dxmt), built-in
+compatdb:   d3d9 = mtld3d (from /Users/jess/mproton/work/mach9/dist/wine/lib/wine/d3d9/mtld3d), built-in
+compatdb:   wined3d = unset (upstream: the OpenGL renderer, unless WINE_D3D_CONFIG or wined3d's registry settings name another)
+compatdb:   metal_hud = unset (upstream: the MTL_HUD_ variables of the environment the process was started with)
+compatdb:   dll_overrides = mscoree,mshtml= (built-in)
+compatdb:   dpi_aware = true, built-in
+compatdb:   large_address_aware = unset (upstream: the executable's large-address-aware flag)
+compatdb:   gcmouse = true, built-in
+compatdb:   force_nx = true, built-in; no effect in a 64-bit process
+compatdb:   opengl = egl, built-in
+compatdb:   arguments = unset (upstream: the command line the process was started with)
+compatdb:   debug_channels = unset (upstream: the WINEDEBUG the process was started with)
+compatdb:   env FEX_X87REDUCEDPRECISION=1, built-in: left alone, the process has FEX_X87REDUCEDPRECISION=1
+compatdb: plugplay.exe [aarch64]
+compatdb:   dxgi = dxmt (from /Users/jess/mproton/work/mach9/dist/wine/lib/wine/dxgi/dxmt), built-in
+compatdb:   d3d9 = mtld3d (from /Users/jess/mproton/work/mach9/dist/wine/lib/wine/d3d9/mtld3d), built-in
+compatdb:   wined3d = unset (upstream: the OpenGL renderer, unless WINE_D3D_CONFIG or wined3d's registry settings name another)
+compatdb:   metal_hud = unset (upstream: the MTL_HUD_ variables of the environment the process was started with)
+compatdb:   dll_overrides = mscoree,mshtml= (built-in)
+compatdb:   dpi_aware = true, built-in
+compatdb:   large_address_aware = unset (upstream: the executable's large-address-aware flag)
+compatdb:   gcmouse = true, built-in
+compatdb:   force_nx = true, built-in; no effect in a 64-bit process
+compatdb:   opengl = egl, built-in
+compatdb:   arguments = unset (upstream: the command line the process was started with)
+compatdb:   debug_channels = unset (upstream: the WINEDEBUG the process was started with)
+compatdb:   env FEX_X87REDUCEDPRECISION=1, built-in: left alone, the process has FEX_X87REDUCEDPRECISION=1
+compatdb: svchost.exe [aarch64]
+compatdb:   dxgi = dxmt (from /Users/jess/mproton/work/mach9/dist/wine/lib/wine/dxgi/dxmt), built-in
+compatdb:   d3d9 = mtld3d (from /Users/jess/mproton/work/mach9/dist/wine/lib/wine/d3d9/mtld3d), built-in
+compatdb:   wined3d = unset (upstream: the OpenGL renderer, unless WINE_D3D_CONFIG or wined3d's registry settings name another)
+compatdb:   metal_hud = unset (upstream: the MTL_HUD_ variables of the environment the process was started with)
+compatdb:   dll_overrides = mscoree,mshtml= (built-in)
+compatdb:   dpi_aware = true, built-in
+compatdb:   large_address_aware = unset (upstream: the executable's large-address-aware flag)
+compatdb:   gcmouse = true, built-in
+compatdb:   force_nx = true, built-in; no effect in a 64-bit process
+compatdb:   opengl = egl, built-in
+compatdb:   arguments = unset (upstream: the command line the process was started with)
+compatdb:   debug_channels = unset (upstream: the WINEDEBUG the process was started with)
+compatdb:   env FEX_X87REDUCEDPRECISION=1, built-in: left alone, the process has FEX_X87REDUCEDPRECISION=1
+compatdb: winedevice.exe [aarch64]
+compatdb:   dxgi = dxmt (from /Users/jess/mproton/work/mach9/dist/wine/lib/wine/dxgi/dxmt), built-in
+compatdb:   d3d9 = mtld3d (from /Users/jess/mproton/work/mach9/dist/wine/lib/wine/d3d9/mtld3d), built-in
+compatdb:   wined3d = unset (upstream: the OpenGL renderer, unless WINE_D3D_CONFIG or wined3d's registry settings name another)
+compatdb:   metal_hud = unset (upstream: the MTL_HUD_ variables of the environment the process was started with)
+compatdb:   dll_overrides = mscoree,mshtml= (built-in)
+compatdb:   dpi_aware = true, built-in
+compatdb:   large_address_aware = unset (upstream: the executable's large-address-aware flag)
+compatdb:   gcmouse = true, built-in
+compatdb:   force_nx = true, built-in; no effect in a 64-bit process
+compatdb:   opengl = egl, built-in
+compatdb:   arguments = unset (upstream: the command line the process was started with)
+compatdb:   debug_channels = unset (upstream: the WINEDEBUG the process was started with)
+compatdb:   env FEX_X87REDUCEDPRECISION=1, built-in: left alone, the process has FEX_X87REDUCEDPRECISION=1
+compatdb: mpbench-arm64ec.exe [x86_64 (arm64ec)]
+compatdb:   dxgi = dxmt (from /Users/jess/mproton/work/mach9/dist/wine/lib/wine/dxgi/dxmt), WINE_COMPATDB line 1
+compatdb:   d3d9 = mtld3d (from /Users/jess/mproton/work/mach9/dist/wine/lib/wine/d3d9/mtld3d), built-in
+compatdb:   wined3d = unset (upstream: the OpenGL renderer, unless WINE_D3D_CONFIG or wined3d's registry settings name another)
+compatdb:   metal_hud = unset (upstream: the MTL_HUD_ variables of the environment the process was started with)
+compatdb:   dll_overrides = mscoree,mshtml= (built-in)
+compatdb:   dpi_aware = true, built-in
+compatdb:   large_address_aware = unset (upstream: the executable's large-address-aware flag)
+compatdb:   gcmouse = true, built-in
+compatdb:   force_nx = true, built-in; no effect in a 64-bit process
+compatdb:   opengl = egl, built-in
+compatdb:   arguments = unset (upstream: the command line the process was started with)
+compatdb:   debug_channels = unset (upstream: the WINEDEBUG the process was started with)
+compatdb:   env FEX_X87REDUCEDPRECISION=1, built-in: set
+compatdb: explorer.exe [aarch64] company="Microsoft Corporation" product="Wine 11.20" original_filename="explorer.exe"
+compatdb:   dxgi = dxmt (from /Users/jess/mproton/work/mach9/dist/wine/lib/wine/dxgi/dxmt), built-in
+compatdb:   d3d9 = mtld3d (from /Users/jess/mproton/work/mach9/dist/wine/lib/wine/d3d9/mtld3d), built-in
+compatdb:   wined3d = unset (upstream: the OpenGL renderer, unless WINE_D3D_CONFIG or wined3d's registry settings name another)
+compatdb:   metal_hud = unset (upstream: the MTL_HUD_ variables of the environment the process was started with)
+compatdb:   dll_overrides = mscoree,mshtml= (built-in)
+compatdb:   dpi_aware = true, built-in
+compatdb:   large_address_aware = unset (upstream: the executable's large-address-aware flag)
+compatdb:   gcmouse = true, built-in
+compatdb:   force_nx = true, built-in; no effect in a 64-bit process
+compatdb:   opengl = egl, built-in
+compatdb:   arguments = unset (upstream: the command line the process was started with)
+compatdb:   debug_channels = unset (upstream: the WINEDEBUG the process was started with)
+compatdb:   env FEX_X87REDUCEDPRECISION=1, built-in: left alone, the process has FEX_X87REDUCEDPRECISION=1
+compatdb: rpcss.exe [aarch64]
+compatdb:   dxgi = dxmt (from /Users/jess/mproton/work/mach9/dist/wine/lib/wine/dxgi/dxmt), built-in
+compatdb:   d3d9 = mtld3d (from /Users/jess/mproton/work/mach9/dist/wine/lib/wine/d3d9/mtld3d), built-in
+compatdb:   wined3d = unset (upstream: the OpenGL renderer, unless WINE_D3D_CONFIG or wined3d's registry settings name another)
+compatdb:   metal_hud = unset (upstream: the MTL_HUD_ variables of the environment the process was started with)
+compatdb:   dll_overrides = mscoree,mshtml= (built-in)
+compatdb:   dpi_aware = true, built-in
+compatdb:   large_address_aware = unset (upstream: the executable's large-address-aware flag)
+compatdb:   gcmouse = true, built-in
+compatdb:   force_nx = true, built-in; no effect in a 64-bit process
+compatdb:   opengl = egl, built-in
+compatdb:   arguments = unset (upstream: the command line the process was started with)
+compatdb:   debug_channels = unset (upstream: the WINEDEBUG the process was started with)
+compatdb:   env FEX_X87REDUCEDPRECISION=1, built-in: left alone, the process has FEX_X87REDUCEDPRECISION=1
+info:  Maximum supported feature level: D3D_FEATURE_LEVEL_11_1
+info:  Using feature level D3D_FEATURE_LEVEL_11_0
+warn:  DXGI: Unknown dxgi.altEnterHook value , using keyboard
+gpu11.device                 1.00 ok           "adapter": "Apple M2", "feature_level": "0xb000"
+gpu11.drawcalls            119.58 fps          "p50_ms": 14.800, "p99_ms": 16.428, "max_ms": 17.359
+gpu11.fill                 119.60 fps          "p50_ms": 4.134, "p99_ms": 15.077, "max_ms": 24.122
+gpu12.device                 1.00 ok           "adapter": "Apple M2", "feature_level": "0xc000", "shader_model": "6.6", "shaders": "dxil"
+gpu12.drawcalls            301.59 fps          "p50_ms": 2.924, "p99_ms": 7.191, "max_ms": 8.901
+gpu12.fill                 432.67 fps          "p50_ms": 2.081, "p99_ms": 5.902, "max_ms": 6.800
+  gpu12.features.gs: PASS (0/128 probe pixels wrong; timed: 65536 points -> quads)
+gpu12.features.gs         1806.57 passes/s     "ok": true, "ms_per_pass": 0.5535, "check": "0/128 probe pixels wrong; timed: 65536 points -> quads"
+  gpu12.features.so: PASS (filled_size 65536 (want 65536), 0/4096 vertices wrong; timed: 1048576 vertices)
+gpu12.features.so          129.19 passes/s     "ok": true, "ms_per_pass": 7.7407, "check": "filled_size 65536 (want 65536), 0/4096 vertices wrong; timed: 1048576 vertices"
+  gpu12.features.tess: PASS (0/12 probe pixels wrong; timed: 4 draws x 64 patches x factor 16 = 131072 triangles)
+gpu12.features.tess        653.88 passes/s     "ok": true, "ms_per_pass": 1.5293, "check": "0/12 probe pixels wrong; timed: 4 draws x 64 patches x factor 16 = 131072 triangles"
+vk.device                    1.00 ok           "adapter": "Apple M2", "api_version": "1.4.363", "driver_version": "0x6863063", "vendor_id": "0x106b", "present_mode": "immediate", "swapchain_images": 3
+vk.drawcalls               215.32 fps          "p50_ms": 2.908, "p99_ms": 11.410, "max_ms": 12.555
+vk.fill                    277.17 fps          "p50_ms": 3.427, "p99_ms": 12.144, "max_ms": 21.113

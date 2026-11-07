@@ -1,0 +1,33 @@
+file	runtime	arch	part	status	exit	seconds	results	ordering_errors	backend
+rosetta-x86_64-cpu.json	rosetta	x86_64	cpu	ok	0	3	5	0	
+rosetta-x86_64-wined3d.json	rosetta	x86_64	wined3d	crash	1	15	9		
+rosetta-i686-cpu.json	rosetta	i686	cpu	ok	0	3	5	0	
+rosetta-i686-wined3d.json	rosetta	i686	wined3d	crash	1	15	5		
+-	rosetta	aarch64	all	skipped: aarch64 not run on rosetta					
+-	rosetta	arm64ec	all	skipped: arm64ec not run on rosetta					
+arm64-tso1-x86_64-cpu.json	arm64-tso1	x86_64	cpu	ok	0	3	5	0	
+arm64-tso1-x86_64-wined3d.json	arm64-tso1	x86_64	wined3d	crash	53	1	0		confirmed
+arm64-tso1-x86_64-dxmt.json	arm64-tso1	x86_64	dxmt	ok	0	32	12		confirmed
+-	arm64-tso1	x86_64	dxvk	skipped: no lib/wine/dxgi/dxvk tree in the bundle					
+arm64-tso1-i686-cpu.json	arm64-tso1	i686	cpu	ok	0	3	5	0	
+arm64-tso1-i686-wined3d.json	arm64-tso1	i686	wined3d	crash	53	1	0		confirmed
+arm64-tso1-i686-dxmt.json	arm64-tso1	i686	dxmt	ok	0	33	12		confirmed
+-	arm64-tso1	i686	dxvk	skipped: no lib/wine/dxgi/dxvk tree in the bundle					
+arm64-tso1-aarch64-cpu.json	arm64-tso1	aarch64	cpu	ok	0	2	5	0	
+arm64-tso1-aarch64-wined3d.json	arm64-tso1	aarch64	wined3d	crash	53	1	0		confirmed
+arm64-tso1-aarch64-dxmt.json	arm64-tso1	aarch64	dxmt	ok	0	30	12		confirmed
+-	arm64-tso1	aarch64	dxvk	skipped: no lib/wine/dxgi/dxvk tree in the bundle					
+arm64-tso1-arm64ec-cpu.json	arm64-tso1	arm64ec	cpu	ok	0	3	5	0	
+arm64-tso1-arm64ec-wined3d.json	arm64-tso1	arm64ec	wined3d	crash	53	1	0		confirmed
+arm64-tso1-arm64ec-dxmt.json	arm64-tso1	arm64ec	dxmt	ok	0	30	12		confirmed
+-	arm64-tso1	arm64ec	dxvk	skipped: no lib/wine/dxgi/dxvk tree in the bundle					
+arm64-tso0-x86_64-cpu.json	arm64-tso0	x86_64	cpu	ok	0	3	5	0	
+arm64-tso0-x86_64-wined3d.json	arm64-tso0	x86_64	wined3d	crash	53	1	0		confirmed
+arm64-tso0-x86_64-dxmt.json	arm64-tso0	x86_64	dxmt	ok	0	24	12		confirmed
+-	arm64-tso0	x86_64	dxvk	skipped: no lib/wine/dxgi/dxvk tree in the bundle					
+arm64-tso0-i686-cpu.json	arm64-tso0	i686	cpu	ok	0	3	5	0	
+arm64-tso0-i686-wined3d.json	arm64-tso0	i686	wined3d	crash	53	1	0		confirmed
+arm64-tso0-i686-dxmt.json	arm64-tso0	i686	dxmt	ok	0	25	12		confirmed
+-	arm64-tso0	i686	dxvk	skipped: no lib/wine/dxgi/dxvk tree in the bundle					
+-	arm64-tso0	aarch64	all	skipped: aarch64 not run on arm64-tso0					
+-	arm64-tso0	arm64ec	all	skipped: arm64ec not run on arm64-tso0					

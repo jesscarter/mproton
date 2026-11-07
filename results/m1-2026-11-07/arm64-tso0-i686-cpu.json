@@ -1,0 +1,50 @@
+{
+ "bench": "mpbench",
+ "version": 2,
+ "pe_arch": "i386",
+ "wine": "11.20",
+ "host": "Darwin 27.2.0",
+ "cpus": 8,
+ "frames": 600,
+ "width": 1280,
+ "height": 720,
+ "d3d12_shaders": "dxil",
+ "note": "m1 matrix: ARM64 Wine + FEX, FEX_HARDWARE_TSO=0 (/Users/jess/mproton/work/mach9/dist/wine); wine-11.20; part cpu",
+ "args": "--no-gpu",
+ "results": [
+  {
+   "name": "cpu.scalar",
+   "value": 155.1311,
+   "unit": "Miter/s"
+  },
+  {
+   "name": "cpu.vector",
+   "value": 6.1388,
+   "unit": "GFLOP/s(x2)"
+  },
+  {
+   "name": "cpu.memcpy",
+   "value": 33.0605,
+   "unit": "GB/s"
+  },
+  {
+   "name": "cpu.atomic",
+   "value": 56.553,
+   "unit": "Mops/s"
+  },
+  {
+   "name": "cpu.pingpong",
+   "value": 12987.6877,
+   "unit": "Krt/s",
+   "ordering_errors": 0
+  }
+ ],
+ "run": {
+  "status": "ok",
+  "exit_code": 0,
+  "seconds": 3,
+  "runtime": "arm64-tso0",
+  "part": "cpu",
+  "log": "logs/arm64-tso0-i686-cpu.log"
+ }
+}
