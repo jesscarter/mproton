@@ -268,8 +268,37 @@ workspace_mach9() {
     ok "mach9: $SCRIPTS at ${MACH9_COMMIT:0:12}, patched"
 }
 
+# apply_series_incremental <base>: run wine/apply.sh in a scratch worktree of
+# src (branch mproton-series), then check src out at the result. Checking out
+# base in src and applying there would rewrite every file the series touches,
+# configure included, so configure reruns, config.h changes and nearly all of
+# Wine recompiles. Going straight from src's current commit to the new one
+# rewrites only the files that differ. The series' commit hashes are the same
+# everywhere (fixed committer and dates), so an unchanged series is a no-op.
+apply_series_incremental() {
+    local base="$1" wt="$STATE/wine-series-wt" new saved
+    if [ -e "$wt" ]; then
+        git -C "$SRC" worktree remove --force "$wt" 2>/dev/null || rm -rf "$wt"
+    fi
+    git -C "$SRC" worktree prune
+    git -C "$SRC" worktree add --quiet --detach "$wt" "$base"
+    info "running wine/apply.sh in a scratch worktree ($wt)"
+    bash "$WINE_SERIES" --branch mproton-series "$wt" || die "wine/apply.sh failed" \
+        "The scratch worktree $wt is left as apply.sh left it; src is untouched. Fix the series and re-run this step."
+    new=$(git -C "$wt" rev-parse HEAD)
+    git -C "$SRC" worktree remove --force "$wt"
+    [ "$new" != "$base" ] || warn "wine/apply.sh changed nothing"
+    if git_dirty "$SRC"; then
+        saved=$(backup_changes "$SRC" src)
+        note "$SRC had local changes; saved them to $saved"
+    fi
+    info "moving $SRC from $(git -C "$SRC" rev-parse --short HEAD) to ${new:0:12} (only changed files are rewritten)"
+    git -C "$SRC" checkout --quiet --force -B mproton "$new"
+    applied=1   # local of the caller, workspace_wine_src
+}
+
 workspace_wine_src() {
-    local key base head
+    local key base head applied=
     key=$(wine_src_key)
     if stamp_ok wine-src "$key" && [ "$(src_state)" = "$(stamp_of wine-src.head)" ]; then
         ok "Wine source: $SRC at $(src_state | cut -c1-12) (up to date)"
@@ -292,8 +321,14 @@ workspace_wine_src() {
             "(no Proton patches, so no steamclient->lsteamclient redirect)"
     fi
     git_fetch_commit "$SRC" "$WINE_REPO" "$base"
-    git_force_checkout "$SRC" "$base" src
-    if [ -f "$WINE_SERIES" ]; then
+    if [ -f "$WINE_SERIES" ] && [ -f "$SRC/.git/index" ]; then
+        # src is already checked out: build the series elsewhere and move src
+        # straight to it, so make stays incremental (see apply_series_incremental).
+        apply_series_incremental "$base"
+    else
+        git_force_checkout "$SRC" "$base" src
+    fi
+    if [ -f "$WINE_SERIES" ] && [ -z "$applied" ]; then
         # apply.sh's contract: given a clean checkout, it does
         # `git checkout -B mproton <base>` and `git am`s wine/patches/*.patch
         # with a fixed committer, so the result has the same commit hashes
