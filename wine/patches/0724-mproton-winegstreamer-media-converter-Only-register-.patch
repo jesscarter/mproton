@@ -1,8 +1,8 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: jess <jessica.welsh.carter@gmail.com>
 Date: Sat, 7 Nov 2026 15:48:52 -0500
-Subject: [PATCH 724/725] mproton: winegstreamer/media-converter: Only register
- the audio converters when opusdec and capssetter exist.
+Subject: [PATCH] mproton: winegstreamer/media-converter: Only register the
+ audio converters when opusdec and capssetter exist.
 
 protonaudioconverter (audio/x-wma -> audio/x-opus) and protonaudioconverterbin
 (audio/x-wma -> raw) outrank the stock WMA decoders. The bin links

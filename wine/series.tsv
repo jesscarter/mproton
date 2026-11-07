@@ -924,7 +924,7 @@ order	commit	status	pass	group	author	subject	note
 	e1b3211935f	dropped-reverted		ARM64 / ARM64EC / FEX / WoW64	Billy Laws	ntdll: Add an interface to map the FEX stats shm.	reverted in Proton by/with 943f68fadda
 	b130f25d66f	conflict	12	ARM64 / ARM64EC / FEX / WoW64	Billy Laws	configure: Enable vcruntime140_1 and dpnsvcr for arm64x builds.	configure.ac
 500	f95eb548a1c	hand-merged	4	ARM64 / ARM64EC / FEX / WoW64	Billy Laws	ntdll: Implement WOW64 thread suspension helpers.	removed 11.20's RtlWow64SuspendThread semi-stub from process.c (d53a9ba0cd5), which these per-arch implementations replace
-	133caa0db14	conflict	12	ARM64 / ARM64EC / FEX / WoW64	Billy Laws	wow64: Support running a BT module provided suspend routine.	dlls/wow64/syscall.c
+726	133caa0db14	hand-merged	12	ARM64 / ARM64EC / FEX / WoW64	Billy Laws	wow64: Support running a BT module provided suspend routine.	ported onto 11.20's dlls/wow64/syscall.c; falls back to NtSuspendThread when the BT module lacks BTCpuSuspendLocalThread. Fixes i686 aborts at Wow64SuspendLocalThread (the stub ntdll's RtlWow64SuspendThread called)
 	be454c4d1d6	dropped-reverted		other PE-side game / app fixes	Billy Laws	HACK: Avoid delay importing rpcrt4	reverted in Proton by/with 8fb9c7f7154
 501	8d813e09b87	applied	4	ARM64 / ARM64EC / FEX / WoW64	Billy Laws	HACK: wineboot: Always apply FEX's scaling to the reported ARM64 TSC	core (likely conflict)
 502	536caf6e516	applied	4	ARM64 / ARM64EC / FEX / WoW64	Billy Laws	wow64: Write NtProtectVirtualMemory old_prot from within the thunk.	core (likely conflict)

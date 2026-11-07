@@ -1,8 +1,8 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: jess <jessica.welsh.carter@gmail.com>
 Date: Sat, 7 Nov 2026 16:18:29 -0500
-Subject: [PATCH 725/726] mproton: winegstreamer/media-converter: Include
- pthread.h in media-converter.h.
+Subject: [PATCH] mproton: winegstreamer/media-converter: Include pthread.h in
+ media-converter.h.
 
 The header declares a pthread_mutex_t member. On Linux glibc makes it
 visible through the other system headers, but on darwin nothing does, so

@@ -1,8 +1,8 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Paul Gofman <pgofman@codeweavers.com>
 Date: Fri, 27 Jun 2025 13:16:52 -0600
-Subject: [PATCH] HACK: win32u: Add a frequency to 800x600  mode and disable
- low res modes for Dishonored 2.
+Subject: [PATCH] HACK: win32u: Add a frequency to 800x600 mode and disable low
+ res modes for Dishonored 2.
 
 CW-Bug-Id: #25610
 (cherry picked from commit 6392ad52e0f5fba092e2cf9fbffff7c4d51ae5d6)

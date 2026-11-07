@@ -6,8 +6,8 @@
 #                                                checked out at the commit BEFORE the regen
 #                                                patch, on branch series-edit
 #   ... commit fixes in <dir> (one commit per fix; git -C <dir> commit ...) ...
-#   wine/scripts/series-edit.sh finish [<dir>]   the regen patch back on top (re-run with
-#                                                regenerate.sh if a fix touched its inputs),
+#   wine/scripts/series-edit.sh finish [<dir>]   the regen patch back on top (the generators
+#                                                whose inputs a fix touched re-run into it),
 #                                                wine/patches re-exported and checked, <dir>
 #                                                removed
 #   wine/scripts/series-edit.sh abort  [<dir>]   remove <dir>, keep wine/patches as it was
@@ -62,18 +62,31 @@ finish)
     old=$(git -C "$dir" rev-parse series-edit-full~1)
     added=$(git -C "$dir" rev-list --count "$old"..HEAD)
     [ "$(git -C "$dir" rev-list --count HEAD.."$old")" -eq 0 ] || echo "series-edit: note: commits were rewritten, not only added"
-    # Inputs of wine/scripts/regenerate.sh: configure.ac (autoconf/autoheader),
-    # server/protocol.def (make_requests), spec files (make_specfiles), the
-    # Vulkan generator.
-    if git -C "$dir" diff --quiet "$old" HEAD -- configure.ac aclocal.m4 server/protocol.def \
-            '*.spec' dlls/winevulkan/make_vulkan; then
-        git -C "$dir" cherry-pick --allow-empty "$regen" >/dev/null \
-            || die "the regen patch doesn't apply on top of your fixes; resolve in $dir (git cherry-pick --continue), then finish again"
-    else
-        echo "series-edit: a fix touched a regenerate.sh input; regenerating"
-        "$here/scripts/regenerate.sh" "$dir" >/dev/null
-        git -C "$dir" add -A
-        git -C "$dir" commit -q --allow-empty -C "$regen"
+    # The regen patch goes back on top as it was; then only the generators
+    # whose inputs the fixes touched run again (wine/scripts/regenerate.sh
+    # runs all of them), and their output is folded into the regen patch.
+    changed() { ! git -C "$dir" diff --quiet "$old" HEAD -- "$@"; }
+    gens=()
+    changed configure.ac aclocal.m4 && gens+=(autoconf)
+    changed server/protocol.def && gens+=(make_requests)
+    changed '*.spec' && gens+=(make_specfiles)
+    changed dlls/winevulkan/make_vulkan && gens+=(make_vulkan)
+    git -C "$dir" cherry-pick --allow-empty "$regen" >/dev/null \
+        || die "the regen patch doesn't apply on top of your fixes; resolve in $dir (git cherry-pick --continue), then finish again"
+    for g in ${gens[@]+"${gens[@]}"}; do
+        echo "series-edit: a fix touched an input of $g; running it"
+        case "$g" in
+            autoconf)
+                command -v autoconf >/dev/null || die "autoconf not found (brew install autoconf); $dir is kept"
+                (cd "$dir" && autoconf -f && autoheader -f && rm -rf autom4te.cache configure~ include/config.h.in~) ;;
+            make_requests|make_specfiles) (cd "$dir" && "tools/$g") ;;
+            make_vulkan) (cd "$dir/dlls/winevulkan" && XDG_CACHE_HOME=${XDG_CACHE_HOME:-${TMPDIR:-/tmp}} python3 ./make_vulkan) ;;
+        esac
+    done
+    if [ -n "$(git -C "$dir" status --porcelain --untracked-files=no)" ]; then
+        git -C "$dir" add -u
+        git -C "$dir" commit -q --amend --no-edit
+        echo "series-edit: regen patch updated"
     fi
     rm -f "$here"/patches/*.patch
     git -C "$dir" format-patch -q --zero-commit --no-signature -N -o "$here/patches" "$base..HEAD"
