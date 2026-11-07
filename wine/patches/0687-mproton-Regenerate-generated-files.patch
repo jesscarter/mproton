@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: mproton <mproton@localhost>
 Date: Sat, 7 Nov 2026 03:50:00 +0000
-Subject: [PATCH] mproton: Regenerate generated files.
+Subject: [PATCH 687/687] mproton: Regenerate generated files.
 
 Proton's Wine deletes configure, config.h.in and the generated Vulkan and
 syscall files from git and regenerates them at build time. athei's tree

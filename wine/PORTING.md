@@ -4,7 +4,7 @@ For the next session that continues [docs/wine-tree.md](../docs/wine-tree.md). R
 
 ## Where things stand
 
-- `main` has the series: 686 patches in `wine/patches/` on athei `arm64-patched` `5959a04b1af` (`wine/base.ref`). That's 682 Proton commits plus 4 mproton patches, and the last patch is always `mproton: Regenerate generated files.`
+- `main` has the series: 687 patches in `wine/patches/` on athei `arm64-patched` `5959a04b1af` (`wine/base.ref`). That's 682 Proton commits plus 5 mproton patches, and the last patch is always `mproton: Regenerate generated files.`
 - `wine/series.tsv` has one row per Proton commit (`ValveSoftware/wine` `proton_11.0` @ `e60892cc239`, 1454 commits on wine-11.0). **200 have status `conflict`** (246 before batch 1). Those are the job.
 - A clean aarch64-Linux build of the series has 0 errors. So does athei alone. Keep it at 0.
 - **Progress:** batch 1 (high-confidence groups except 10 d3dx commits) is done; see [Porting the conflicts](../docs/wine-tree.md#porting-the-conflicts). Next: the 10 d3dx commits left (d3dx10/d3dx11 save, d3dx11 load/filter), then multimedia. Hand-set statuses (superseded, Linux-only) go in `wine/scripts/manual-status.tsv`.

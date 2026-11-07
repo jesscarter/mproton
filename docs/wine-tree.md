@@ -6,7 +6,7 @@ The mproton Wine tree is athei's macOS ARM64 Wine (`athei/wine` `arm64-patched`,
 
 ## TL;DR
 
-- **The series:** 686 patches in [`wine/patches/`](../wine/patches), on athei `5959a04b1af` ([`wine/base.ref`](../wine/base.ref)). `wine/apply.sh <dir>` clones athei and applies them as commits on branch `mproton`.
+- **The series:** 687 patches in [`wine/patches/`](../wine/patches), on athei `5959a04b1af` ([`wine/base.ref`](../wine/base.ref)). `wine/apply.sh <dir>` clones athei and applies them as commits on branch `mproton`.
 - **Proton's 1454 commits:** 635 applied cleanly, 47 applied with a hand merge or a port, 413 dropped as already upstream in 11.20 (or superseded), 22 dropped because Proton reverts them itself, 134 skipped as Linux-only, 3 skipped as generated-file deletions, and **200 not carried yet** because they don't apply on the 11.20 base. Per-commit status: [Every Proton commit](#every-proton-commit) and [`wine/series.tsv`](../wine/series.tsv).
 - **Linux build:** `wine/apply.sh` into a fresh directory, then `configure` and a full `make` for aarch64 Linux with PE arches `aarch64,arm64ec,i386` (llvm-mingw 20261020): **0 errors**. A control build of unmodified athei with the same setup also has 0 errors. See [Linux verification](#linux-verification).
 - **Darwin build blockers from the triage:** #4 (libdrm in `amd_ags_x64`) and #5 (`<linux/limits.h>` in protontts) are fixed with configure checks and a portable header, not `#ifdef __APPLE__`. #1 to #3 and #6 don't occur, because the code that had them (fsync/ntsync, the glibc `mallopt` hack, the win32u fshack) isn't in the series.

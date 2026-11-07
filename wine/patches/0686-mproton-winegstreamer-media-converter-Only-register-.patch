@@ -1,0 +1,73 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: jess <jessica.welsh.carter@gmail.com>
+Date: Sat, 7 Nov 2026 15:48:52 -0500
+Subject: [PATCH 686/687] mproton: winegstreamer/media-converter: Only register
+ the audio converters when opusdec and capssetter exist.
+
+protonaudioconverter (audio/x-wma -> audio/x-opus) and protonaudioconverterbin
+(audio/x-wma -> raw) outrank the stock WMA decoders. The bin links
+protonaudioconverter -> opusdec -> capssetter; when either element is missing,
+as in athei's macOS GStreamer, linking fails and the WMA decoder DMO's
+SetOutputType returns 0xd0000001 (wg_transform_create fails). Skip registering
+both audio converters in that case so WMA falls back to the normal decoders.
+The video converter and protondemuxer are unaffected.
+---
+ dlls/winegstreamer/media-converter/lib.c | 35 +++++++++++++++++++-----
+ 1 file changed, 28 insertions(+), 7 deletions(-)
+
+diff --git a/dlls/winegstreamer/media-converter/lib.c b/dlls/winegstreamer/media-converter/lib.c
+index cd10ea6d220..52420b633e4 100644
+--- a/dlls/winegstreamer/media-converter/lib.c
++++ b/dlls/winegstreamer/media-converter/lib.c
+@@ -305,6 +305,16 @@ void dump_fozdb_close(struct dump_fozdb *db)
+     }
+ }
+ 
++static bool element_factory_exists(const char *name)
++{
++    GstElementFactory *factory;
++
++    if (!(factory = gst_element_factory_find(name)))
++        return false;
++    gst_object_unref(factory);
++    return true;
++}
++
+ bool media_converter_init(void)
+ {
+     GST_DEBUG_CATEGORY_INIT(media_converter_debug,
+@@ -316,16 +326,27 @@ bool media_converter_init(void)
+         return false;
+     }
+ 
+-    if (!GST_ELEMENT_REGISTER(protonaudioconverter, NULL))
++    /* protonaudioconverter claims audio/x-wma and outputs Opus, and protonaudioconverterbin
++     * needs opusdec and capssetter after it. Without them (macOS GStreamer builds often lack
++     * both) the bin fails to link and every WMA decoder would fail to start, so only
++     * register the audio converters when their downstream elements exist. */
++    if (!element_factory_exists("opusdec") || !element_factory_exists("capssetter"))
+     {
+-        GST_ERROR("Failed to register protonaudioconverter.");
+-        return false;
++        GST_WARNING("opusdec or capssetter missing, not registering the Proton audio converters.");
+     }
+-
+-    if (!GST_ELEMENT_REGISTER(protonaudioconverterbin, NULL))
++    else
+     {
+-        GST_ERROR("Failed to register protonaudioconverterbin.");
+-        return false;
++        if (!GST_ELEMENT_REGISTER(protonaudioconverter, NULL))
++        {
++            GST_ERROR("Failed to register protonaudioconverter.");
++            return false;
++        }
++
++        if (!GST_ELEMENT_REGISTER(protonaudioconverterbin, NULL))
++        {
++            GST_ERROR("Failed to register protonaudioconverterbin.");
++            return false;
++        }
+     }
+ 
+     if (!GST_ELEMENT_REGISTER(protondemuxer, NULL))
