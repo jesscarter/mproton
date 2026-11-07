@@ -6,7 +6,7 @@ Machine: MacBook Air, Apple M2 (4P+4E), 16 GB.
 
 ## Tooling (done)
 
-- `scripts/setup.sh` downloads llvm-mingw (20261104, universal macOS) to `toolchains/` (gitignored).
+- `scripts/setup.sh` downloads llvm-mingw (20261104; the universal macOS build, or the Ubuntu build on Linux) to `toolchains/` (gitignored).
 - `bench/mpbench.cpp` is a small deterministic benchmark. `bench/build.sh` builds it for x86_64, i686, aarch64 and arm64ec into `bench/out/`.
   - CPU scenes: scalar FP, vectorisable FP, memcpy, locked atomics, and a plain-store message-passing ping-pong. The ping-pong's `ordering_errors` exposes broken TSO emulation.
   - D3D11 scenes (FL 11_0), `gpu11.*`: 4,000 draws per frame with a constant-buffer Map each, which measures translation overhead, plus a fullscreen ALU-heavy pixel shader. (Version 1 called these `gpu.*`; `compare.py` maps the old names.)
@@ -38,15 +38,79 @@ The GPU row means wined3d over Apple's GL 4.1 tops out at feature level 9_3 (and
 
 Takeaway: plain Wine on macOS can't run D3D11-class games at all without DXVK, DXMT or D3DMetal. That's expected, and it confirms the graphics stack is the main work.
 
-## Still to do (needs macOS 27.2, update pending)
+## macOS 27.2 (updated 2026-11-06)
 
-1. Re-run the Rosetta baseline on 27.2. Rosetta still works on 27.
-2. **Rosetta + DXVK/MoltenVK** and **Rosetta + DXMT**: Gcenx/CrossOver-style builds. Run the full `--api all` set on every stack: `gpu12.features.*` tells us which of GS / stream output / tessellation each layer actually handles, and `vk.*` against `gpu11.*` separates winevulkan → MoltenVK cost from DXVK's own.
-3. **ARM64 Wine + FEX**: CrossOver Preview (ARM64 build), MetalSharp-Wine or athei/mach9. Compare CPU numbers with Rosetta, check `ordering_errors` with hardware TSO on and off, and record which GPU layers work.
-4. **KosmicKrisp**: build from Mesa (+ steamac patches) and run `vulkaninfo`. Then run DXVK and vkd3d-proton on it under ARM64 Wine; the `gpu12.features.*` probes are aimed at what KosmicKrisp has to emulate.
-5. **D3DMetal**: run the D3D12 scenes with the default DXIL shaders and again with `--d3d12-shaders dxbc`. We haven't confirmed whether D3DMetal accepts DXBC in D3D12; that run will tell us.
-6. **Native aarch64 / arm64ec builds of mpbench** under ARM64 Wine: the ceiling with no x86 translation.
-7. Optional: one real Steam game you own, as a sanity check alongside the synthetic numbers.
+### Rosetta, re-run
+
+Rosetta still runs Wine 10 on 27.2, with no "App Update Required" prompt. Results are in `results/m0-macos27-*.json`.
+
+| scene | x86_64 on 14.0 | x86_64 on 27.2 | i686 on 27.2 |
+|---|---|---|---|
+| cpu.scalar (Miter/s) | 160.3 | 157.7 | 156.8 |
+| cpu.vector (GFLOP/s x2) | 8.0 | 7.8 | 6.7 |
+| cpu.memcpy (GB/s) | 18.6 | 16.3 | 15.2 |
+| cpu.atomic (Mops/s) | 59.3 | 56.8 | 54.0 |
+| cpu.pingpong (K round-trips/s) | 12,213 | 11,882 | 10,676 |
+
+GPU is unchanged: feature level 9_3 only.
+
+### The new macOS APIs (`probes/macos_compat_probe.c`)
+
+- `posix_spawnattr_set_4k_page_size_np` and `thread_set_x86_64_compat` are exported from `libsystem_kernel` on 27.2. `posix_spawnattr_get_4k_page_size_np`, `thread_get_x86_64_compat` and `os_arch_x18_custom_abi` are not.
+- **Without the entitlement:**
+  - `thread_set_x86_64_compat(self, 1)` returns `KERN_FAILURE` (5).
+  - Setting the 4K attribute succeeds, but `posix_spawn` then fails with `EBADMACHO` (88, "Malformed Mach-o file").
+- `hw.optional.arm.FEAT_AFP` = 0 on M2.
+
+### Signing is a hard requirement
+
+athei/mach9's loader refuses to start without `com.apple.developer.cross-architecture-support`. That entitlement only takes effect through a provisioning profile embedded in a `.app` and a signature from that profile's team. There is no 16K-page fallback. So **any** ARM64 Wine we build ourselves needs our own Apple Developer team, provisioning profile and signing identity.
+
+- **Decision (2026-11-06):** enroll in the paid Apple Developer Program. Enrollment is in progress.
+- **CrossOver Preview** (ARM64 + FEX) is only available to holders of a paid CrossOver license, so we aren't using it.
+- **Full Xcode** (not just the Command Line Tools) is needed for the Metal toolchain (`xcrun metal`, used for DXMT's shaders) and for managing the profile.
+
+### ARM64 build from source (in progress)
+
+athei/mach9 checks out its sources into `work/mach9/` (gitignored):
+- `scripts` = mach9
+- `src` = athei/wine `arm64-patched`
+- FEX, Mesa (KosmicKrisp), DXMT and vkd3d-proton are cloned by the build itself.
+
+The command:
+
+```bash
+cd work/mach9 && MINGW_DIR=$PWD/../../toolchains/llvm-mingw scripts/bin/build-wine.sh
+```
+
+Then `scripts/bin/bundle-wine.sh`, which needs the signing identity.
+
+**Build status (2026-11-06):**
+- Built: Mesa/KosmicKrisp, GStreamer, Wine, the Wine SDK, FEX (wow64 + arm64ec), vkd3d-proton. The full run took about 22 minutes on the M2.
+- DXMT is blocked until full Xcode is installed: "no Metal compiler".
+- **Workaround:** FEX's staging step wrote AppConfig to `/usr/local/share/fex-emu`, which isn't writable here. Fixed locally by reconfiguring each `build/fex/<tree>` with `-DDATA_DIRECTORY=$PWD/build/fex/install/share/fex-emu`. Worth reporting upstream to athei.
+
+### KosmicKrisp on M2 (native, no Wine needed)
+
+`results/m0-kosmickrisp-m2-vulkaninfo.txt`, captured with `VK_DRIVER_FILES=…/kosmickrisp_mesa_icd.aarch64.json MESA_KK_EXPERIMENTAL=1 vulkaninfo`:
+
+- **Driver:** Vulkan **1.4.363**, conformance 1.4.6.2, Mesa 27.0.0-devel (athei/mesa `macos-patched`).
+- **Supported (true):** geometryShader, tessellationShader, transformFeedback + geometryStreams, sparse binding/residency (buffer, 2D image), 64-bit buffer and image atomics, robustness2 + nullDescriptor, customBorderColors, depthClipEnable, descriptorIndexing, bufferDeviceAddress, dynamicRendering, timelineSemaphore. Extensions present include `VK_EXT_mutable_descriptor_type`, `VK_EXT_extended_dynamic_state3`, `VK_EXT_vertex_attribute_divisor` and maintenance1–9.
+- **Missing:**
+  - `shaderFloat64`: Metal has no fp64, which matters only for rare D3D11 double-precision shaders.
+  - `VK_EXT_descriptor_buffer`: vkd3d-proton has a fallback.
+  - `VK_EXT_graphics_pipeline_library`: DXVK can't pre-compile pipeline pieces, so expect more shader-compile stutter.
+
+Takeaway: the feature set DXVK and vkd3d-proton need is essentially there on M2. The next question is correctness and performance under real games.
+
+## Still to do
+
+1. **Rosetta + DXVK/MoltenVK** and **Rosetta + DXMT**: Gcenx/CrossOver-style builds. Run the full `--api all` set on every stack: `gpu12.features.*` tells us which of GS / stream output / tessellation each layer actually handles, and `vk.*` against `gpu11.*` separates winevulkan → MoltenVK cost from DXVK's own.
+2. **ARM64 Wine + FEX** (our own mach9 build, once signed): compare CPU numbers with Rosetta, check `ordering_errors` with `FEX_HARDWARE_TSO=1` and `=0`, and record which GPU layers work.
+3. **KosmicKrisp**: run DXVK and vkd3d-proton on it under ARM64 Wine. `vulkaninfo` lists geometryShader, tessellationShader and transformFeedback; the `gpu12.features.*` probes check that they actually produce correct results.
+4. **D3DMetal**: run the D3D12 scenes with the default DXIL shaders and again with `--d3d12-shaders dxbc`. We haven't confirmed whether D3DMetal accepts DXBC in D3D12; that run will tell us.
+5. **Native aarch64 / arm64ec builds of mpbench** under ARM64 Wine: the ceiling with no x86 translation.
+6. Optional: one real Steam game you own, as a sanity check alongside the synthetic numbers.
 
 ## Linux validation on lavapipe (correctness only)
 
@@ -85,4 +149,3 @@ What the run showed:
 - Wine's builtin d3d12 (vkd3d, without vkd3d-proton) reports SM 5.1, so DXIL pipelines fail there. `gpu12.device` now carries a hint pointing at `--d3d12-shaders dxbc`.
 - Headless gotcha: under Xvfb, Wine's XRandR path reports a 0 Hz display mode, and DXVK's dxgi divides by it on swapchain creation (an unhandled exception, after which winedbg hangs the run). The script sets `UseXRandR=N` and disables the crash dialog.
 - Lavapipe's tessellator is about 50x slower per vertex once a single draw goes past about 64k domain vertices. The timed tess pass therefore uses 4 draws of 64 patches (factor 16, 131k triangles), which keeps each draw under that threshold.
-
