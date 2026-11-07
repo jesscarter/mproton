@@ -1,0 +1,25 @@
+{
+  "bench": "mpbench", "version": 2, "pe_arch": "x86_64", "wine": "9.0", "host": "Linux 6.18.44-fc-v300", "cpus": 4,
+  "frames": 120, "width": 640, "height": 360, "d3d12_shaders": "dxil",
+  "note": "CORRECTNESS ONLY: Linux, wine-9.0 (Ubuntu 9.0~repack-4build3), DXVK dxvk-2.7.1, vkd3d-proton-3.1, lavapipe (Mesa 25.2.8-0ubuntu0.24.04.4 (LLVM 20.1.2)) software Vulkan under Xvfb. Numbers measure a CPU rasterizer, not Mac performance.",
+  "args": "--frames 120 --width 640 --height 360",
+  "results": [
+    {"name": "cpu.scalar", "value": 213.4838, "unit": "Miter/s"},
+    {"name": "cpu.vector", "value": 2.8961, "unit": "GFLOP/s(x2)"},
+    {"name": "cpu.memcpy", "value": 6.5637, "unit": "GB/s"},
+    {"name": "cpu.atomic", "value": 26.9763, "unit": "Mops/s"},
+    {"name": "cpu.pingpong", "value": 4168.2037, "unit": "Krt/s", "ordering_errors": 0},
+    {"name": "gpu11.device", "value": 1.0000, "unit": "ok", "adapter": "llvmpipe (LLVM 20.1.2, 256 bits)", "feature_level": "0xb000"},
+    {"name": "gpu11.drawcalls", "value": 130.7755, "unit": "fps", "p50_ms": 6.826, "p99_ms": 9.862, "max_ms": 10.876},
+    {"name": "gpu11.fill", "value": 105.3743, "unit": "fps", "p50_ms": 9.032, "p99_ms": 10.886, "max_ms": 11.293},
+    {"name": "gpu12.device", "value": 1.0000, "unit": "ok", "adapter": "llvmpipe (LLVM 20.1.2, 256 bits)", "feature_level": "0xb100", "shader_model": "6.0", "shaders": "dxil"},
+    {"name": "gpu12.drawcalls", "value": 21.0547, "unit": "fps", "p50_ms": 47.306, "p99_ms": 118.555, "max_ms": 128.839},
+    {"name": "gpu12.fill", "value": 214.8104, "unit": "fps", "p50_ms": 4.216, "p99_ms": 7.480, "max_ms": 8.212},
+    {"name": "gpu12.features.gs", "value": 151.4026, "unit": "passes/s", "ok": true, "ms_per_pass": 6.6049, "check": "0/128 probe pixels wrong; timed: 65536 points -> quads"},
+    {"name": "gpu12.features.so", "value": 45.2980, "unit": "passes/s", "ok": true, "ms_per_pass": 22.0760, "check": "filled_size 65536 (want 65536), 0/4096 vertices wrong; timed: 1048576 vertices"},
+    {"name": "gpu12.features.tess", "value": 79.2109, "unit": "passes/s", "ok": true, "ms_per_pass": 12.6245, "check": "0/12 probe pixels wrong; timed: 4 draws x 64 patches x factor 16 = 131072 triangles"},
+    {"name": "vk.device", "value": 1.0000, "unit": "ok", "adapter": "llvmpipe (LLVM 20.1.2, 256 bits)", "api_version": "1.4.318", "driver_version": "0x6402008", "vendor_id": "0x10005", "present_mode": "immediate", "swapchain_images": 3},
+    {"name": "vk.drawcalls", "value": 30.3352, "unit": "fps", "p50_ms": 19.738, "p99_ms": 68.127, "max_ms": 70.184},
+    {"name": "vk.fill", "value": 259.7813, "unit": "fps", "p50_ms": 3.388, "p99_ms": 4.948, "max_ms": 5.012}
+  ]
+}

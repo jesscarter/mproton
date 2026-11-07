@@ -1,0 +1,14 @@
+{
+  "bench": "mpbench", "version": 2, "pe_arch": "x86_64", "wine": "9.0", "host": "Linux 6.18.44-fc-v300", "cpus": 4,
+  "frames": 120, "width": 640, "height": 360, "d3d12_shaders": "dxbc",
+  "note": "CORRECTNESS ONLY: Linux, wine-9.0 (Ubuntu 9.0~repack-4build3), DXVK dxvk-2.7.1, vkd3d-proton-3.1, lavapipe (Mesa 25.2.8-0ubuntu0.24.04.4 (LLVM 20.1.2)) software Vulkan under Xvfb. Numbers measure a CPU rasterizer, not Mac performance.",
+  "args": "--frames 120 --width 640 --height 360 --no-cpu --api d3d12 --d3d12-shaders dxbc",
+  "results": [
+    {"name": "gpu12.device", "value": 1.0000, "unit": "ok", "adapter": "llvmpipe (LLVM 20.1.2, 256 bits)", "feature_level": "0xb100", "shader_model": "6.0", "shaders": "dxbc"},
+    {"name": "gpu12.drawcalls", "value": 25.5983, "unit": "fps", "p50_ms": 36.944, "p99_ms": 55.049, "max_ms": 113.185},
+    {"name": "gpu12.fill", "value": 214.9267, "unit": "fps", "p50_ms": 3.962, "p99_ms": 7.308, "max_ms": 7.442},
+    {"name": "gpu12.features.gs", "value": 0.0000, "unit": "passes/s", "ok": false, "error": "D3DCompile vs_point (vs_5_0): 0x80004005 mpbench.hlsl:51:16: E5000: syntax error, unexpected NEW_IDENTIFIER"},
+    {"name": "gpu12.features.so", "value": 41.9762, "unit": "passes/s", "ok": true, "ms_per_pass": 23.8230, "check": "filled_size 65536 (want 65536), 0/4096 vertices wrong; timed: 1048576 vertices"},
+    {"name": "gpu12.features.tess", "value": 0.0000, "unit": "passes/s", "ok": false, "error": "D3DCompile vs_patch (vs_5_0): 0x80004005 mpbench.hlsl:56:16: E5000: syntax error, unexpected NEW_IDENTIFIER"}
+  ]
+}
