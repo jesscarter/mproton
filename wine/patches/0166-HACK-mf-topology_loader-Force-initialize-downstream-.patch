@@ -1,0 +1,27 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Thu, 18 Aug 2022 16:38:19 +0200
+Subject: [PATCH] HACK: mf/topology_loader: Force initialize downstream media
+ type if it's not.
+
+(cherry picked from commit cb370a63d4133639d0249dc6f128f9c96d594764)
+---
+ dlls/mf/topology_loader.c | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/mf/topology_loader.c b/dlls/mf/topology_loader.c
+index a07249cf1ff..d61571cb11f 100644
+--- a/dlls/mf/topology_loader.c
++++ b/dlls/mf/topology_loader.c
+@@ -600,7 +600,10 @@ static HRESULT get_first_supported_media_type(IMFMediaTypeHandler *handler, IMFM
+ 
+     for (i = 0; SUCCEEDED(hr = IMFMediaTypeHandler_GetMediaTypeByIndex(handler, i, &media_type)); i++)
+     {
+-        if (SUCCEEDED(hr = IMFMediaTypeHandler_IsMediaTypeSupported(handler, media_type, NULL)))
++        /* HACK: Force initialize media type here, this is now something the topology laoder should do
++         * according to conformance tests but it should hopefully going to solve uninitialized audio
++         * renderer issues. */
++        if (SUCCEEDED(hr = IMFMediaTypeHandler_SetCurrentMediaType(handler, media_type)))
+         {
+             *type = media_type;
+             return hr;

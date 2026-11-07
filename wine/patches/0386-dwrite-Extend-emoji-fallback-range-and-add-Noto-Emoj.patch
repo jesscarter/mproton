@@ -1,0 +1,25 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Thu, 19 Mar 2026 16:59:17 -0600
+Subject: [PATCH] dwrite: Extend emoji fallback range and add Noto Emoji as a
+ fallback font.
+
+CW-Bug-Id: #26705
+(cherry picked from commit efd72a829c70b3a3f2fac1c1282638d8cc48660f)
+---
+ dlls/dwrite/analyzer.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/dlls/dwrite/analyzer.c b/dlls/dwrite/analyzer.c
+index 2289bb21a9c..b4a123cc2a7 100644
+--- a/dlls/dwrite/analyzer.c
++++ b/dlls/dwrite/analyzer.c
+@@ -393,7 +393,7 @@ system_fallback_config[] =
+     { "FF00-FFEF",              L"Malgun Gothic", L"ko" },
+     { "FF00-FFEF",              L"MS Gothic" },
+ 
+-    { "1F800-1F8FF",            L"Noto Sans Symbols2, Noto Sans Symbols 2" },
++    { "1F300-1F8FF",            L"Noto Sans Symbols2, Noto Sans Symbols 2, Noto Emoji" },
+ };
+ 
+ struct text_source_context

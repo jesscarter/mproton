@@ -1,0 +1,29 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Mon, 25 Mar 2024 16:21:46 -0600
+Subject: [PATCH] windows.perception.stub: HACK: Set WS_EX_NOACTIVATE for
+ window in holographicspace_interop_CreateForWindow().
+
+CW-Bug-Id: #23614
+
+CW-Bug-Id: #26275
+(cherry picked from commit ec309bdc033826cbc516ad187a2dbbce42fbd53e)
+---
+ dlls/windows.perception.stub/holographic_space.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/dlls/windows.perception.stub/holographic_space.c b/dlls/windows.perception.stub/holographic_space.c
+index 8e523fe6fd6..07fb38f2992 100644
+--- a/dlls/windows.perception.stub/holographic_space.c
++++ b/dlls/windows.perception.stub/holographic_space.c
+@@ -361,6 +361,10 @@ static HRESULT WINAPI holographic_space_interop_CreateForWindow( IHolographicSpa
+         *holographic_space = NULL;
+         return E_INVALIDARG;
+     }
++
++    FIXME( "HACK: Setting WS_EX_NOACTIVATE for %p.\n", window );
++    SetWindowLongW( window, GWL_EXSTYLE, WS_EX_NOACTIVATE );
++
+     if (!(impl = calloc( 1, sizeof( *impl ) ))) return E_OUTOFMEMORY;
+ 
+     impl->IHolographicSpace_iface.lpVtbl = &holographic_space_vtbl;

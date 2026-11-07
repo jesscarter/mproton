@@ -1,0 +1,29 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Wed, 10 Nov 2021 20:30:40 +0300
+Subject: [PATCH] wine.inf: HACK: Spoof Win81 for msedgewebview2.exe.
+
+A proper fix depends on other process window Vulkan rendering
+and Direct Compositing implementation.
+
+CW-Bug-ID: #19618
+
+For FH5.
+
+(cherry picked from commit 0e78d593d240e1c3692476bc516217ce2423d548)
+---
+ loader/wine.inf.in | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/loader/wine.inf.in b/loader/wine.inf.in
+index 6a09b444e47..1a909a6037e 100644
+--- a/loader/wine.inf.in
++++ b/loader/wine.inf.in
+@@ -1449,6 +1449,7 @@ HKCU,Software\Wine\AppDefaults\ShadowOfWar.exe\DllOverrides,"atiadlxx",,"builtin
+ HKCU,Software\Wine\AppDefaults\DIRT5.exe\DllOverrides,"atiadlxx",,"builtin"
+ HKCU,Software\Wine\AppDefaults\gotg.exe\DllOverrides,"atiadlxx",,"builtin"
+ HKCU,Software\Wine\AppDefaults\RelicCardinal.exe\DllOverrides,"atiadlxx",,"builtin"
++HKCU,Software\Wine\AppDefaults\msedgewebview2.exe,"Version",,"win81"
+ HKCU,Software\Wine\AppDefaults\Avengers.exe\DllOverrides,"atiadlxx",,"builtin"
+ HKCU,Software\Wine\AppDefaults\starwarssquadrons.exe\DllOverrides,"atiadlxx",,"builtin"
+ HKCU,Software\Wine\AppDefaults\GW2.Main_Win64_Retail.exe\DllOverrides,"atiadlxx",,"builtin"

@@ -1,0 +1,24 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Fri, 14 Apr 2023 20:20:21 -0600
+Subject: [PATCH] HACK: ntdll: Enable WINESTEAMNOEXEC for Madballs in Babo:
+ Invasion.
+
+CW-Bug-Id: #22137
+(cherry picked from commit 6bd99436947eae6a467b2bb4cf591a19c67669ed)
+---
+ dlls/ntdll/unix/loader.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/dlls/ntdll/unix/loader.c b/dlls/ntdll/unix/loader.c
+index 921b9f5e3a1..21dee17a08a 100644
+--- a/dlls/ntdll/unix/loader.c
++++ b/dlls/ntdll/unix/loader.c
+@@ -2120,6 +2120,7 @@ static void hacks_init(void)
+ 
+     switch (sgi ? atoi( sgi ) : -1)
+     {
++    case 25700: /* Madballs in Babo: Invasion */
+     case 50130: /* Mafia II */
+     case 202990: /* CoD Black Ops II Multiplayer */
+     case 212910: /* CoD Black Ops II Zombies */

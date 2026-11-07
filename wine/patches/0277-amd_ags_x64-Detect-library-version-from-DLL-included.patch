@@ -1,0 +1,110 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Brendan Shanks <bshanks@codeweavers.com>
+Date: Thu, 25 Jun 2020 15:54:59 -0700
+Subject: [PATCH] amd_ags_x64: Detect library version from DLL included with
+ game.
+
+(cherry picked from commit e302836d229fcee6d494095af244e2b9efda2f95)
+---
+ dlls/amd_ags_x64/Makefile.in        |  2 +-
+ dlls/amd_ags_x64/amd_ags_x64_main.c | 70 ++++++++++++++++++++++++++++-
+ 2 files changed, 69 insertions(+), 3 deletions(-)
+
+diff --git a/dlls/amd_ags_x64/Makefile.in b/dlls/amd_ags_x64/Makefile.in
+index b2c2a28c064..5cd98895ff6 100644
+--- a/dlls/amd_ags_x64/Makefile.in
++++ b/dlls/amd_ags_x64/Makefile.in
+@@ -1,6 +1,6 @@
+ EXTRADEFS = -DWINE_NO_LONG_TYPES
+ MODULE    = amd_ags_x64.dll
+-IMPORTS   = vulkan-1
++IMPORTS   = version vulkan-1
+ IMPORTLIB = amd_ags_x64
+ 
+ EXTRADLLFLAGS = -mno-cygwin -Wb,--prefer-native
+diff --git a/dlls/amd_ags_x64/amd_ags_x64_main.c b/dlls/amd_ags_x64/amd_ags_x64_main.c
+index d5d99e14e7e..b3dec2751a5 100644
+--- a/dlls/amd_ags_x64/amd_ags_x64_main.c
++++ b/dlls/amd_ags_x64/amd_ags_x64_main.c
+@@ -130,13 +130,79 @@ done:
+     return ret;
+ }
+ 
++static enum amd_ags_version determine_ags_version(void)
++{
++    /* AMD AGS is not binary compatible between versions (even minor versions), and the game
++     * does not request a specific version when calling agsInit().
++     * Checking the version of amd_ags_x64.dll shipped with the game is the only way to
++     * determine what version the game was built against.
++     *
++     * An update to AGS 5.4.1 included an amd_ags_x64.dll with no file version info.
++     * In case of an error, assume it's that version.
++     */
++    enum amd_ags_version ret = AMD_AGS_VERSION_5_4_1;
++    DWORD infosize;
++    void *infobuf = NULL;
++    void *val;
++    UINT vallen, i;
++    VS_FIXEDFILEINFO *info;
++    UINT16 major, minor, patch;
++
++    infosize = GetFileVersionInfoSizeW(L"amd_ags_x64.dll", NULL);
++    if (!infosize)
++    {
++        WARN("Unable to determine desired version of amd_ags_x64.dll.\n");
++        goto done;
++    }
++
++    if (!(infobuf = heap_alloc(infosize)))
++    {
++        WARN("Failed to allocate memory.\n");
++        goto done;
++    }
++
++    if (!GetFileVersionInfoW(L"amd_ags_x64.dll", 0, infosize, infobuf))
++    {
++        WARN("Unable to determine desired version of amd_ags_x64.dll.\n");
++        goto done;
++    }
++
++    if (!VerQueryValueW(infobuf, L"\\", &val, &vallen) || (vallen != sizeof(VS_FIXEDFILEINFO)))
++    {
++        WARN("Unable to determine desired version of amd_ags_x64.dll.\n");
++        goto done;
++    }
++
++    info = val;
++    major = info->dwFileVersionMS >> 16;
++    minor = info->dwFileVersionMS;
++    patch = info->dwFileVersionLS >> 16;
++    TRACE("Found amd_ags_x64.dll v%d.%d.%d\n", major, minor, patch);
++
++    for (i = 0; i < ARRAY_SIZE(amd_ags_versions); i++)
++    {
++        if ((major == amd_ags_versions[i].major) &&
++            (minor == amd_ags_versions[i].minor) &&
++            (patch == amd_ags_versions[i].patch))
++        {
++            ret = i;
++            break;
++        }
++    }
++
++done:
++    heap_free(infobuf);
++    TRACE("Using AGS v%d.%d.%d interface\n",
++          amd_ags_versions[ret].major, amd_ags_versions[ret].minor, amd_ags_versions[ret].patch);
++    return ret;
++}
++
+ static AGSReturnCode init_ags_context(AGSContext *context)
+ {
+     AGSReturnCode ret;
+     unsigned int i, j;
+ 
+-    // TODO: version check
+-    context->version = AMD_AGS_VERSION_5_1_1;
++    context->version = determine_ags_version();
+     context->device_count = 0;
+     context->devices = NULL;
+     context->properties = NULL;

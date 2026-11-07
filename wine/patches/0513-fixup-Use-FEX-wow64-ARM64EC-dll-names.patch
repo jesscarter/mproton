@@ -1,0 +1,56 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Tue, 21 Apr 2026 16:17:32 -0600
+Subject: [PATCH] fixup! Use FEX wow64/ARM64EC dll names
+
+So when using a prefix from different arch has 32 bit rundll32.exe working
+and this process is not broken very early.
+
+(cherry picked from commit 0bea7fadfadb1b5a2211bd19919beccc552d74d6)
+---
+ dlls/wow64/syscall.c | 7 ++++++-
+ loader/wine.inf.in   | 6 +++---
+ 2 files changed, 9 insertions(+), 4 deletions(-)
+
+diff --git a/dlls/wow64/syscall.c b/dlls/wow64/syscall.c
+index 1ea3e2b6ec2..528b296a288 100644
+--- a/dlls/wow64/syscall.c
++++ b/dlls/wow64/syscall.c
+@@ -942,7 +942,12 @@ static const WCHAR *get_cpu_dll_name(void)
+     if (!NtQueryValueKey( key, &nameW, KeyValuePartialInformation, buffer, size, &size ) && info->Type == REG_SZ)
+     {
+         ((WCHAR *)info->Data)[info->DataLength / sizeof(WCHAR)] = 0;
+-        ret = (WCHAR *)info->Data;
++        if ((native_machine == IMAGE_FILE_MACHINE_AMD64 && (!wcscmp( (WCHAR *)info->Data, L"libwow64fex.dll")
++                                                            || !wcscmp( (WCHAR *)info->Data, L"xtajit64.dll")))
++            || (native_machine == IMAGE_FILE_MACHINE_ARM64 && !wcscmp( (WCHAR *)info->Data, L"wow64cpu.dll")))
++            ERR( "cpu dll is wrong for native_machine %#x, using default.\n", native_machine );
++        else
++            ret = (WCHAR *)info->Data;
+     }
+     NtClose( key );
+     return ret;
+diff --git a/loader/wine.inf.in b/loader/wine.inf.in
+index 10df2a5eb12..8190e17b125 100644
+--- a/loader/wine.inf.in
++++ b/loader/wine.inf.in
+@@ -403,16 +403,16 @@ HKLM,%CurrentVersionNT%\Image File Execution Options\Crysis2Remastered.exe,Globa
+ [CurrentVersionWow64.ntamd64]
+ HKLM,%CurrentVersion%,"ProgramFilesDir (x86)",,"%16426%"
+ HKLM,%CurrentVersion%,"CommonFilesDir (x86)",,"%16428%"
+-HKLM,Software\Microsoft\Wow64\x86,,2,"wow64cpu.dll"
++HKLM,Software\Microsoft\Wow64\x86,,,"wow64cpu.dll"
+ 
+ [CurrentVersionWow64.ntarm64]
+ HKLM,%CurrentVersion%,"ProgramFilesDir (x86)",,"%16426%"
+ HKLM,%CurrentVersion%,"CommonFilesDir (x86)",,"%16428%"
+ HKLM,%CurrentVersion%,"ProgramFilesDir (Arm)",,"C:\Program Files (Arm)"
+ HKLM,%CurrentVersion%,"CommonFilesDir (Arm)",,"C:\Program Files (Arm)\Common Files"
+-HKLM,Software\Microsoft\Wow64\amd64,,2,"libarm64ecfex.dll"
++HKLM,Software\Microsoft\Wow64\amd64,,,"libarm64ecfex.dll"
+ HKLM,Software\Microsoft\Wow64\arm,,2,"wowarmhw.dll"
+-HKLM,Software\Microsoft\Wow64\x86,,2,"libwow64fex.dll"
++HKLM,Software\Microsoft\Wow64\x86,,,"libwow64fex.dll"
+ 
+ [CurrentVersionWow64.ntx86]
+ HKLM,%CurrentVersion%,"ProgramFilesDir (x86)",,"%16422%"

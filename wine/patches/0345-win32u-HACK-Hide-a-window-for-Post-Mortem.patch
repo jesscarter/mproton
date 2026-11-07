@@ -1,0 +1,28 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Elia Devito <eliadevito@gmail.com>
+Date: Mon, 9 Dec 2024 20:41:12 +0100
+Subject: [PATCH] win32u: HACK: Hide a window for Post Mortem.
+
+Post Mortem needs the same hack as Syberia to avoid a black screen until
+it is possible to properly implement exclusive fullscreen ddraw mode.
+
+CW-Bug-Id: #23858
+CW-Bug-Id: #25542
+(cherry picked from commit 07346d6b546f4a1dd096d887f1f5fdf68d5c7c69)
+---
+ dlls/win32u/window.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/dlls/win32u/window.c b/dlls/win32u/window.c
+index 7d26917cc02..1e3800aa936 100644
+--- a/dlls/win32u/window.c
++++ b/dlls/win32u/window.c
+@@ -809,7 +809,7 @@ HWND WINAPI NtUserSetParent( HWND hwnd, HWND parent )
+         WCHAR name[32];
+         UNICODE_STRING us = { 0, sizeof(name), name };
+ 
+-        if (NtUserGetClassName( hwnd, FALSE, &us ) && !wcscmp( us.Buffer, u"SyberiaRenderWindowClass" ))
++        if (NtUserGetClassName( hwnd, FALSE, &us ) && ( !wcscmp( us.Buffer, u"SyberiaRenderWindowClass" ) || !wcscmp( us.Buffer, u"Post MortemRenderWindowClass" ) ))
+         {
+             ERR( "HACK: Hiding window.\n" );
+             was_visible = FALSE;

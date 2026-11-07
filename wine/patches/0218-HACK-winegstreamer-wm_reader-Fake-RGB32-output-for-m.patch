@@ -1,0 +1,33 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Fri, 14 Feb 2025 15:20:18 +0100
+Subject: [PATCH] HACK: winegstreamer/wm_reader: Fake RGB32 output for more
+ games.
+
+CW-Bug-Id: #24875
+CW-Bug-Id: #24876
+CW-Bug-Id: #24884
+(cherry picked from commit 5917a552027a26d5e6453b54cec1cb25a1f4b7e4)
+---
+ dlls/winegstreamer/wm_reader.c | 7 ++++++-
+ 1 file changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/winegstreamer/wm_reader.c b/dlls/winegstreamer/wm_reader.c
+index 73b3b211d00..ead67dd78ea 100644
+--- a/dlls/winegstreamer/wm_reader.c
++++ b/dlls/winegstreamer/wm_reader.c
+@@ -1568,8 +1568,13 @@ static HRESULT init_stream(struct wm_reader *reader)
+ 
+                 const char *id = getenv("SteamGameId");
+ 
+-                if (id && !strcmp(id, "1113000"))
++                if (id && (0
++                    || !strcmp(id, "1113000")
++                    || !strcmp(id, "638160")
++                    ))
++                {
+                     stream->format.u.video.format = WG_VIDEO_FORMAT_BGRx;
++                }
+             }
+         }
+         wg_parser_stream_enable(stream->wg_stream, &stream->format);

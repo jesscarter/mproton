@@ -1,0 +1,50 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Thu, 2 Oct 2025 18:26:48 -0600
+Subject: [PATCH] atiadlxx: Add stub for ADL2_Adapter_Graphic_Core_Info_Get().
+
+CW-Bug-Id: #25998
+(cherry picked from commit a70db36d074b76bed0f1e15a5b90feb2d294065a)
+---
+ dlls/atiadlxx/atiadlxx.spec   |  2 +-
+ dlls/atiadlxx/atiadlxx_main.c | 14 ++++++++++++++
+ 2 files changed, 15 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/atiadlxx/atiadlxx.spec b/dlls/atiadlxx/atiadlxx.spec
+index ed7dd7069c4..5d44a20eb29 100644
+--- a/dlls/atiadlxx/atiadlxx.spec
++++ b/dlls/atiadlxx/atiadlxx.spec
+@@ -82,7 +82,7 @@
+ @ stub ADL2_Adapter_FrameMetrics_Stop
+ @ stub ADL2_Adapter_Gamma_Get
+ @ stub ADL2_Adapter_Gamma_Set
+-@ stub ADL2_Adapter_Graphic_Core_Info_Get
++@ cdecl ADL2_Adapter_Graphic_Core_Info_Get(ptr long ptr)
+ @ stub ADL2_Adapter_HBC_Caps
+ @ stub ADL2_Adapter_HBM_ECC_UC_Check
+ @ stub ADL2_Adapter_Headless_Get
+diff --git a/dlls/atiadlxx/atiadlxx_main.c b/dlls/atiadlxx/atiadlxx_main.c
+index b4a532c6006..ef34356382e 100644
+--- a/dlls/atiadlxx/atiadlxx_main.c
++++ b/dlls/atiadlxx/atiadlxx_main.c
+@@ -809,6 +809,20 @@ int CDECL ADL_Adapter_ObservedClockInfo_Get(int adapter_index, int *core_clock,
+     return ADL2_Adapter_ObservedClockInfo_Get(default_ctx, adapter_index, core_clock, memory_clock);
+ }
+ 
++
++int CDECL ADL2_Adapter_Graphic_Core_Info_Get(ADL_CONTEXT_HANDLE context, int adapter_index, ADLGraphicCoreInfo *info)
++{
++    FIXME("context %p, adapter_index %d, info %p stub.\n", context, adapter_index, info);
++
++    memset(info, 0, sizeof(*info));
++    info->iNumPEsPerCU = 1000;
++    info->iNumCUs = 1000;
++    info->iGCGen = 100;
++    info->iNumROPs = 10000;
++    info->iNumSIMDs = 10000;
++    return ADL_OK;
++}
++
+ /* documented in the "Linux Specific APIs" section, present and used on Windows */
+ int CDECL ADL2_Adapter_MemoryInfo_Get(ADL_CONTEXT_HANDLE ctx, int adapter_index, ADLMemoryInfo *mem_info)
+ {

@@ -1,0 +1,28 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Tue, 22 Apr 2025 17:22:13 -0600
+Subject: [PATCH] services: HACK: Don't autostart MS Edge updater service.
+
+CW-Bug-Id: #25268
+(cherry picked from commit 2571587414f4d12290113ea24a37eef9592654b0)
+---
+ programs/services/services.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/programs/services/services.c b/programs/services/services.c
+index 0830a75016b..705c5112bf4 100644
+--- a/programs/services/services.c
++++ b/programs/services/services.c
+@@ -1160,6 +1160,12 @@ DWORD service_start(struct service_entry *service, DWORD service_argc, LPCWSTR *
+     BOOL shared_process;
+     DWORD err;
+ 
++    if (service->name && (!wcscmp(service->name, L"edgeupdate") || !wcscmp(service->name, L"edgeupdatem")))
++    {
++        ERR( "HACK: not starting %s.\n", wine_dbgstr_w(service->name));
++        return ERROR_SUCCESS;
++    }
++
+     err = service_start_process(service, &process, &shared_process);
+     if (err == ERROR_SUCCESS)
+     {

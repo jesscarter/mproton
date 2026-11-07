@@ -1,0 +1,28 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Santino Mazza <smazza@codeweavers.com>
+Date: Tue, 31 Oct 2023 20:44:53 -0300
+Subject: [PATCH] mf: Signal event_cond in wg_parser_stream_disable.
+
+A workaround to fix a hang in media_source_Shutdown in old media
+source, because the wg_parser receives an EOS signal after
+media_source_Shutdown disabled the streams, and event_cond
+never gets signaled so it never stops being busy.
+
+Cw-Bug-Id: #21809
+(cherry picked from commit d38dc757cc45d3600017956f6d1c54ac83282f02)
+---
+ dlls/winegstreamer/wg_parser.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/dlls/winegstreamer/wg_parser.c b/dlls/winegstreamer/wg_parser.c
+index b16d3c2509f..bf796cbbcfb 100644
+--- a/dlls/winegstreamer/wg_parser.c
++++ b/dlls/winegstreamer/wg_parser.c
+@@ -295,6 +295,7 @@ static NTSTATUS wg_parser_stream_disable(void *args)
+         stream->desired_caps = NULL;
+     }
+     pthread_mutex_unlock(&parser->mutex);
++    pthread_cond_signal(&stream->event_cond);
+     pthread_cond_signal(&stream->event_empty_cond);
+     return S_OK;
+ }

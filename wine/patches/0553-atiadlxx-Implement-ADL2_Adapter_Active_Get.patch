@@ -1,0 +1,45 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Thu, 2 Oct 2025 18:44:58 -0600
+Subject: [PATCH] atiadlxx: Implement ADL2_Adapter_Active_Get().
+
+CW-Bug-Id: #25998
+(cherry picked from commit 898a0cfe202c9528a665d692567323a9f96cdfad)
+---
+ dlls/atiadlxx/atiadlxx.spec   | 2 +-
+ dlls/atiadlxx/atiadlxx_main.c | 9 +++++++++
+ 2 files changed, 10 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/atiadlxx/atiadlxx.spec b/dlls/atiadlxx/atiadlxx.spec
+index 86465541681..ed7dd7069c4 100644
+--- a/dlls/atiadlxx/atiadlxx.spec
++++ b/dlls/atiadlxx/atiadlxx.spec
+@@ -14,7 +14,7 @@
+ @ stub ADL2_Adapter_ASICInfo_Get
+ @ stub ADL2_Adapter_Accessibility_Get
+ @ stub ADL2_Adapter_AceDefaults_Restore
+-@ stub ADL2_Adapter_Active_Get
++@ cdecl ADL2_Adapter_Active_Get(ptr long ptr)
+ @ stub ADL2_Adapter_Active_Set
+ @ stub ADL2_Adapter_Active_SetPrefer
+ @ cdecl ADL2_Adapter_AdapterInfoX2_Get(ptr ptr)
+diff --git a/dlls/atiadlxx/atiadlxx_main.c b/dlls/atiadlxx/atiadlxx_main.c
+index 9975b0a2fdf..b4a532c6006 100644
+--- a/dlls/atiadlxx/atiadlxx_main.c
++++ b/dlls/atiadlxx/atiadlxx_main.c
+@@ -658,6 +658,15 @@ int CDECL ADL2_Adapter_AdapterInfoX2_Get(ADL_CONTEXT_HANDLE ctx, ADLAdapterInfo
+     return adapter_info_get(ctx, *info, ctx->adapter_count * sizeof(**info));
+ }
+ 
++int CDECL ADL2_Adapter_Active_Get(ADL_CONTEXT_HANDLE ctx, int adapter_index, int *status)
++{
++    TRACE("ctx %p, adapter_index %d, status %p.\n", ctx, adapter_index, status);
++
++    if (adapter_index >= ctx->adapter_count) return ADL_ERR_INVALID_ADL_IDX;
++    *status = ctx->adapters[adapter_index].active;
++    return ADL_OK;
++}
++
+ int CDECL ADL2_Display_DisplayInfo_Get(ADL_CONTEXT_HANDLE ctx, int adapter_index, int *num_displays, ADLDisplayInfo **info, int force_detect)
+ {
+     struct gpu *gpu;

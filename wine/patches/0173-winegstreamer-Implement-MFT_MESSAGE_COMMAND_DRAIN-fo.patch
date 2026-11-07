@@ -1,0 +1,37 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Fri, 20 Jan 2023 14:50:38 -0600
+Subject: [PATCH] winegstreamer: Implement MFT_MESSAGE_COMMAND_DRAIN for wma
+ decoder.
+
+CW-Bug-Id: #21804
+CW-Bug-Id: #22299
+(cherry picked from commit 5b0d44834092cfecd81016f142793e01d713e32b)
+---
+ dlls/winegstreamer/wma_decoder.c | 13 ++++++++++++-
+ 1 file changed, 12 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/winegstreamer/wma_decoder.c b/dlls/winegstreamer/wma_decoder.c
+index 1ac44979844..791c7bba04b 100644
+--- a/dlls/winegstreamer/wma_decoder.c
++++ b/dlls/winegstreamer/wma_decoder.c
+@@ -527,7 +527,18 @@ static HRESULT WINAPI transform_ProcessEvent(IMFTransform *iface, DWORD id, IMFM
+ 
+ static HRESULT WINAPI transform_ProcessMessage(IMFTransform *iface, MFT_MESSAGE_TYPE message, ULONG_PTR param)
+ {
+-    FIXME("iface %p, message %#x, param %p stub!\n", iface, message, (void *)param);
++    struct wma_decoder *decoder = impl_from_IMFTransform(iface);
++
++    TRACE("iface %p, message %#x, param %p.\n", iface, message, (void *)param);
++
++    if (!decoder->wg_transform)
++        return MF_E_TRANSFORM_TYPE_NOT_SET;
++
++    if (message == MFT_MESSAGE_COMMAND_DRAIN)
++        return wg_transform_drain(decoder->wg_transform);
++
++    FIXME("Ignoring message %#x.\n", message);
++
+     return S_OK;
+ }
+ 

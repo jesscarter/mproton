@@ -1,0 +1,70 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Thu, 20 Jul 2023 20:45:34 -0600
+Subject: [PATCH] amd_ags_x64, atiadlxx: Bump driver version.
+
+(cherry picked from commit 2f099951a41e4d2fa49c783a1a91f1d681721b33)
+---
+ dlls/amd_ags_x64/amd_ags_x64_main.c | 11 +++++++----
+ dlls/atiadlxx/atiadlxx_main.c       |  6 +++---
+ 2 files changed, 10 insertions(+), 7 deletions(-)
+
+diff --git a/dlls/amd_ags_x64/amd_ags_x64_main.c b/dlls/amd_ags_x64/amd_ags_x64_main.c
+index 76519142865..0736a2ea16b 100644
+--- a/dlls/amd_ags_x64/amd_ags_x64_main.c
++++ b/dlls/amd_ags_x64/amd_ags_x64_main.c
+@@ -31,6 +31,9 @@ WINE_DEFAULT_DEBUG_CHANNEL(amd_ags);
+ #define heap_calloc calloc
+ #define heap_free free
+ 
++static const char driver_version[] = "23.10.01.45-230626a-393367C-AMD-Software-Adrenalin-Edition";
++static const char radeon_version[] = "23.7.1";
++
+ enum amd_ags_version
+ {
+     AMD_AGS_VERSION_5_0_5,
+@@ -758,8 +761,8 @@ AGSReturnCode WINAPI agsInit(AGSContext **context, const AGSConfiguration *confi
+     gpu_info->agsVersionMajor = amd_ags_info[object->version].major;
+     gpu_info->agsVersionMinor = amd_ags_info[object->version].minor;
+     gpu_info->agsVersionPatch = amd_ags_info[object->version].patch;
+-    gpu_info->driverVersion = "21.30.25.05-211005a-372402E-RadeonSoftware";
+-    gpu_info->radeonSoftwareVersion  = "21.10.2";
++    gpu_info->driverVersion = driver_version;
++    gpu_info->radeonSoftwareVersion  = radeon_version;
+     gpu_info->numDevices = object->device_count;
+     gpu_info->devices = object->devices;
+ 
+@@ -793,8 +796,8 @@ AGSReturnCode WINAPI agsInitialize(int ags_version, const AGSConfiguration *conf
+     }
+ 
+     memset(gpu_info, 0, sizeof(*gpu_info));
+-    gpu_info->driverVersion = "21.30.25.05-211005a-372402E-RadeonSoftware";
+-    gpu_info->radeonSoftwareVersion  = "21.10.2";
++    gpu_info->driverVersion = driver_version;
++    gpu_info->radeonSoftwareVersion  = radeon_version;
+     gpu_info->numDevices = object->device_count;
+     gpu_info->devices = object->devices;
+ 
+diff --git a/dlls/atiadlxx/atiadlxx_main.c b/dlls/atiadlxx/atiadlxx_main.c
+index 21dfbe71096..7104bcfa723 100644
+--- a/dlls/atiadlxx/atiadlxx_main.c
++++ b/dlls/atiadlxx/atiadlxx_main.c
+@@ -172,15 +172,15 @@ typedef struct ADLDisplayMap
+ } ADLDisplayMap, *LPADLDisplayMap;
+ 
+ static const ADLVersionsInfo version = {
+-    "22.20.19.16-221003a-384125E-AMD-Software-Adrenalin-Edition",
++    "23.10.01.45-230626a-393367C-AMD-Software-Adrenalin-Edition",
+     "",
+     "http://support.amd.com/drivers/xml/driver_09_us.xml",
+ };
+ 
+ static const ADLVersionsInfoX2 version2 = {
+-    "22.20.19.16-221003a-384125E-AMD-Software-Adrenalin-Edition",
++    "23.10.01.45-230626a-393367C-AMD-Software-Adrenalin-Edition",
+     "",
+-    "22.10.1",
++    "23.7.1",
+     "http://support.amd.com/drivers/xml/driver_09_us.xml",
+ };
+ 

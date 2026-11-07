@@ -1,0 +1,39 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Bernhard=20K=C3=B6lbl?= <bkoelbl@codeweavers.com>
+Date: Fri, 15 Aug 2025 21:16:36 +0200
+Subject: [PATCH] windows.media.speech: Add a way of forcing the recognized
+ locale.
+
+CW-Bug-Id: #20134
+(cherry picked from commit 0e28359f01d03aa49c1e5e71e3018aa681de09f7)
+---
+ dlls/windows.media.speech/recognizer.c | 15 ++++++++++++---
+ 1 file changed, 12 insertions(+), 3 deletions(-)
+
+diff --git a/dlls/windows.media.speech/recognizer.c b/dlls/windows.media.speech/recognizer.c
+index b1c8da5347d..a8dc71724d2 100644
+--- a/dlls/windows.media.speech/recognizer.c
++++ b/dlls/windows.media.speech/recognizer.c
+@@ -1502,10 +1502,19 @@ static HRESULT recognizer_create_unix_instance( struct session *session, const c
+     NTSTATUS status;
+     INT len;
+ 
+-    if (!strcmp(appid, "739630") && !RegGetValueW(HKEY_CURRENT_USER, L"Software\\Valve\\Steam", L"language", RRF_RT_REG_SZ, NULL, locale, &locale_len))
++    memset(locale, 0, locale_len);
++
++    if ((locale_len = GetEnvironmentVariableW(L"WINE_FORCE_SR_LOCALE", locale, locale_len)) && locale_len <= LOCALE_NAME_MAX_LENGTH)
+         len = locale_len;
+-    else if (!(len = GetUserDefaultLocaleName(locale, LOCALE_NAME_MAX_LENGTH)))
+-        return E_FAIL;
++    else
++    {
++        locale_len = LOCALE_NAME_MAX_LENGTH;
++
++        if (!strcmp(appid, "739630") && !RegGetValueW(HKEY_CURRENT_USER, L"Software\\Valve\\Steam", L"language", RRF_RT_REG_SZ, NULL, locale, &locale_len))
++            len = locale_len;
++        else if (!(len = GetUserDefaultLocaleName(locale, LOCALE_NAME_MAX_LENGTH)))
++            return E_FAIL;
++    }
+ 
+     if (CharLowerBuffW(locale, len) != len)
+         return E_FAIL;

@@ -1,0 +1,30 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arkadiusz Hiler <ahiler@codeweavers.com>
+Date: Tue, 17 Jan 2023 14:38:06 +0200
+Subject: [PATCH] winegstreamer/wg_parser: Set n-threads for dav1d to 4 in 64
+ bit mode.
+
+CW-Bug-Id: #19516
+(cherry picked from commit 1ed11075f5d7ecd5a083304b330c48cf52e9bd5e)
+---
+ dlls/winegstreamer/wg_parser.c | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/dlls/winegstreamer/wg_parser.c b/dlls/winegstreamer/wg_parser.c
+index 32f0daf1de1..fd1e5c22157 100644
+--- a/dlls/winegstreamer/wg_parser.c
++++ b/dlls/winegstreamer/wg_parser.c
+@@ -679,8 +679,13 @@ static void set_dav1d_n_threads(GstElement *element)
+ 
+     if (name && strstr(name, "Dav1d"))
+     {
++#if defined(__x86_64__)
++        GST_DEBUG("%s found, setting n-threads to 4.", name);
++        g_object_set(element, "n-threads", G_GINT64_CONSTANT(4), NULL);
++#else
+         GST_DEBUG("%s found, setting n-threads to 1.", name);
+         g_object_set(element, "n-threads", G_GINT64_CONSTANT(1), NULL);
++#endif
+     }
+ }
+ 

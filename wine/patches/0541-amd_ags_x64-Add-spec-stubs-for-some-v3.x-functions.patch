@@ -1,0 +1,41 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Thu, 29 Feb 2024 22:21:25 -0600
+Subject: [PATCH] amd_ags_x64: Add spec stubs for some v3.x functions.
+
+CW-Bug-Id: #23474
+(cherry picked from commit 8d5ae5c0e856abc41cdd5c9446e99e554e5fb7d8)
+---
+ dlls/amd_ags_x64/amd_ags_x64.spec | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/dlls/amd_ags_x64/amd_ags_x64.spec b/dlls/amd_ags_x64/amd_ags_x64.spec
+index 5908cc611b9..6d828aaa37b 100644
+--- a/dlls/amd_ags_x64/amd_ags_x64.spec
++++ b/dlls/amd_ags_x64/amd_ags_x64.spec
+@@ -5,11 +5,15 @@
+ @ stdcall -norelay -arch=x86_64,arm64ec agsDriverExtensionsDX11_BeginUAVOverlap() DX11_BeginUAVOverlap_impl
+ @ stub agsDriverExtensions_IASetPrimitiveTopology
+ @ stub agsDriverExtensionsDX11_CreateBuffer
++@ stub agsDriverExtensions_CreateBuffer
+ @ stdcall agsDriverExtensionsDX11_CreateDevice(ptr ptr ptr ptr)
+ @ stub agsDriverExtensionsDX11_CreateFromDevice
+ @ stub agsDriverExtensionsDX11_CreateTexture1D
+ @ stub agsDriverExtensionsDX11_CreateTexture2D
+ @ stub agsDriverExtensionsDX11_CreateTexture3D
++@ stub agsDriverExtensions_CreateTexture1D
++@ stub agsDriverExtensions_CreateTexture2D
++@ stub agsDriverExtensions_CreateTexture3D
+ @ stdcall agsDriverExtensions_DeInit(ptr)
+ @ stdcall agsDriverExtensionsDX11_DeInit(ptr)
+ @ stub agsDriverExtensionsDX11_Destroy
+@@ -29,6 +33,9 @@
+ @ stub agsDriverExtensionsDX11_NotifyResourceBeginAllAccess
+ @ stub agsDriverExtensionsDX11_NotifyResourceEndAllAccess
+ @ stub agsDriverExtensionsDX11_NotifyResourceEndWrites
++@ stub agsDriverExtensions_NotifyResourceBeginAllAccess
++@ stub agsDriverExtensions_NotifyResourceEndAllAccess
++@ stub agsDriverExtensions_NotifyResourceEndWrites
+ @ stub agsDriverExtensionsDX11_NumPendingAsyncCompileJobs
+ @ stub agsDriverExtensionsDX11_SetClipRects
+ @ stdcall -norelay -arch=x86_64,arm64ec agsDriverExtensions_SetDepthBounds() DX11_SetDepthBounds_impl

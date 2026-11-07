@@ -1,0 +1,950 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Connor McAdams <cmcadams@codeweavers.com>
+Date: Wed, 14 Jan 2026 12:55:22 -0500
+Subject: [PATCH] d3dx11: Implement D3DX11CreateThreadPump().
+
+Signed-off-by: Connor McAdams <cmcadams@codeweavers.com>
+
+CW-Bug-Id: #20442
+CW-Bug-Id: #23084
+CW-Bug-Id: #23301
+(cherry picked from commit 5a82fd04ecdd180cfed6a7f28f08d5d959a58fd1)
+
+mproton-resolved: 11.20's texture.c no longer includes initguid.h, so define the IIDs async.c uses here
+---
+ dlls/d3dx11_42/d3dx11_42.spec |   2 +-
+ dlls/d3dx11_43/async.c        | 483 ++++++++++++++++++++++++++++++++++
+ dlls/d3dx11_43/d3dx11_43.spec |   2 +-
+ dlls/d3dx11_43/tests/d3dx11.c | 372 ++++++++++++++++++++++++++
+ include/d3dx11core.idl        |   2 +
+ 5 files changed, 859 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/d3dx11_42/d3dx11_42.spec b/dlls/d3dx11_42/d3dx11_42.spec
+index 0fa9cb37d51..c7bc2e30778 100644
+--- a/dlls/d3dx11_42/d3dx11_42.spec
++++ b/dlls/d3dx11_42/d3dx11_42.spec
+@@ -25,7 +25,7 @@
+ @ stdcall -import D3DX11CreateTextureFromMemory(ptr ptr long ptr ptr ptr ptr)
+ @ stdcall -import D3DX11CreateTextureFromResourceA(ptr long str ptr ptr ptr ptr)
+ @ stdcall -import D3DX11CreateTextureFromResourceW(ptr long wstr ptr ptr ptr ptr)
+-@ stub D3DX11CreateThreadPump
++@ stdcall -import D3DX11CreateThreadPump(long long ptr)
+ @ stdcall -import D3DX11FilterTexture(ptr ptr long long)
+ @ stdcall -import D3DX11GetImageInfoFromFileA(str ptr ptr ptr)
+ @ stdcall -import D3DX11GetImageInfoFromFileW(wstr ptr ptr ptr)
+diff --git a/dlls/d3dx11_43/async.c b/dlls/d3dx11_43/async.c
+index 427b022a813..d45ea369d8d 100644
+--- a/dlls/d3dx11_43/async.c
++++ b/dlls/d3dx11_43/async.c
+@@ -17,11 +17,14 @@
+  */
+ 
+ #define COBJMACROS
++#include "initguid.h"
+ #include "d3dx11.h"
+ #include "d3dcompiler.h"
+ #include "dxhelpers.h"
++#include "winternl.h"
+ 
+ #include "wine/debug.h"
++#include "wine/list.h"
+ 
+ WINE_DEFAULT_DEBUG_CHANNEL(d3dx);
+ 
+@@ -642,3 +645,483 @@ HRESULT WINAPI D3DX11CreateAsyncShaderResourceViewProcessor(ID3D11Device *device
+     *processor = &object->ID3DX11DataProcessor_iface;
+     return S_OK;
+ }
++
++struct work_item
++{
++    struct list entry;
++
++    ID3DX11DataLoader *loader;
++    ID3DX11DataProcessor *processor;
++    HRESULT *result;
++    void **object;
++};
++
++static inline void work_item_free(struct work_item *work_item, BOOL cancel)
++{
++    ID3DX11DataLoader_Destroy(work_item->loader);
++    ID3DX11DataProcessor_Destroy(work_item->processor);
++    if (cancel && work_item->result)
++        *work_item->result = S_FALSE;
++    free(work_item);
++}
++
++#define THREAD_PUMP_EXITING UINT_MAX
++struct thread_pump
++{
++    ID3DX11ThreadPump ID3DX11ThreadPump_iface;
++    LONG refcount;
++
++    LONG processing_count;
++
++    SRWLOCK io_lock;
++    CONDITION_VARIABLE io_cv;
++    unsigned int io_count;
++    struct list io_queue;
++
++    SRWLOCK proc_lock;
++    CONDITION_VARIABLE proc_cv;
++    unsigned int proc_count;
++    struct list proc_queue;
++
++    SRWLOCK device_lock;
++    unsigned int device_count;
++    struct list device_queue;
++
++    unsigned int thread_count;
++    HANDLE threads[1];
++};
++
++static inline struct thread_pump *impl_from_ID3DX11ThreadPump(ID3DX11ThreadPump *iface)
++{
++    return CONTAINING_RECORD(iface, struct thread_pump, ID3DX11ThreadPump_iface);
++}
++
++static HRESULT WINAPI thread_pump_QueryInterface(ID3DX11ThreadPump *iface, REFIID riid, void **out)
++{
++    TRACE("iface %p, riid %s, out %p.\n", iface, debugstr_guid(riid), out);
++
++    if (IsEqualGUID(riid, &IID_ID3DX11ThreadPump)
++            || IsEqualGUID(riid, &IID_IUnknown))
++    {
++        ID3DX11ThreadPump_AddRef(iface);
++        *out = iface;
++        return S_OK;
++    }
++
++    WARN("%s not implemented, returning E_NOINTERFACE.\n", debugstr_guid(riid));
++    *out = NULL;
++    return E_NOINTERFACE;
++}
++
++static ULONG WINAPI thread_pump_AddRef(ID3DX11ThreadPump *iface)
++{
++    struct thread_pump *thread_pump = impl_from_ID3DX11ThreadPump(iface);
++    ULONG refcount = InterlockedIncrement(&thread_pump->refcount);
++
++    TRACE("%p increasing refcount to %lu.\n", iface, refcount);
++
++    return refcount;
++}
++
++static ULONG WINAPI thread_pump_Release(ID3DX11ThreadPump *iface)
++{
++    struct thread_pump *thread_pump = impl_from_ID3DX11ThreadPump(iface);
++    ULONG refcount = InterlockedDecrement(&thread_pump->refcount);
++    struct work_item *item, *next;
++    struct list list;
++    unsigned int i;
++
++    TRACE("%p decreasing refcount to %lu.\n", iface, refcount);
++
++    if (!refcount)
++    {
++        AcquireSRWLockExclusive(&thread_pump->io_lock);
++        thread_pump->io_count = THREAD_PUMP_EXITING;
++        ReleaseSRWLockExclusive(&thread_pump->io_lock);
++        WakeAllConditionVariable(&thread_pump->io_cv);
++
++        AcquireSRWLockExclusive(&thread_pump->proc_lock);
++        thread_pump->proc_count = THREAD_PUMP_EXITING;
++        ReleaseSRWLockExclusive(&thread_pump->proc_lock);
++        WakeAllConditionVariable(&thread_pump->proc_cv);
++
++        AcquireSRWLockExclusive(&thread_pump->device_lock);
++        thread_pump->device_count = THREAD_PUMP_EXITING;
++        ReleaseSRWLockExclusive(&thread_pump->device_lock);
++
++        for (i = 0; i < thread_pump->thread_count; ++i)
++        {
++            if (!thread_pump->threads[i])
++                continue;
++
++            WaitForSingleObject(thread_pump->threads[i], INFINITE);
++            CloseHandle(thread_pump->threads[i]);
++        }
++
++        list_init(&list);
++        list_move_tail(&list, &thread_pump->io_queue);
++        list_move_tail(&list, &thread_pump->proc_queue);
++        list_move_tail(&list, &thread_pump->device_queue);
++        LIST_FOR_EACH_ENTRY_SAFE(item, next, &list, struct work_item, entry)
++        {
++            list_remove(&item->entry);
++            work_item_free(item, TRUE);
++        }
++
++        free(thread_pump);
++    }
++
++    return refcount;
++}
++
++static HRESULT WINAPI thread_pump_AddWorkItem(ID3DX11ThreadPump *iface, ID3DX11DataLoader *loader,
++        ID3DX11DataProcessor *processor, HRESULT *result, void **object)
++{
++    struct thread_pump *thread_pump = impl_from_ID3DX11ThreadPump(iface);
++    struct work_item *work_item;
++
++    TRACE("iface %p, loader %p, processor %p, result %p, object %p.\n",
++            iface, loader, processor, result, object);
++
++    work_item = malloc(sizeof(*work_item));
++    if (!work_item)
++        return E_OUTOFMEMORY;
++
++    work_item->loader = loader;
++    work_item->processor = processor;
++    work_item->result = result;
++    work_item->object = object;
++
++    if (object)
++        *object = NULL;
++
++    InterlockedIncrement(&thread_pump->processing_count);
++    AcquireSRWLockExclusive(&thread_pump->io_lock);
++    ++thread_pump->io_count;
++    list_add_tail(&thread_pump->io_queue, &work_item->entry);
++    ReleaseSRWLockExclusive(&thread_pump->io_lock);
++    WakeConditionVariable(&thread_pump->io_cv);
++    return S_OK;
++}
++
++static UINT WINAPI thread_pump_GetWorkItemCount(ID3DX11ThreadPump *iface)
++{
++    struct thread_pump *thread_pump = impl_from_ID3DX11ThreadPump(iface);
++    UINT ret;
++
++    TRACE("iface %p.\n", iface);
++
++    AcquireSRWLockExclusive(&thread_pump->device_lock);
++    ret = thread_pump->processing_count + thread_pump->device_count;
++    ReleaseSRWLockExclusive(&thread_pump->device_lock);
++    return ret;
++}
++
++static HRESULT WINAPI thread_pump_WaitForAllItems(ID3DX11ThreadPump *iface)
++{
++    struct thread_pump *thread_pump = impl_from_ID3DX11ThreadPump(iface);
++    HRESULT hr;
++    LONG v;
++
++    TRACE("iface %p.\n", iface);
++
++    for (;;)
++    {
++        if (FAILED((hr = ID3DX11ThreadPump_ProcessDeviceWorkItems(iface, UINT_MAX))))
++            return hr;
++
++        AcquireSRWLockExclusive(&thread_pump->device_lock);
++        if (thread_pump->device_count)
++        {
++            ReleaseSRWLockExclusive(&thread_pump->device_lock);
++            continue;
++        }
++        v = thread_pump->processing_count;
++        ReleaseSRWLockExclusive(&thread_pump->device_lock);
++        if (!v)
++            break;
++
++        RtlWaitOnAddress(&thread_pump->processing_count, &v, sizeof(v), NULL);
++    }
++
++    return S_OK;
++}
++
++static HRESULT WINAPI thread_pump_ProcessDeviceWorkItems(ID3DX11ThreadPump *iface, UINT count)
++{
++    struct thread_pump *thread_pump = impl_from_ID3DX11ThreadPump(iface);
++    struct work_item *work_item;
++    HRESULT hr;
++    UINT i;
++
++    TRACE("iface %p, count %u.\n", iface, count);
++
++    for (i = 0; i < count; ++i)
++    {
++        AcquireSRWLockExclusive(&thread_pump->device_lock);
++        if (!thread_pump->device_count)
++        {
++            ReleaseSRWLockExclusive(&thread_pump->device_lock);
++            break;
++        }
++
++        --thread_pump->device_count;
++        work_item = LIST_ENTRY(list_head(&thread_pump->device_queue), struct work_item, entry);
++        list_remove(&work_item->entry);
++        ReleaseSRWLockExclusive(&thread_pump->device_lock);
++
++        hr = ID3DX11DataProcessor_CreateDeviceObject(work_item->processor, work_item->object);
++        if (work_item->result)
++            *work_item->result = hr;
++        work_item_free(work_item, FALSE);
++    }
++
++    return S_OK;
++}
++
++static void purge_list(struct list *list, LONG *count)
++{
++    struct work_item *work_item;
++
++    while (!list_empty(list))
++    {
++        work_item = LIST_ENTRY(list_head(list), struct work_item, entry);
++        list_remove(&work_item->entry);
++        work_item_free(work_item, TRUE);
++
++        if (count && !InterlockedDecrement(count))
++            RtlWakeAddressAll(count);
++    }
++}
++
++static HRESULT WINAPI thread_pump_PurgeAllItems(ID3DX11ThreadPump *iface)
++{
++    struct thread_pump *thread_pump = impl_from_ID3DX11ThreadPump(iface);
++    LONG v;
++
++    TRACE("iface %p.\n", iface);
++
++    for (;;)
++    {
++        AcquireSRWLockExclusive(&thread_pump->io_lock);
++        purge_list(&thread_pump->io_queue, &thread_pump->processing_count);
++        thread_pump->io_count = 0;
++        ReleaseSRWLockExclusive(&thread_pump->io_lock);
++
++        AcquireSRWLockExclusive(&thread_pump->proc_lock);
++        purge_list(&thread_pump->proc_queue, &thread_pump->processing_count);
++        thread_pump->proc_count = 0;
++        ReleaseSRWLockExclusive(&thread_pump->proc_lock);
++
++        AcquireSRWLockExclusive(&thread_pump->device_lock);
++        purge_list(&thread_pump->device_queue, NULL);
++        thread_pump->device_count = 0;
++        v = thread_pump->processing_count;
++        ReleaseSRWLockExclusive(&thread_pump->device_lock);
++        if (!v)
++            break;
++
++        RtlWaitOnAddress(&thread_pump->processing_count, &v, sizeof(v), NULL);
++    }
++
++    return S_OK;
++}
++
++static HRESULT WINAPI thread_pump_GetQueueStatus(ID3DX11ThreadPump *iface,
++        UINT *io_queue, UINT *process_queue, UINT *device_queue)
++{
++    struct thread_pump *thread_pump = impl_from_ID3DX11ThreadPump(iface);
++
++    TRACE("iface %p, io_queue %p, process_queue %p, device_queue %p.\n",
++            iface, io_queue, process_queue, device_queue);
++
++    *io_queue = thread_pump->io_count;
++    *process_queue = thread_pump->proc_count;
++    *device_queue = thread_pump->device_count;
++    return S_OK;
++}
++
++static const ID3DX11ThreadPumpVtbl thread_pump_vtbl =
++{
++    thread_pump_QueryInterface,
++    thread_pump_AddRef,
++    thread_pump_Release,
++    thread_pump_AddWorkItem,
++    thread_pump_GetWorkItemCount,
++    thread_pump_WaitForAllItems,
++    thread_pump_ProcessDeviceWorkItems,
++    thread_pump_PurgeAllItems,
++    thread_pump_GetQueueStatus
++};
++
++static DWORD WINAPI io_thread(void *arg)
++{
++    struct thread_pump *thread_pump = arg;
++    struct work_item *work_item;
++    HRESULT hr;
++
++    TRACE("%p thread started.\n", thread_pump);
++
++    for (;;)
++    {
++        AcquireSRWLockExclusive(&thread_pump->io_lock);
++
++        while (!thread_pump->io_count)
++            SleepConditionVariableSRW(&thread_pump->io_cv, &thread_pump->io_lock, INFINITE, 0);
++
++        if (thread_pump->io_count == THREAD_PUMP_EXITING)
++        {
++            ReleaseSRWLockExclusive(&thread_pump->io_lock);
++            return 0;
++        }
++
++        --thread_pump->io_count;
++        work_item = LIST_ENTRY(list_head(&thread_pump->io_queue), struct work_item, entry);
++        list_remove(&work_item->entry);
++        ReleaseSRWLockExclusive(&thread_pump->io_lock);
++
++        if (FAILED(hr = ID3DX11DataLoader_Load(work_item->loader)))
++        {
++            if (work_item->result)
++                *work_item->result = hr;
++            work_item_free(work_item, FALSE);
++            if (!InterlockedDecrement(&thread_pump->processing_count))
++                RtlWakeAddressAll(&thread_pump->processing_count);
++            continue;
++        }
++
++        AcquireSRWLockExclusive(&thread_pump->proc_lock);
++        if (thread_pump->proc_count == THREAD_PUMP_EXITING)
++        {
++            ReleaseSRWLockExclusive(&thread_pump->proc_lock);
++            work_item_free(work_item, TRUE);
++            return 0;
++        }
++
++        list_add_tail(&thread_pump->proc_queue, &work_item->entry);
++        ++thread_pump->proc_count;
++        ReleaseSRWLockExclusive(&thread_pump->proc_lock);
++        WakeConditionVariable(&thread_pump->proc_cv);
++    }
++    return 0;
++}
++
++static DWORD WINAPI proc_thread(void *arg)
++{
++    struct thread_pump *thread_pump = arg;
++    struct work_item *work_item;
++    SIZE_T size;
++    void *data;
++    HRESULT hr;
++
++    TRACE("%p thread started.\n", thread_pump);
++
++    for (;;)
++    {
++        AcquireSRWLockExclusive(&thread_pump->proc_lock);
++
++        while (!thread_pump->proc_count)
++            SleepConditionVariableSRW(&thread_pump->proc_cv, &thread_pump->proc_lock, INFINITE, 0);
++
++        if (thread_pump->proc_count == THREAD_PUMP_EXITING)
++        {
++            ReleaseSRWLockExclusive(&thread_pump->proc_lock);
++            return 0;
++        }
++
++        --thread_pump->proc_count;
++        work_item = LIST_ENTRY(list_head(&thread_pump->proc_queue), struct work_item, entry);
++        list_remove(&work_item->entry);
++        ReleaseSRWLockExclusive(&thread_pump->proc_lock);
++
++        if (FAILED(hr = ID3DX11DataLoader_Decompress(work_item->loader, &data, &size)))
++        {
++            if (work_item->result)
++                *work_item->result = hr;
++            work_item_free(work_item, FALSE);
++            if (!InterlockedDecrement(&thread_pump->processing_count))
++                RtlWakeAddressAll(&thread_pump->processing_count);
++            continue;
++        }
++
++        if (thread_pump->device_count == THREAD_PUMP_EXITING)
++        {
++            work_item_free(work_item, TRUE);
++            return 0;
++        }
++
++        if (FAILED(hr = ID3DX11DataProcessor_Process(work_item->processor, data, size)))
++        {
++            if (work_item->result)
++                *work_item->result = hr;
++            work_item_free(work_item, FALSE);
++            if (!InterlockedDecrement(&thread_pump->processing_count))
++                RtlWakeAddressAll(&thread_pump->processing_count);
++            continue;
++        }
++
++        AcquireSRWLockExclusive(&thread_pump->device_lock);
++        if (thread_pump->device_count == THREAD_PUMP_EXITING)
++        {
++            ReleaseSRWLockExclusive(&thread_pump->device_lock);
++            work_item_free(work_item, TRUE);
++            return 0;
++        }
++
++        list_add_tail(&thread_pump->device_queue, &work_item->entry);
++        ++thread_pump->device_count;
++        InterlockedDecrement(&thread_pump->processing_count);
++        RtlWakeAddressAll(&thread_pump->processing_count);
++        ReleaseSRWLockExclusive(&thread_pump->device_lock);
++    }
++    return 0;
++}
++
++HRESULT WINAPI D3DX11CreateThreadPump(UINT io_threads, UINT proc_threads, ID3DX11ThreadPump **pump)
++{
++    struct thread_pump *object;
++    unsigned int i;
++
++    TRACE("io_threads %u, proc_threads %u, pump %p.\n", io_threads, proc_threads, pump);
++
++    if (io_threads >= 1024 || proc_threads >= 1024)
++        return E_FAIL;
++
++    if (!io_threads)
++        io_threads = 1;
++    if (!proc_threads)
++    {
++        SYSTEM_INFO info;
++
++        GetSystemInfo(&info);
++        proc_threads = info.dwNumberOfProcessors;
++    }
++
++    if (!(object = calloc(1, FIELD_OFFSET(struct thread_pump, threads[io_threads + proc_threads]))))
++        return E_OUTOFMEMORY;
++
++    object->ID3DX11ThreadPump_iface.lpVtbl = &thread_pump_vtbl;
++    object->refcount = 1;
++    InitializeSRWLock(&object->io_lock);
++    InitializeConditionVariable(&object->io_cv);
++    list_init(&object->io_queue);
++    InitializeSRWLock(&object->proc_lock);
++    InitializeConditionVariable(&object->proc_cv);
++    list_init(&object->proc_queue);
++    InitializeSRWLock(&object->device_lock);
++    list_init(&object->device_queue);
++    object->thread_count = io_threads + proc_threads;
++
++    for (i = 0; i < object->thread_count; ++i)
++    {
++        object->threads[i] = CreateThread(NULL, 0, i < io_threads ? io_thread : proc_thread, object, 0, NULL);
++        if (!object->threads[i])
++        {
++            ID3DX11ThreadPump_Release(&object->ID3DX11ThreadPump_iface);
++            return E_FAIL;
++        }
++    }
++
++    *pump = &object->ID3DX11ThreadPump_iface;
++    return S_OK;
++}
+diff --git a/dlls/d3dx11_43/d3dx11_43.spec b/dlls/d3dx11_43/d3dx11_43.spec
+index 4c3b311a8d6..5212532e0e4 100644
+--- a/dlls/d3dx11_43/d3dx11_43.spec
++++ b/dlls/d3dx11_43/d3dx11_43.spec
+@@ -25,7 +25,7 @@
+ @ stdcall D3DX11CreateTextureFromMemory(ptr ptr long ptr ptr ptr ptr)
+ @ stdcall D3DX11CreateTextureFromResourceA(ptr long str ptr ptr ptr ptr)
+ @ stdcall D3DX11CreateTextureFromResourceW(ptr long wstr ptr ptr ptr ptr)
+-@ stub D3DX11CreateThreadPump
++@ stdcall D3DX11CreateThreadPump(long long ptr)
+ @ stdcall D3DX11FilterTexture(ptr ptr long long)
+ @ stdcall D3DX11GetImageInfoFromFileA(str ptr ptr ptr)
+ @ stdcall D3DX11GetImageInfoFromFileW(wstr ptr ptr ptr)
+diff --git a/dlls/d3dx11_43/tests/d3dx11.c b/dlls/d3dx11_43/tests/d3dx11.c
+index 97a72b7a857..6668e8e4d0b 100644
+--- a/dlls/d3dx11_43/tests/d3dx11.c
++++ b/dlls/d3dx11_43/tests/d3dx11.c
+@@ -3698,6 +3698,377 @@ static void test_D3DX11CreateAsyncShaderResourceViewProcessor(void)
+     ok(!ID3D11Device_Release(device), "Unexpected refcount.\n");
+ }
+ 
++static DWORD main_tid;
++static DWORD io_tid;
++
++struct data_object
++{
++    ID3DX11DataLoader ID3DX11DataLoader_iface;
++    ID3DX11DataProcessor ID3DX11DataProcessor_iface;
++
++    HANDLE load_started;
++    HANDLE load_done;
++    HANDLE decompress_done;
++    HRESULT load_ret;
++
++    DWORD process_tid;
++};
++
++static struct data_object *data_object_from_ID3DX11DataLoader(ID3DX11DataLoader *iface)
++{
++    return CONTAINING_RECORD(iface, struct data_object, ID3DX11DataLoader_iface);
++}
++
++static LONG data_loader_load_count;
++static WINAPI HRESULT data_loader_Load(ID3DX11DataLoader *iface)
++{
++    struct data_object *data_object = data_object_from_ID3DX11DataLoader(iface);
++    DWORD ret;
++
++    ok(InterlockedDecrement(&data_loader_load_count) >= 0, "Got unexpected call.\n");
++
++    if (!io_tid)
++        io_tid = GetCurrentThreadId();
++    ok(io_tid != main_tid, "Load called in main thread.\n");
++    ok(io_tid == GetCurrentThreadId(), "Load called in wrong thread.\n");
++
++    SetEvent(data_object->load_started);
++    ret = WaitForSingleObject(data_object->load_done, INFINITE);
++    ok(ret == WAIT_OBJECT_0, "WaitForSingleObject returned %#lx.\n", ret);
++    return data_object->load_ret;
++}
++
++static LONG data_loader_decompress_count;
++static WINAPI HRESULT data_loader_Decompress(ID3DX11DataLoader *iface, void **data, SIZE_T *bytes)
++{
++    struct data_object *data_object = data_object_from_ID3DX11DataLoader(iface);
++    DWORD ret;
++
++    ok(InterlockedDecrement(&data_loader_decompress_count) >= 0, "Got unexpected call.\n");
++    ok(!!data, "Got unexpected data %p.\n", data);
++    ok(!!bytes, "Got unexpected bytes %p.\n", bytes);
++
++    data_object->process_tid = GetCurrentThreadId();
++    ok(data_object->process_tid != main_tid, "Decompress called in main thread.\n");
++    ok(data_object->process_tid != io_tid, "Decompress called in IO thread.\n");
++
++    *data = (void *)0xdeadbeef;
++    *bytes = 0xdead;
++    ret = WaitForSingleObject(data_object->decompress_done, INFINITE);
++    ok(ret == WAIT_OBJECT_0, "WaitForSingleObject returned %#lx.\n", ret);
++    return S_OK;
++}
++
++static LONG data_loader_destroy_count;
++static WINAPI HRESULT data_loader_Destroy(ID3DX11DataLoader *iface)
++{
++    ok(InterlockedDecrement(&data_loader_destroy_count) >= 0, "Got unexpected call.\n");
++    return S_OK;
++}
++
++static ID3DX11DataLoaderVtbl D3DX11DataLoaderVtbl =
++{
++    data_loader_Load,
++    data_loader_Decompress,
++    data_loader_Destroy
++};
++
++static struct data_object* data_object_from_ID3DX11DataProcessor(ID3DX11DataProcessor *iface)
++{
++    return CONTAINING_RECORD(iface, struct data_object, ID3DX11DataProcessor_iface);
++}
++
++static LONG data_processor_process_count;
++static HRESULT WINAPI data_processor_Process(ID3DX11DataProcessor *iface, void *data, SIZE_T bytes)
++{
++    struct data_object *data_object = data_object_from_ID3DX11DataProcessor(iface);
++
++    ok(InterlockedDecrement(&data_processor_process_count) >= 0, "Got unexpected call.\n");
++    ok(data_object->process_tid == GetCurrentThreadId(), "Process called in unexpected thread.\n");
++
++    ok(data == (void *)0xdeadbeef, "Got unexpected data %p.\n", data);
++    ok(bytes == 0xdead, "Got unexpected bytes %Iu.\n", bytes);
++    return S_OK;
++}
++
++static LONG data_processor_create_count;
++static HRESULT WINAPI data_processor_CreateDeviceObject(ID3DX11DataProcessor *iface, void **object)
++{
++    ok(InterlockedDecrement(&data_processor_create_count) >= 0, "Got unexpected call.\n");
++    ok(main_tid == GetCurrentThreadId(), "CreateDeviceObject not called in main thread.\n");
++
++    *object = (void *)0xdeadf00d;
++    return S_OK;
++}
++
++static LONG data_processor_destroy_count;
++static HRESULT WINAPI data_processor_Destroy(ID3DX11DataProcessor *iface)
++{
++    struct data_object *data_object = data_object_from_ID3DX11DataProcessor(iface);
++
++    ok(InterlockedDecrement(&data_processor_destroy_count) >= 0, "Got unexpected call.\n");
++
++    CloseHandle(data_object->load_started);
++    CloseHandle(data_object->load_done);
++    CloseHandle(data_object->decompress_done);
++    free(data_object);
++    return S_OK;
++}
++
++static ID3DX11DataProcessorVtbl D3DX11DataProcessorVtbl =
++{
++    data_processor_Process,
++    data_processor_CreateDeviceObject,
++    data_processor_Destroy
++};
++
++static struct data_object *create_data_object(HRESULT load_ret)
++{
++    struct data_object *data_object = malloc(sizeof(*data_object));
++
++    data_object->ID3DX11DataLoader_iface.lpVtbl = &D3DX11DataLoaderVtbl;
++    data_object->ID3DX11DataProcessor_iface.lpVtbl = &D3DX11DataProcessorVtbl;
++
++    data_object->load_started = CreateEventW(NULL, FALSE, FALSE, NULL);
++    ok(!!data_object->load_started, "CreateEvent failed, error %lu.\n", GetLastError());
++    data_object->load_done = CreateEventW(NULL, FALSE, FALSE, NULL);
++    ok(!!data_object->load_done, "CreateEvent failed, error %lu.\n", GetLastError());
++    data_object->decompress_done = CreateEventW(NULL, FALSE, FALSE, NULL);
++    ok(!!data_object->decompress_done, "CreateEvent failed, error %lu.\n", GetLastError());
++    data_object->load_ret = load_ret;
++
++    return data_object;
++}
++
++static void test_D3DX11CreateThreadPump(void)
++{
++    UINT io_count, process_count, device_count, count;
++    struct data_object *data_object[2];
++    ID3DX11DataProcessor *processor;
++    D3DX11_IMAGE_INFO image_info;
++    ID3DX11DataLoader *loader;
++    HRESULT hr, work_item_hr;
++    ID3D11Resource *resource;
++    ID3DX11ThreadPump *pump;
++    ID3D11Device *device;
++    SYSTEM_INFO info;
++    void *object;
++    DWORD ret;
++    int i;
++
++    main_tid = GetCurrentThreadId();
++
++    hr = D3DX11CreateThreadPump(1024, 0, &pump);
++    ok(hr == E_FAIL, "Got unexpected hr %#lx.\n", hr);
++    hr = D3DX11CreateThreadPump(0, 1024, &pump);
++    ok(hr == E_FAIL, "Got unexpected hr %#lx.\n", hr);
++
++    GetSystemInfo(&info);
++    if (info.dwNumberOfProcessors > 1)
++        hr = D3DX11CreateThreadPump(0, 0, &pump);
++    else
++        hr = D3DX11CreateThreadPump(0, 2, &pump);
++    ok(hr == S_OK, "Got unexpected hr %#lx.\n", hr);
++
++    count = ID3DX11ThreadPump_GetWorkItemCount(pump);
++    ok(!count, "GetWorkItemCount returned %u.\n", count);
++    hr = ID3DX11ThreadPump_GetQueueStatus(pump, &io_count, &process_count, &device_count);
++    ok(hr == S_OK, "Got unexpected hr %#lx.\n", hr);
++    ok(!io_count, "Got unexpected io_count %u.\n", io_count);
++    ok(!process_count, "Got unexpected process_count %u.\n", process_count);
++    ok(!device_count, "Got unexpected device_count %u.\n", device_count);
++
++    data_object[0] = create_data_object(E_NOTIMPL);
++    data_object[1] = create_data_object(S_OK);
++
++    data_loader_load_count = 1;
++    hr = ID3DX11ThreadPump_AddWorkItem(pump, &data_object[0]->ID3DX11DataLoader_iface,
++            &data_object[0]->ID3DX11DataProcessor_iface, &work_item_hr, NULL);
++    ok(hr == S_OK, "Got unexpected hr %#lx.\n", hr);
++    ret = WaitForSingleObject(data_object[0]->load_started, INFINITE);
++    ok(ret == WAIT_OBJECT_0, "WaitForSingleObject returned %#lx.\n", ret);
++    ok(!data_loader_load_count, "Got unexpected data_loader_load_count %ld.\n",
++            data_loader_load_count);
++    count = ID3DX11ThreadPump_GetWorkItemCount(pump);
++    ok(count == 1, "GetWorkItemCount returned %u.\n", count);
++    hr = ID3DX11ThreadPump_GetQueueStatus(pump, &io_count, &process_count, &device_count);
++    ok(hr == S_OK, "Got unexpected hr %#lx.\n", hr);
++    ok(!io_count, "Got unexpected io_count %u.\n", io_count);
++    ok(!process_count, "Got unexpected process_count %u.\n", process_count);
++    ok(!device_count, "Got unexpected device_count %u.\n", device_count);
++
++    hr = ID3DX11ThreadPump_AddWorkItem(pump, &data_object[1]->ID3DX11DataLoader_iface,
++            &data_object[1]->ID3DX11DataProcessor_iface, NULL, &object);
++    ok(hr == S_OK, "Got unexpected hr %#lx.\n", hr);
++    ret = WaitForSingleObject(data_object[0]->load_started, 50);
++    ok(ret == WAIT_TIMEOUT, "WaitForSingleObject returned %#lx.\n", ret);
++    count = ID3DX11ThreadPump_GetWorkItemCount(pump);
++    ok(count == 2, "GetWorkItemCount returned %u.\n", count);
++    hr = ID3DX11ThreadPump_GetQueueStatus(pump, &io_count, &process_count, &device_count);
++    ok(hr == S_OK, "Got unexpected hr %#lx.\n", hr);
++    ok(io_count == 1, "Got unexpected io_count %u.\n", io_count);
++    ok(!process_count, "Got unexpected process_count %u.\n", process_count);
++    ok(!device_count, "Got unexpected device_count %u.\n", device_count);
++
++    data_loader_load_count = 1;
++    data_loader_destroy_count = 1;
++    data_processor_destroy_count = 1;
++    SetEvent(data_object[0]->load_done);
++    ret = WaitForSingleObject(data_object[1]->load_started, INFINITE);
++    ok(ret == WAIT_OBJECT_0, "WaitForSingleObject returned %#lx.\n", ret);
++    ok(work_item_hr == E_NOTIMPL, "Got unexpected work_item_hr %#lx.\n", work_item_hr);
++    ok(!data_loader_destroy_count, "Got unexpected data_loader_destroy_count %ld.\n",
++            data_loader_destroy_count);
++    ok(!data_processor_destroy_count, "Got unexpected data_processor_destroy_count %ld.\n",
++            data_processor_destroy_count);
++    ok(!data_loader_load_count, "Got unexpected data_loader_load_count %ld.\n",
++            data_loader_load_count);
++
++    data_loader_decompress_count = 1;
++    data_processor_process_count = 1;
++    SetEvent(data_object[1]->load_done);
++    SetEvent(data_object[1]->decompress_done);
++
++    data_processor_create_count = 1;
++    data_loader_destroy_count = 1;
++    data_processor_destroy_count = 1;
++    hr = ID3DX11ThreadPump_WaitForAllItems(pump);
++    ok(hr == S_OK, "Got unexpected hr %#lx.\n", hr);
++    ok(object == (void *)0xdeadf00d, "Got unexpected object %p.\n", object);
++    ok(!data_loader_decompress_count, "Got unexpected data_loader_decompress_count %ld.\n",
++            data_loader_decompress_count);
++    ok(!data_processor_process_count, "Got unexpected data_processor_process_count %ld.\n",
++            data_processor_process_count);
++    ok(!data_processor_create_count, "Got unexpected data_processor_create_count %ld.\n",
++            data_processor_create_count);
++    ok(!data_loader_destroy_count, "Got unexpected data_loader_destroy_count %ld.\n",
++            data_loader_destroy_count);
++    ok(!data_processor_destroy_count, "Got unexpected data_processor_destroy_count %ld.\n",
++            data_processor_destroy_count);
++
++    data_object[0] = create_data_object(S_OK);
++    data_object[1] = create_data_object(S_OK);
++    SetEvent(data_object[0]->load_done);
++    SetEvent(data_object[1]->load_done);
++    SetEvent(data_object[1]->decompress_done);
++
++    data_loader_load_count = 2;
++    data_loader_decompress_count = 2;
++    data_processor_process_count = 1;
++    hr = ID3DX11ThreadPump_AddWorkItem(pump, &data_object[0]->ID3DX11DataLoader_iface,
++            &data_object[0]->ID3DX11DataProcessor_iface, NULL, &object);
++    ok(hr == S_OK, "Got unexpected hr %#lx.\n", hr);
++    hr = ID3DX11ThreadPump_AddWorkItem(pump, &data_object[1]->ID3DX11DataLoader_iface,
++            &data_object[1]->ID3DX11DataProcessor_iface, NULL, &object);
++    ok(hr == S_OK, "Got unexpected hr %#lx.\n", hr);
++    for (;;)
++    {
++        hr = ID3DX11ThreadPump_GetQueueStatus(pump, &io_count, &process_count, &device_count);
++        if (hr != S_OK || device_count)
++            break;
++        Sleep(1);
++    }
++    ok(hr == S_OK, "Got unexpected hr %#lx.\n", hr);
++    ok(!io_count, "Got unexpected io_count %u.\n", io_count);
++    ok(!process_count, "Got unexpected process_count %u.\n", process_count);
++    ok(device_count == 1, "Got unexpected device_count %u.\n", device_count);
++    ok(!data_loader_load_count, "Got unexpected data_loader_load_count %ld.\n",
++            data_loader_load_count);
++    ok(!data_loader_decompress_count, "Got unexpected data_loader_decompress_count %ld.\n",
++            data_loader_decompress_count);
++    ok(!data_processor_process_count, "Got unexpected data_processor_process_count %ld.\n",
++            data_processor_process_count);
++
++    hr = ID3DX11ThreadPump_ProcessDeviceWorkItems(pump, 0);
++    ok(hr == S_OK, "Got unexpected hr %#lx.\n", hr);
++    hr = ID3DX11ThreadPump_GetQueueStatus(pump, &io_count, &process_count, &device_count);
++    ok(hr == S_OK, "Got unexpected hr %#lx.\n", hr);
++    ok(!io_count, "Got unexpected io_count %u.\n", io_count);
++    ok(!process_count, "Got unexpected process_count %u.\n", process_count);
++    ok(device_count == 1, "Got unexpected device_count %u.\n", device_count);
++
++    data_processor_create_count = 1;
++    data_loader_destroy_count = 1;
++    data_processor_destroy_count = 1;
++    hr = ID3DX11ThreadPump_ProcessDeviceWorkItems(pump, 1);
++    ok(hr == S_OK, "Got unexpected hr %#lx.\n", hr);
++    hr = ID3DX11ThreadPump_GetQueueStatus(pump, &io_count, &process_count, &device_count);
++    ok(hr == S_OK, "Got unexpected hr %#lx.\n", hr);
++    ok(!io_count, "Got unexpected io_count %u.\n", io_count);
++    ok(!process_count, "Got unexpected process_count %u.\n", process_count);
++    ok(!device_count, "Got unexpected device_count %u.\n", device_count);
++    ok(!data_processor_create_count, "Got unexpected data_processor_create_count %ld.\n",
++            data_processor_create_count);
++    ok(!data_loader_destroy_count, "Got unexpected data_loader_destroy_count %ld.\n",
++            data_loader_destroy_count);
++    ok(!data_processor_destroy_count, "Got unexpected data_processor_destroy_count %ld.\n",
++            data_processor_destroy_count);
++
++    data_processor_process_count = 1;
++    data_loader_destroy_count = 1;
++    data_processor_destroy_count = 1;
++    SetEvent(data_object[0]->decompress_done);
++    hr = ID3DX11ThreadPump_PurgeAllItems(pump);
++    ok(hr == S_OK, "Got unexpected hr %#lx.\n", hr);
++    data_processor_process_count = 0;
++    ok(!data_loader_destroy_count, "Got unexpected data_loader_destroy_count %ld.\n",
++            data_loader_destroy_count);
++    ok(!data_processor_destroy_count, "Got unexpected data_processor_destroy_count %ld.\n",
++            data_processor_destroy_count);
++
++    device = create_device();
++    if (!device)
++    {
++        skip("Failed to create device, skipping tests.\n");
++        ID3DX11ThreadPump_Release(pump);
++        return;
++    }
++
++    for (i = 0; i < ARRAY_SIZE(test_image); ++i)
++    {
++        winetest_push_context("Test %u", i);
++
++        hr = D3DX11CreateAsyncMemoryLoader(test_image[i].data, test_image[i].size, &loader);
++        ok(hr == S_OK, "Got unexpected hr %#lx.\n", hr);
++        hr = D3DX11CreateAsyncTextureInfoProcessor(&image_info, &processor);
++        ok(hr == S_OK, "Got unexpected hr %#lx.\n", hr);
++        hr = ID3DX11ThreadPump_AddWorkItem(pump, loader, processor, &work_item_hr, NULL);
++        ok(hr == S_OK, "Got unexpected hr %#lx.\n", hr);
++        hr = ID3DX11ThreadPump_WaitForAllItems(pump);
++        ok(hr == S_OK, "Got unexpected hr %#lx.\n", hr);
++        ok(work_item_hr == S_OK || (work_item_hr == E_FAIL
++                    && test_image[i].expected_info.ImageFileFormat == D3DX11_IFF_WMP),
++                "Got unexpected hr %#lx.\n", work_item_hr);
++        if (work_item_hr == S_OK)
++            check_image_info(&image_info, test_image + i, __LINE__);
++
++        hr = D3DX11CreateAsyncMemoryLoader(test_image[i].data, test_image[i].size, &loader);
++        ok(hr == S_OK, "Got unexpected hr %#lx.\n", hr);
++        hr = D3DX11CreateAsyncTextureProcessor(device, NULL, &processor);
++        ok(hr == S_OK, "Got unexpected hr %#lx.\n", hr);
++        hr = ID3DX11ThreadPump_AddWorkItem(pump, loader, processor, &work_item_hr, (void **)&resource);
++        ok(hr == S_OK, "Got unexpected hr %#lx.\n", hr);
++        hr = ID3DX11ThreadPump_WaitForAllItems(pump);
++        ok(hr == S_OK, "Got unexpected hr %#lx.\n", hr);
++        ok(work_item_hr == S_OK || (work_item_hr == E_FAIL
++                    && test_image[i].expected_info.ImageFileFormat == D3DX11_IFF_WMP),
++                "Got unexpected hr %#lx.\n", work_item_hr);
++        if (work_item_hr == S_OK)
++        {
++            check_resource_info(resource, test_image + i, __LINE__);
++            check_resource_data(resource, test_image + i, __LINE__);
++            ID3D11Resource_Release(resource);
++        }
++
++        winetest_pop_context();
++    }
++
++    ok(!ID3D11Device_Release(device), "Got unexpected refcount.\n");
++
++    ret = ID3DX11ThreadPump_Release(pump);
++    ok(!ret, "Got unexpected refcount %lu.\n", ret);
++}
++
+ static void check_dds_pixel_format_image_info(unsigned int line, DWORD flags, DWORD fourcc, DWORD bpp,
+         DWORD rmask, DWORD gmask, DWORD bmask, DWORD amask, HRESULT expected_hr, DXGI_FORMAT expected_format)
+ {
+@@ -5852,6 +6223,7 @@ START_TEST(d3dx11)
+     test_D3DX11CreateAsyncTextureInfoProcessor();
+     test_D3DX11CreateAsyncTextureProcessor();
+     test_D3DX11CreateAsyncShaderResourceViewProcessor();
++    test_D3DX11CreateThreadPump();
+     test_D3DX11CompileFromFile();
+     test_get_image_info();
+     test_create_texture();
+diff --git a/include/d3dx11core.idl b/include/d3dx11core.idl
+index f619e3b1b02..3b1339069ee 100644
+--- a/include/d3dx11core.idl
++++ b/include/d3dx11core.idl
+@@ -63,3 +63,5 @@ interface ID3DX11ThreadPump : IUnknown
+     HRESULT PurgeAllItems();
+     HRESULT GetQueueStatus([in] UINT *io_queue, [in] UINT *process_queue, [in] UINT *device_queue);
+ }
++
++cpp_quote("HRESULT WINAPI D3DX11CreateThreadPump(UINT io_threads, UINT proc_threads, ID3DX11ThreadPump **pump);")

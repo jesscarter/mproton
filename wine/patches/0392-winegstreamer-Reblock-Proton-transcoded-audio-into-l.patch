@@ -1,0 +1,72 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Shaun Ren <sren@codeweavers.com>
+Date: Mon, 25 May 2026 17:20:03 -0400
+Subject: [PATCH] winegstreamer: Reblock Proton transcoded audio into larger
+ chunks if necessary.
+
+The game Warhammer 40k: Dakka Squadron-Flyboyz Edition uses a MF sample
+grabber to obtain decoded audio samples during playback of its intro
+video. The MF sample grabber can provide only one sample every ~10-16 ms
+(once per periodic timer tick). This is not a problem if the original
+mp4 video is used, as the original video has ~23 ms audio samples.
+However, in the Proton transcoded video, the audio samples are only ~3
+ms. The sample grabber cannot keep up with these smaller samples,
+causing severe audio distortion shortly after playback begins.
+
+By using the audiobuffersplit gstreamer plugin, the decoded audio
+samples can be reblocked into larger chunks, allowing the sample grabber
+to keep pace.
+
+CW-Bug-Id: #27084
+(cherry picked from commit 31b15edfe5b517106cc398b7fcd448fa8a7a5268)
+---
+ dlls/winegstreamer/wg_transform.c | 22 ++++++++++++++++++++++
+ 1 file changed, 22 insertions(+)
+
+diff --git a/dlls/winegstreamer/wg_transform.c b/dlls/winegstreamer/wg_transform.c
+index e67c2f15f4d..f98932b3a01 100644
+--- a/dlls/winegstreamer/wg_transform.c
++++ b/dlls/winegstreamer/wg_transform.c
+@@ -90,6 +90,7 @@ struct wg_transform
+     GstAtomicQueue *output_queue;
+     GstSample *output_sample;
+     bool output_caps_changed;
++    bool reblock_output_audio;
+     GstCaps *desired_caps;
+     GstCaps *output_caps;
+     GstCaps *input_caps;
+@@ -726,6 +727,25 @@ static bool transform_create_converter_elements(struct wg_transform *transform,
+         if (!(element = create_element("audioresample", "base"))
+                 || !append_element(transform->container, element, first, last))
+             return false;
++
++        /* Reblock Proton transcoded audio into larger chunks if necessary. */
++        if (transform->reblock_output_audio)
++        {
++            gint num_samples = 1024, sample_rate;
++            GValue duration = G_VALUE_INIT;
++
++            if (!gst_structure_get_int(gst_caps_get_structure(transform->output_caps, 0),
++                    "rate", &sample_rate))
++                return false;
++
++            if (!(element = create_element("audiobuffersplit", "bad"))
++                    || !append_element(transform->container, element, first, last))
++                return false;
++
++            g_value_init(&duration, GST_TYPE_FRACTION);
++            gst_value_set_fraction(&duration, num_samples, sample_rate);
++            g_object_set_property(G_OBJECT(element), "output-buffer-duration", &duration);
++        }
+     }
+ 
+     if (g_str_has_prefix(output_mime, "video/"))
+@@ -798,6 +818,8 @@ NTSTATUS wg_transform_create(void *args)
+                 memmove((WAVEFORMATEXTENSIBLE *)input_type.u.audio + 1, hwf->pbAudioSpecificConfig,
+                         data_size - sizeof(audio));
+                 memcpy(input_type.u.audio, &audio, sizeof(audio));
++
++                transform->reblock_output_audio = true;
+             }
+         }
+     }

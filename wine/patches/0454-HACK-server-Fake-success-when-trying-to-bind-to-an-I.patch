@@ -1,0 +1,28 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Andrew Eikum <aeikum@codeweavers.com>
+Date: Tue, 14 Dec 2021 13:01:58 +0100
+Subject: [PATCH] HACK: server: Fake success when trying to bind to an IPX
+ address.
+
+(cherry picked from commit e7650933b7da03f6ea52df1fa651480dc956d489)
+---
+ server/sock.c | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/server/sock.c b/server/sock.c
+index d9866fc3f86..890e6a8dbc8 100644
+--- a/server/sock.c
++++ b/server/sock.c
+@@ -3114,7 +3114,11 @@ static void sock_ioctl( struct fd *fd, ioctl_code_t code, struct async *async )
+         }
+         else
+ #endif
+-        if (bind( unix_fd, &bind_addr.addr, unix_len ) < 0)
++        /* Quake (and similar family) fails if we can't bind to an IPX address. This often
++         * doesn't work on Linux, so just fake success. */
++        if (unix_addr.addr.sa_family == AF_IPX)
++            fprintf( stderr, "wine: HACK: Faking AF_IPX bind success.\n" );
++        else if (bind( unix_fd, &bind_addr.addr, unix_len ) < 0)
+         {
+             if (errno == EADDRINUSE && sock->reuseaddr)
+                 errno = EACCES;

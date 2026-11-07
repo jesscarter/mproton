@@ -1,0 +1,49 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Thu, 9 Nov 2023 16:06:37 -0600
+Subject: [PATCH] amd_ags_x64: Implement agsDriverExtensionsDX11_DeInit().
+
+CW-Bug-Id: #22976
+(cherry picked from commit 8717ab339d1646eb72505c5f30080264bdf8a60f)
+---
+ dlls/amd_ags_x64/amd_ags_x64.spec   |  2 +-
+ dlls/amd_ags_x64/amd_ags_x64_main.c | 13 +++++++++++++
+ 2 files changed, 14 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/amd_ags_x64/amd_ags_x64.spec b/dlls/amd_ags_x64/amd_ags_x64.spec
+index 316eec6bf23..3620bd8885b 100644
+--- a/dlls/amd_ags_x64/amd_ags_x64.spec
++++ b/dlls/amd_ags_x64/amd_ags_x64.spec
+@@ -8,7 +8,7 @@
+ @ stub agsDriverExtensionsDX11_CreateTexture1D
+ @ stub agsDriverExtensionsDX11_CreateTexture2D
+ @ stub agsDriverExtensionsDX11_CreateTexture3D
+-@ stub agsDriverExtensionsDX11_DeInit
++@ stdcall agsDriverExtensionsDX11_DeInit(ptr)
+ @ stub agsDriverExtensionsDX11_Destroy
+ @ stdcall -norelay -arch=x86_64,arm64ec agsDriverExtensionsDX11_DestroyDevice()
+ @ stdcall -norelay -arch=x86_64,arm64ec agsDriverExtensionsDX11_EndUAVOverlap() DX11_EndUAVOverlap_impl
+diff --git a/dlls/amd_ags_x64/amd_ags_x64_main.c b/dlls/amd_ags_x64/amd_ags_x64_main.c
+index cd38e55a1cd..ea05f55f271 100644
+--- a/dlls/amd_ags_x64/amd_ags_x64_main.c
++++ b/dlls/amd_ags_x64/amd_ags_x64_main.c
+@@ -1083,6 +1083,19 @@ AGSReturnCode WINAPI agsDriverExtensionsDX11_Init( AGSContext *context, ID3D11De
+     return AGS_SUCCESS;
+ }
+ 
++AGSReturnCode WINAPI agsDriverExtensionsDX11_DeInit( AGSContext* context )
++{
++    TRACE("context %p.\n", context);
++
++    if (context->d3d11_context)
++    {
++        ID3D11DeviceContext_Release(context->d3d11_context);
++        context->d3d11_context = NULL;
++    }
++
++    return AGS_SUCCESS;
++}
++
+ BOOL WINAPI DllMain(HINSTANCE instance, DWORD reason, void *reserved)
+ {
+     TRACE("%p, %u, %p.\n", instance, reason, reserved);

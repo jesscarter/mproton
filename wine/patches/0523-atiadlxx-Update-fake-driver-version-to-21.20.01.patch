@@ -1,0 +1,38 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Andrew Eikum <aeikum@codeweavers.com>
+Date: Mon, 15 Nov 2021 11:33:45 -0600
+Subject: [PATCH] atiadlxx: Update fake driver version to 21.20.01
+
+Age of Empires IV wants this.
+
+CW-Bug-ID: #19602
+(cherry picked from commit f95d02c332b9ecef0b4c76f7a023fad84178a127)
+---
+ dlls/atiadlxx/atiadlxx_main.c | 10 +++++-----
+ 1 file changed, 5 insertions(+), 5 deletions(-)
+
+diff --git a/dlls/atiadlxx/atiadlxx_main.c b/dlls/atiadlxx/atiadlxx_main.c
+index f85c7f8ba62..65c6d6ca988 100644
+--- a/dlls/atiadlxx/atiadlxx_main.c
++++ b/dlls/atiadlxx/atiadlxx_main.c
+@@ -136,15 +136,15 @@ typedef struct ADLMemoryInfo
+ } ADLMemoryInfo, *LPADLMemoryInfo;
+ 
+ static const ADLVersionsInfo version = {
+-    "20.10.1",
+-    "20.10.1",
++    "21.20.01",
++    "21.20.01",
+     "",
+ };
+ 
+ static const ADLVersionsInfoX2 version2 = {
+-    "20.10.1",
+-    "20.10.1",
+-    "20.10.1",
++    "21.20.01",
++    "21.20.01",
++    "21.20.01",
+     "",
+ };
+ 

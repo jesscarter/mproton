@@ -1,0 +1,31 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Mon, 26 Feb 2024 13:37:03 -0600
+Subject: [PATCH] win32u: Store effective AA flags in font_physdev.
+
+CW-Bug-Id: #22992
+(cherry picked from commit b905b7888e80011ba9d00154dbb282ba0606c185)
+---
+ dlls/win32u/font.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/dlls/win32u/font.c b/dlls/win32u/font.c
+index 0361ff46fab..913bd093bb0 100644
+--- a/dlls/win32u/font.c
++++ b/dlls/win32u/font.c
+@@ -54,6 +54,7 @@ struct font_physdev
+ {
+     struct gdi_physdev dev;
+     struct gdi_font   *font;
++    UINT               aa_flags;
+ };
+ 
+ static inline struct font_physdev *get_font_dev( PHYSDEV dev )
+@@ -4614,6 +4615,7 @@ static HFONT font_SelectFont( PHYSDEV dev, HFONT hfont, UINT *aa_flags )
+                     *aa_flags = font_smoothing;
+             }
+             *aa_flags = font_funcs->get_aa_flags( font, *aa_flags, antialias_fakes );
++            physdev->aa_flags = *aa_flags;
+         }
+         TRACE( "%p %s %d aa %x\n", hfont, debugstr_w(lf.lfFaceName), lf.lfHeight, *aa_flags );
+         pthread_mutex_unlock( &font_lock );

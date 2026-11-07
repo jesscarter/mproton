@@ -1,0 +1,25 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Fri, 29 Mar 2024 15:17:07 +0100
+Subject: [PATCH] winegstreamer/media-converter: Use
+ gst_util_uint64_scale_round to round upstream position.
+
+CW-Bug-Id: #22319
+(cherry picked from commit 76acb78329baf82195e97a41f6509482efbbdd0e)
+---
+ dlls/winegstreamer/media-converter/videoconv.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/dlls/winegstreamer/media-converter/videoconv.c b/dlls/winegstreamer/media-converter/videoconv.c
+index 8bb35ad41fe..97c7e1d35f3 100644
+--- a/dlls/winegstreamer/media-converter/videoconv.c
++++ b/dlls/winegstreamer/media-converter/videoconv.c
+@@ -510,7 +510,7 @@ static uint64_t video_conv_duration_ours_to_upstream(VideoConv *conv, uint64_t p
+     struct video_conv_state *state = conv->state;
+ 
+     if (state->upstream_duration != DURATION_NONE && state->our_duration != DURATION_NONE)
+-        return pos * state->upstream_duration / state->our_duration;
++        return gst_util_uint64_scale_round(pos, state->upstream_duration, state->our_duration);
+     else
+         return DURATION_NONE;
+ }

@@ -1,0 +1,32 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Piotr Caban <piotr@codeweavers.com>
+Date: Tue, 19 Oct 2021 10:39:18 +0200
+Subject: [PATCH] HACK: user32: Process WM_PAINT in peek_message for
+ WS_EX_COMPOSITED windows.
+
+CW-Bug-Id: #19488
+(cherry picked from commit f29d74823aa59a71df8c87e566c265cc9a8f080d)
+---
+ dlls/win32u/message.c | 9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+diff --git a/dlls/win32u/message.c b/dlls/win32u/message.c
+index 3c7d5665de7..4e1c0902a59 100644
+--- a/dlls/win32u/message.c
++++ b/dlls/win32u/message.c
+@@ -3247,6 +3247,15 @@ static int peek_message( MSG *msg, const struct peek_message_filter *filter )
+                     info.msg.lParam = result->lparam;
+                 }
+             }
++            /* CXHACK 19488 */
++            if (info.msg.message == WM_PAINT &&
++                    flags == (PM_REMOVE | PM_QS_INPUT | PM_QS_POSTMESSAGE | PM_QS_PAINT | PM_QS_SENDMESSAGE) &&
++                    (get_window_long( info.msg.hwnd, GWL_EXSTYLE ) & WS_EX_COMPOSITED ))
++            {
++                send_message( info.msg.hwnd, info.msg.message, info.msg.wParam, info.msg.lParam );
++                flags &= ~PM_QS_PAINT;
++                continue;
++            }
+             if (info.msg.message == WM_TIMER || info.msg.message == WM_SYSTIMER)
+             {
+                 if (!(flags & PM_NOYIELD) && idle_event) NtSetEvent( idle_event, NULL );

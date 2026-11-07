@@ -1,0 +1,32 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Mon, 10 Feb 2025 21:21:48 +0100
+Subject: [PATCH] mfreadwrite/reader: Fixup MFVideoFormat_IYUV format to NV12
+ when enumerating decoders.
+
+CW-Bug-Id: #24770
+(cherry picked from commit aa2abf49b7d69ee1e294f8bed0d36af1923808aa)
+---
+ dlls/mfreadwrite/reader.c | 9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+diff --git a/dlls/mfreadwrite/reader.c b/dlls/mfreadwrite/reader.c
+index aabeac36db1..550db3ede52 100644
+--- a/dlls/mfreadwrite/reader.c
++++ b/dlls/mfreadwrite/reader.c
+@@ -2066,6 +2066,15 @@ static HRESULT source_reader_create_transform(struct source_reader *reader, BOOL
+         out_type.guidSubtype = MFVideoFormat_RGB32;
+     }
+ 
++    if (IsEqualGUID(&out_type.guidMajorType, &MFMediaType_Video) && IsEqualGUID(&out_type.guidSubtype, &MFVideoFormat_IYUV)
++            && IsEqualGUID(&category, &MFT_CATEGORY_VIDEO_DECODER))
++    {
++        /* The WMV video decoder isn't registered for MFVideoFormat_IYUV, but selecting it as an output format still succeeds,
++         * the host decoders usually support IYUV as well, so fixup the subtype for MFTEnumEx.
++         */
++        WARN("Fixing up MFVideoFormat_IYUV subtype for the video processor\n");
++        out_type.guidSubtype = MFVideoFormat_NV12;
++    }
+ 
+     count = 0;
+     if (SUCCEEDED(hr = MFTEnumEx(category, 0, &in_type, allow_processor ? NULL : &out_type, &activates, &count)))

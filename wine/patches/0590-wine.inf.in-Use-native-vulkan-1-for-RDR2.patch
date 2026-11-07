@@ -1,0 +1,22 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arkadiusz Hiler <ahiler@codeweavers.com>
+Date: Mon, 24 Jul 2023 13:19:04 +0300
+Subject: [PATCH] wine.inf.in: Use native vulkan-1 for RDR2.
+
+So we don't depend only on the app id and play manifest to have the game
+playable.
+
+(cherry picked from commit 2c09b684a4d58a312e582e7762882faa428fa76b)
+---
+ loader/wine.inf.in | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/loader/wine.inf.in b/loader/wine.inf.in
+index b3d3910b898..ec8e14535dc 100644
+--- a/loader/wine.inf.in
++++ b/loader/wine.inf.in
+@@ -1464,3 +1464,4 @@ HKCU,Software\Wine\AppDefaults\rayne1.exe\DllOverrides,"d3d8",,"native"
+ HKCU,Software\Wine\AppDefaults\rayne2.exe\DllOverrides,"d3d8",,"native"
+ HKLM,Software\Wow6432Node\lucasarts entertainment company llc\Star Wars: Episode I Racer\v1.0,"Display Height",0x10001,480
+ HKLM,Software\Wow6432Node\lucasarts entertainment company llc\Star Wars: Episode I Racer\v1.0,"Display Width",0x10001,640
++HKCU,Software\Wine\AppDefaults\RDR2.exe\DllOverrides,"vulkan-1",,"native"

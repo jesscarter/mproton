@@ -1,0 +1,75 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Tue, 25 May 2021 20:48:17 +0300
+Subject: [PATCH] mshtml: HACK: Split rules in HTMLStyleSheet_put_cssText().
+
+For Open Swords of Legends Online: Beta launcher.
+
+CW-Bug-Id: #18963
+(cherry picked from commit 1688979be5570ee614e03bd2a50a3e6746131cc7)
+---
+ dlls/mshtml/htmlstylesheet.c | 49 +++++++++++++++++++++++++++++-------
+ 1 file changed, 40 insertions(+), 9 deletions(-)
+
+diff --git a/dlls/mshtml/htmlstylesheet.c b/dlls/mshtml/htmlstylesheet.c
+index b5ce4a3f4e7..0ee89c89284 100644
+--- a/dlls/mshtml/htmlstylesheet.c
++++ b/dlls/mshtml/htmlstylesheet.c
+@@ -816,17 +816,48 @@ static HRESULT WINAPI HTMLStyleSheet_put_cssText(IHTMLStyleSheet *iface, BSTR v)
+     }while(NS_SUCCEEDED(nsres));
+ 
+     if(v && *v) {
++        UINT32 i, depth, idx;
+         nsAString nsstr;
+-        UINT32 idx;
+-
+-        /* FIXME: This won't work for multiple rules in the string. */
+-        nsAString_InitDepend(&nsstr, v);
+-        nsres = nsIDOMCSSStyleSheet_InsertRule(This->nsstylesheet, &nsstr, 0, &idx);
+-        nsAString_Finish(&nsstr);
+-        if(NS_FAILED(nsres)) {
+-            FIXME("InsertRule failed for string %s. Probably multiple rules passed.\n", debugstr_w(v));
+-            return E_FAIL;
++        WCHAR *ws;
++
++        depth = 0;
++        ws = malloc(sizeof(*ws) * (lstrlenW(v) + 1));
++        do
++        {
++            for (i = 0; v[i]; ++i)
++            {
++                ws[i] = v[i];
++                if (ws[i] == '{')
++                    ++depth;
++                else if (ws[i] == '}' && !--depth)
++                    break;
++            }
++            if (ws[i])
++                ws[++i] = 0;
++
++            v += i;
++
++            for (i = 0; ws[i]; ++i)
++                if (!iswspace(ws[i]))
++                    break;
++
++            if (!ws[i])
++            {
++                TRACE("Skipping empty part.\n");
++                continue;
++            }
++
++            nsAString_InitDepend(&nsstr, ws);
++            nsres = nsIDOMCSSStyleSheet_InsertRule(This->nsstylesheet, &nsstr, 0, &idx);
++            nsAString_Finish(&nsstr);
++
++            if(NS_FAILED(nsres))
++                FIXME("InsertRule failed for string %s.\n", debugstr_w(ws));
++            else
++                TRACE("Added rule %s.\n", debugstr_w(ws));
+         }
++        while (*v);
++        free(ws);
+     }
+ 
+     return S_OK;

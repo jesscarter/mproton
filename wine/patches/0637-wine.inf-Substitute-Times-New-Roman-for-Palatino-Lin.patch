@@ -1,0 +1,25 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Andrew Eikum <aeikum@codeweavers.com>
+Date: Tue, 30 Oct 2018 13:04:06 -0500
+Subject: [PATCH] wine.inf: Substitute Times New Roman for Palatino Linotype
+
+For AOE2HD launcher.
+
+CW-Bug-Id: #16410
+(cherry picked from commit 207300002407ee40121f67df9e99a21e31ee2be2)
+---
+ loader/wine.inf.in | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/loader/wine.inf.in b/loader/wine.inf.in
+index 69b907ebe00..a1f419a0707 100644
+--- a/loader/wine.inf.in
++++ b/loader/wine.inf.in
+@@ -544,6 +544,7 @@ HKLM,%FontsNT%,"Arial (TrueType)",,"arial.ttf"
+ HKLM,%FontsNT%,"Arial Bold (TrueType)",,"arialbd.ttf"
+ HKLM,%FontsNT%,"Times New Roman (TrueType)",,"times.ttf"
+ HKLM,%FontsNT%,"Courier New (TrueType)",,"cour.ttf"
++HKCU,Software\Wine\Fonts\Replacements,"Palatino Linotype",,"Times New Roman"
+ 
+ [MCI]
+ HKLM,%Mci32Str%,"AVIVideo",,"mciavi32.dll"

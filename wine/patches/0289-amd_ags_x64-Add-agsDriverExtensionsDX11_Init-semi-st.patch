@@ -1,0 +1,43 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Wed, 6 Oct 2021 22:56:07 +0300
+Subject: [PATCH] amd_ags_x64: Add agsDriverExtensionsDX11_Init() semi-stub.
+
+(cherry picked from commit e4559be3ea77291b811a328682e8063e4d108f1d)
+---
+ dlls/amd_ags_x64/amd_ags_x64.spec   | 2 +-
+ dlls/amd_ags_x64/amd_ags_x64_main.c | 8 ++++++++
+ 2 files changed, 9 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/amd_ags_x64/amd_ags_x64.spec b/dlls/amd_ags_x64/amd_ags_x64.spec
+index 562c4103343..ebb026da35e 100644
+--- a/dlls/amd_ags_x64/amd_ags_x64.spec
++++ b/dlls/amd_ags_x64/amd_ags_x64.spec
+@@ -14,7 +14,7 @@
+ @ stub agsDriverExtensionsDX11_EndUAVOverlap
+ @ stub agsDriverExtensionsDX11_GetMaxClipRects
+ @ stub agsDriverExtensionsDX11_IASetPrimitiveTopology
+-@ stub agsDriverExtensionsDX11_Init
++@ stdcall agsDriverExtensionsDX11_Init(ptr ptr long ptr)
+ @ stub agsDriverExtensionsDX11_MultiDrawIndexedInstancedIndirect
+ @ stub agsDriverExtensionsDX11_MultiDrawIndexedInstancedIndirectCountIndirect
+ @ stub agsDriverExtensionsDX11_MultiDrawInstancedIndirect
+diff --git a/dlls/amd_ags_x64/amd_ags_x64_main.c b/dlls/amd_ags_x64/amd_ags_x64_main.c
+index 26fbd65607e..4cc8e189459 100644
+--- a/dlls/amd_ags_x64/amd_ags_x64_main.c
++++ b/dlls/amd_ags_x64/amd_ags_x64_main.c
+@@ -667,6 +667,14 @@ int WINAPI agsGetVersionNumber(void)
+     return AGS_MAKE_VERSION(amd_ags_info[version].major, amd_ags_info[version].minor, amd_ags_info[version].patch);
+ }
+ 
++AGSReturnCode WINAPI agsDriverExtensionsDX11_Init( AGSContext* context, ID3D11Device* device, unsigned int uavSlot, unsigned int* extensionsSupported )
++{
++    FIXME("context %p, device %p, uavSlot %u, extensionsSupported %p stub.\n", context, device, uavSlot, extensionsSupported);
++
++    *extensionsSupported = 0;
++    return AGS_SUCCESS;
++}
++
+ BOOL WINAPI DllMain(HINSTANCE instance, DWORD reason, void *reserved)
+ {
+     TRACE("%p, %u, %p.\n", instance, reason, reserved);

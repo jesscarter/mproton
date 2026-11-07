@@ -1,0 +1,27 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arkadiusz Hiler <ahiler@codeweavers.com>
+Date: Tue, 9 Apr 2024 11:56:54 +0300
+Subject: [PATCH] HACK: winebuild: Include target arch in the hash used for
+ timestamp.
+
+So that 32 and 64 bit PEs produce different values even if they have the
+same name.
+
+(cherry picked from commit 7f9003458e45e18ace08249022b778753442aafb)
+---
+ tools/winebuild/spec32.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/tools/winebuild/spec32.c b/tools/winebuild/spec32.c
+index 1e9dccc3f8f..641bf69b985 100644
+--- a/tools/winebuild/spec32.c
++++ b/tools/winebuild/spec32.c
+@@ -62,7 +62,7 @@ static unsigned int hash_filename( const char *name )
+     /* FNV-1 hash */
+     unsigned int ret = 2166136261u;
+     while (*name) ret = (ret * 16777619) ^ *name++;
+-    return ret;
++    return ret + target.cpu;
+ }
+ 
+ /* check if entry point needs a relay thunk */

@@ -1,0 +1,27 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Yuxuan Shui <yshui@codeweavers.com>
+Date: Thu, 10 Apr 2025 01:51:19 +0100
+Subject: [PATCH] HACK: qasf/asfreader: Name the output pin as out0 for
+ KoFXIII: GLOBAL MATCH.
+
+Same as the other version of KoFXIII
+
+CW-Bug-Id: #25190
+(cherry picked from commit 18d16d81c85498af658cad07632f49645314a66a)
+---
+ dlls/qasf/asfreader.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/dlls/qasf/asfreader.c b/dlls/qasf/asfreader.c
+index 0f059eb6b59..550cc060238 100644
+--- a/dlls/qasf/asfreader.c
++++ b/dlls/qasf/asfreader.c
+@@ -868,7 +868,7 @@ static HRESULT WINAPI reader_callback_OnStatus(IWMReaderCallback *iface, WMT_STA
+                     /* King of Fighters XIII requests the WMV decoder filter pins by name
+                      * to connect them to a Sample Grabber filter.
+                      */
+-                    if (sgi && !strcmp(sgi, "222940"))
++                    if (sgi && (!strcmp(sgi, "222940") || !strcmp(sgi, "3050220")))
+                         swprintf(name, ARRAY_SIZE(name), L"out0");
+                     else
+                         swprintf(name, ARRAY_SIZE(name), L"Raw Video %u", stream->index);

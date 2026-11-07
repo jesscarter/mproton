@@ -1,0 +1,48 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Wed, 2 Oct 2024 13:48:43 -0600
+Subject: [PATCH] amd_ags_x64: Alias some AGS 3.2 agsDriverExtensions_
+ functions.
+
+CW-Bug-Id: #24337
+(cherry picked from commit 7c32c3900ec3716c4eda4ccad6e493ebb1cab1ba)
+---
+ dlls/amd_ags_x64/amd_ags_x64.spec | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/dlls/amd_ags_x64/amd_ags_x64.spec b/dlls/amd_ags_x64/amd_ags_x64.spec
+index 99852d7f750..0768fd9a085 100644
+--- a/dlls/amd_ags_x64/amd_ags_x64.spec
++++ b/dlls/amd_ags_x64/amd_ags_x64.spec
+@@ -1,6 +1,7 @@
+ @ stdcall agsDeInit(ptr)
+ @ stdcall agsDeInitialize(ptr)
+ @ stdcall agsCheckDriverVersion(ptr long)
++@ stdcall -norelay -arch=x86_64,arm64ec agsDriverExtensions_BeginUAVOverlap() DX11_BeginUAVOverlap_impl
+ @ stdcall -norelay -arch=x86_64,arm64ec agsDriverExtensionsDX11_BeginUAVOverlap() DX11_BeginUAVOverlap_impl
+ @ stub agsDriverExtensionsDX11_CreateBuffer
+ @ stdcall agsDriverExtensionsDX11_CreateDevice(ptr ptr ptr ptr)
+@@ -11,12 +12,15 @@
+ @ stdcall agsDriverExtensionsDX11_DeInit(ptr)
+ @ stub agsDriverExtensionsDX11_Destroy
+ @ stdcall -norelay -arch=x86_64,arm64ec agsDriverExtensionsDX11_DestroyDevice()
++@ stdcall -norelay -arch=x86_64,arm64ec agsDriverExtensions_EndUAVOverlap() DX11_EndUAVOverlap_impl
+ @ stdcall -norelay -arch=x86_64,arm64ec agsDriverExtensionsDX11_EndUAVOverlap() DX11_EndUAVOverlap_impl
+ @ stub agsDriverExtensionsDX11_GetMaxClipRects
+ @ stub agsDriverExtensionsDX11_IASetPrimitiveTopology
+ @ stdcall agsDriverExtensionsDX11_Init(ptr ptr long ptr)
++@ stdcall -norelay -arch=x86_64,arm64ec agsDriverExtensions_MultiDrawIndexedInstancedIndirect() DX11_MultiDrawIndexedInstancedIndirect_impl
+ @ stdcall -norelay -arch=x86_64,arm64ec agsDriverExtensionsDX11_MultiDrawIndexedInstancedIndirect() DX11_MultiDrawIndexedInstancedIndirect_impl
+ @ stdcall -norelay -arch=x86_64,arm64ec agsDriverExtensionsDX11_MultiDrawIndexedInstancedIndirectCountIndirect() DX11_MultiDrawIndexedInstancedIndirectCountIndirect_impl
++@ stdcall -norelay -arch=x86_64,arm64ec agsDriverExtensions_MultiDrawInstancedIndirect() DX11_MultiDrawInstancedIndirect_impl
+ @ stdcall -norelay -arch=x86_64,arm64ec agsDriverExtensionsDX11_MultiDrawInstancedIndirect() DX11_MultiDrawInstancedIndirect_impl
+ @ stdcall -norelay -arch=x86_64,arm64ec agsDriverExtensionsDX11_MultiDrawInstancedIndirectCountIndirect() DX11_MultiDrawInstancedIndirectCountIndirect_impl
+ @ stub agsDriverExtensionsDX11_NotifyResourceBeginAllAccess
+@@ -24,6 +28,7 @@
+ @ stub agsDriverExtensionsDX11_NotifyResourceEndWrites
+ @ stub agsDriverExtensionsDX11_NumPendingAsyncCompileJobs
+ @ stub agsDriverExtensionsDX11_SetClipRects
++@ stdcall -norelay -arch=x86_64,arm64ec agsDriverExtensions_SetDepthBounds() DX11_SetDepthBounds_impl
+ @ stdcall -norelay -arch=x86_64,arm64ec agsDriverExtensionsDX11_SetDepthBounds() DX11_SetDepthBounds_impl
+ @ stdcall agsDriverExtensionsDX11_SetDiskShaderCacheEnabled(ptr long)
+ @ stub agsDriverExtensionsDX11_SetMaxAsyncCompileThreadCount

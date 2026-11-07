@@ -1,0 +1,180 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Gabriel=20Iv=C4=83ncescu?= <gabrielopcode@gmail.com>
+Date: Mon, 15 Dec 2025 22:22:33 +0200
+Subject: [PATCH] mshtml: Make Collection Enumerators part of the Cycle
+ Collection graph.
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Example of non-contrived cyclic ref:
+
+    document.body.foobar = function() {}
+    var enumerator = new Enumerator(document.getElementsByTagName("body"));
+
+body element (BODY) has a prop with a function (FUNC) which holds link to the
+enclosing scope (SCOPE). The scope holds link to "enumerator" (ENUM) which
+holds a link to the IEnumVARIANT of the element collection (ELEMCOL), which
+holds a link to body element. So: BODY->FUNC->SCOPE->ENUM->ELEMCOL->BODY.
+
+Signed-off-by: Gabriel Ivăncescu <gabrielopcode@gmail.com>
+(cherry picked from commit 8f138bea6568e35a3201263ee4afead85739fa89)
+---
+ dlls/mshtml/dispex.c         | 66 ++++++++++++++++++++++++++++++------
+ dlls/mshtml/mshtml_private.h |  1 +
+ dlls/mshtml/nsembed.c        |  1 +
+ 3 files changed, 57 insertions(+), 11 deletions(-)
+
+diff --git a/dlls/mshtml/dispex.c b/dlls/mshtml/dispex.c
+index 3fc0dec0ce4..9a02dd2ffad 100644
+--- a/dlls/mshtml/dispex.c
++++ b/dlls/mshtml/dispex.c
+@@ -3015,12 +3015,14 @@ IWineCCParticipant cc_participant = { .lpVtbl = &cc_participant_vtbl };
+ 
+ struct EnumVARIANT {
+     IEnumVARIANT IEnumVARIANT_iface;
+-    LONG ref;
++    nsCycleCollectingAutoRefCnt ccref;
+ 
+     DispatchEx *collection;
+     ULONG iter;
+ };
+ 
++static ExternalCycleCollectionParticipant enum_ccp;
++
+ static inline struct EnumVARIANT *impl_from_IEnumVARIANT(IEnumVARIANT *iface)
+ {
+     return CONTAINING_RECORD(iface, struct EnumVARIANT, IEnumVARIANT_iface);
+@@ -3032,9 +3034,15 @@ static HRESULT WINAPI EnumVARIANT_QueryInterface(IEnumVARIANT *iface, REFIID rii
+ 
+     TRACE("(%p)->(%s %p)\n", This, debugstr_mshtml_guid(riid), ppv);
+ 
+-    if(IsEqualGUID(riid, &IID_IUnknown) || IsEqualGUID(riid, &IID_IEnumVARIANT))
++    if(IsEqualGUID(riid, &IID_IUnknown) || IsEqualGUID(riid, &IID_IEnumVARIANT)) {
+         *ppv = &This->IEnumVARIANT_iface;
+-    else {
++    }else if(IsEqualGUID(&IID_nsXPCOMCycleCollectionParticipant, riid)) {
++        *ppv = &enum_ccp;
++        return S_OK;
++    }else if(IsEqualGUID(&IID_nsCycleCollectionISupports, riid)) {
++        *ppv = &This->IEnumVARIANT_iface;
++        return S_OK;
++    }else {
+         FIXME("Unsupported iface %s\n", debugstr_mshtml_guid(riid));
+         *ppv = NULL;
+         return E_NOINTERFACE;
+@@ -3047,7 +3055,7 @@ static HRESULT WINAPI EnumVARIANT_QueryInterface(IEnumVARIANT *iface, REFIID rii
+ static ULONG WINAPI EnumVARIANT_AddRef(IEnumVARIANT *iface)
+ {
+     struct EnumVARIANT *This = impl_from_IEnumVARIANT(iface);
+-    LONG ref = InterlockedIncrement(&This->ref);
++    LONG ref = ccref_incr(&This->ccref, (nsISupports*)&This->IEnumVARIANT_iface);
+ 
+     TRACE("(%p) ref=%ld\n", This, ref);
+ 
+@@ -3057,15 +3065,10 @@ static ULONG WINAPI EnumVARIANT_AddRef(IEnumVARIANT *iface)
+ static ULONG WINAPI EnumVARIANT_Release(IEnumVARIANT *iface)
+ {
+     struct EnumVARIANT *This = impl_from_IEnumVARIANT(iface);
+-    LONG ref = InterlockedDecrement(&This->ref);
++    LONG ref = ccref_decr(&This->ccref, (nsISupports*)&This->IEnumVARIANT_iface, &enum_ccp);
+ 
+     TRACE("(%p) ref=%ld\n", This, ref);
+ 
+-    if(!ref) {
+-        DispatchEx_Release(&This->collection->IWineJSDispatchHost_iface);
+-        free(This);
+-    }
+-
+     return ref;
+ }
+ 
+@@ -3144,6 +3147,37 @@ static const IEnumVARIANTVtbl EnumVARIANTVtbl = {
+     EnumVARIANT_Clone
+ };
+ 
++static nsresult NSAPI EnumVARIANT_traverse(void *ccp, void *p, nsCycleCollectionTraversalCallback *cb)
++{
++    struct EnumVARIANT *This = impl_from_IEnumVARIANT(p);
++
++    describe_cc_node(&This->ccref, "EnumVARIANT", cb);
++
++    if(This->collection)
++        note_cc_edge((nsISupports*)&This->collection->IWineJSDispatchHost_iface, "collection", cb);
++    return NS_OK;
++}
++
++static nsresult NSAPI EnumVARIANT_unlink(void *p)
++{
++    struct EnumVARIANT *This = impl_from_IEnumVARIANT(p);
++
++    if(This->collection) {
++        DispatchEx *col = This->collection;
++        This->collection = NULL;
++        DispatchEx_Release(&col->IWineJSDispatchHost_iface);
++    }
++    return NS_OK;
++}
++
++static void NSAPI EnumVARIANT_delete_cycle_collectable(void *p)
++{
++    struct EnumVARIANT *This = impl_from_IEnumVARIANT(p);
++
++    EnumVARIANT_unlink(p);
++    free(This);
++}
++
+ HRESULT create_enum_variant(DispatchEx *collection, IUnknown **ret)
+ {
+     struct EnumVARIANT *enumvar = malloc(sizeof(*enumvar));
+@@ -3152,15 +3186,25 @@ HRESULT create_enum_variant(DispatchEx *collection, IUnknown **ret)
+         return E_OUTOFMEMORY;
+ 
+     enumvar->IEnumVARIANT_iface.lpVtbl = &EnumVARIANTVtbl;
+-    enumvar->ref = 1;
+     enumvar->iter = 0;
+     enumvar->collection = collection;
++    ccref_init(&enumvar->ccref, 1);
+     DispatchEx_AddRef(&collection->IWineJSDispatchHost_iface);
+ 
+     *ret = (IUnknown*)&enumvar->IEnumVARIANT_iface;
+     return S_OK;
+ }
+ 
++void init_enum_cc(void)
++{
++    static const CCObjCallback ccp_callback = {
++        EnumVARIANT_traverse,
++        EnumVARIANT_unlink,
++        EnumVARIANT_delete_cycle_collectable
++    };
++    ccp_init(&enum_ccp, &ccp_callback);
++}
++
+ HRESULT dispex_builtin_props_to_json(DispatchEx *dispex, HTMLInnerWindow *window, VARIANT *ret)
+ {
+     func_info_t *func, *end;
+diff --git a/dlls/mshtml/mshtml_private.h b/dlls/mshtml/mshtml_private.h
+index 5a28cb8025c..305e5c5ff01 100644
+--- a/dlls/mshtml/mshtml_private.h
++++ b/dlls/mshtml/mshtml_private.h
+@@ -1279,6 +1279,7 @@ float get_viewer_zoom(GeckoBrowser*);
+ 
+ void init_dispex_cc(void);
+ void init_window_cc(void);
++void init_enum_cc(void);
+ 
+ HRESULT nsuri_to_url(LPCWSTR,BOOL,BSTR*);
+ 
+diff --git a/dlls/mshtml/nsembed.c b/dlls/mshtml/nsembed.c
+index 62e1922cf6c..d6dba02551a 100644
+--- a/dlls/mshtml/nsembed.c
++++ b/dlls/mshtml/nsembed.c
+@@ -599,6 +599,7 @@ static BOOL init_xpcom(const PRUnichar *gre_path)
+ 
+     init_dispex_cc();
+     init_window_cc();
++    init_enum_cc();
+ 
+     return TRUE;
+ }

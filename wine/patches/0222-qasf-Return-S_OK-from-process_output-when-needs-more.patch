@@ -1,0 +1,28 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Thu, 20 Feb 2025 15:05:51 +0100
+Subject: [PATCH] qasf: Return S_OK from process_output when needs more input.
+
+CW-Bug-Id: #21303
+CW-Bug-Id: #21304
+CW-Bug-Id: #23630
+CW-Bug-Id: #24374
+CW-Bug-Id: #24857
+(cherry picked from commit a8423de19235d3b9099aac314489668172f56459)
+---
+ dlls/qasf/dmowrapper.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/dlls/qasf/dmowrapper.c b/dlls/qasf/dmowrapper.c
+index f6e586d0235..ef6409181ed 100644
+--- a/dlls/qasf/dmowrapper.c
++++ b/dlls/qasf/dmowrapper.c
+@@ -331,6 +331,8 @@ static HRESULT process_output(struct dmo_wrapper *filter, IMediaObject *dmo)
+         release_output_samples(filter);
+     } while (more_data);
+ 
++    if (hr == S_FALSE)
++        return S_OK;
+     return hr;
+ }
+ 

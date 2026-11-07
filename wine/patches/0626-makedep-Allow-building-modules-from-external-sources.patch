@@ -1,0 +1,86 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Wed, 20 Sep 2023 00:03:48 +0200
+Subject: [PATCH] makedep: Allow building modules from external sources.
+
+CW-Bug-Id: #22729
+(cherry picked from commit c30909127744a2a8a9da254566810689e443bcfb)
+
+mproton-resolved: 11.20 renamed extlib to external (EXTERNAL_SUBDIRS) and dropped incl_file::is_external; kept Proton's per-module is_external flag beside it
+---
+ tools/makedep.c | 20 +++++++++++++++++---
+ 1 file changed, 17 insertions(+), 3 deletions(-)
+
+diff --git a/tools/makedep.c b/tools/makedep.c
+index 458290b01c0..b8e29ceb3f0 100644
+--- a/tools/makedep.c
++++ b/tools/makedep.c
+@@ -222,6 +222,7 @@ struct makefile
+     bool            is_win16;
+     bool            is_exe;
+     bool            disabled[MAX_ARCHS];
++    bool            is_external;  /* module built from an out-of-tree source dir */
+ 
+     /* values generated at output time */
+     struct strarray in_files;
+@@ -1713,6 +1714,7 @@ static struct file *open_include_file( const struct makefile *make, struct incl_
+     /* ignore missing files in external libs */
+     if (make->external) return NULL;
+     if (source->included_by && is_external_header( source->included_by )) return NULL;
++    if (make->is_external) return NULL;
+ 
+     fprintf( stderr, "%s:%d: error: ", source->included_by->file->name, source->included_line );
+     perror( source->name );
+@@ -2374,7 +2376,7 @@ static struct strarray add_unix_libraries( const struct makefile *make, struct s
+     struct strarray ret = empty_strarray;
+     struct strarray all_libs = empty_strarray;
+ 
+-    if (strcmp( make->unixlib, "ntdll.so" )) strarray_add( &all_libs, "-lntdll" );
++    if (strcmp( make->unixlib, "ntdll.so" ) && !make->is_external) strarray_add( &all_libs, "-lntdll" );
+     strarray_addall( &all_libs, get_expanded_make_var_array( make, "UNIX_LIBS" ));
+ 
+     STRARRAY_FOR_EACH( file, &all_libs )
+@@ -4823,6 +4825,8 @@ static void output_top_makefile( struct makefile *make )
+     output( ".PRECIOUS: Makefile\n" );
+     output( ".MAKEFILEDEPS:\n" );
+     output( ".SUFFIXES:\n" );
++    if (root_obj_dir) goto done;
++
+     output( "Makefile: config.status %s\n", makedep );
+     output( "\t@./config.status Makefile\n" );
+     output( "config.status: %s\n", root_src_dir_path( "configure" ));
+@@ -4867,6 +4871,7 @@ static void output_top_makefile( struct makefile *make )
+         strarray_add( &make->maintainerclean_files, "include/config.h.in" );
+     }
+ 
++done:
+     for (i = 0; i < subdirs.count; i++) output_sources( submakes[i] );
+     output_sources( make );
+ 
+@@ -5093,7 +5098,7 @@ static unsigned int find_pe_arch( const char *arch )
+ int main( int argc, char *argv[] )
+ {
+     const char *makeflags = getenv( "MAKEFLAGS" );
+-    const char *target;
++    const char *target, *tmp;
+     unsigned int i, j, arch, ec_arch;
+ 
+     if (makeflags) parse_makeflags( makeflags );
+@@ -5228,7 +5233,16 @@ int main( int argc, char *argv[] )
+     subdirs = get_expanded_make_var_array( top_makefile, "SUBDIRS" );
+     submakes = xmalloc( subdirs.count * sizeof(*submakes) );
+ 
+-    for (i = 0; i < subdirs.count; i++) submakes[i] = parse_makefile( subdirs.str[i] );
++    for (i = 0; i < subdirs.count; i++)
++    {
++        submakes[i] = parse_makefile( subdirs.str[i] );
++        if (*(tmp = subdirs.str[i]) == '/')
++        {
++            tmp = strmake( "dlls%s", strrchr( tmp, '/' ) );
++            submakes[i]->is_external = 1;
++        }
++        submakes[i]->obj_dir = subdirs.str[i] = tmp;
++    }
+ 
+     if (!include_makefile) include_makefile = parse_makefile( root_src_dir_path( "include" ) );
+ 

@@ -1,0 +1,51 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Billy Laws <blaws05@gmail.com>
+Date: Mon, 5 Jan 2026 19:49:00 +0000
+Subject: [PATCH] HACK: ntdll: Spin up a thread to handle CreateThread APCs on
+ ARM64 WOW
+
+Required as SIGUSR1 as issued when performing an APC may interrupt a
+unix malloc invocation, but as pthread_create uses malloc this can
+deadlock. By having a thread always available and waiting to service
+these APCs the SIGUSR1 path will never be taken by wineserver.
+
+(cherry picked from commit c10d8779c962365d8480182cafd97c43423cad22)
+---
+ dlls/ntdll/signal_arm64.c | 17 +++++++++++++++++
+ 1 file changed, 17 insertions(+)
+
+diff --git a/dlls/ntdll/signal_arm64.c b/dlls/ntdll/signal_arm64.c
+index 900b9a88c90..7cd7c782817 100644
+--- a/dlls/ntdll/signal_arm64.c
++++ b/dlls/ntdll/signal_arm64.c
+@@ -673,6 +673,14 @@ BOOLEAN WINAPI RtlIsProcessorFeaturePresent( UINT feature )
+     return !!(cpu_features_bitmap[feature / 64] & (1ull << (feature % 64)));
+ }
+ 
++static LONG apc_worker_started = 0;
++
++static void apc_worker_thread( void * )
++{
++    ULONG count = 0;
++    while (1) NtSuspendThread( NtCurrentThread(), &count );
++}
++
+ static void suspend_remote_breakin( HANDLE thread )
+ {
+     ULONG count = 0;
+@@ -911,6 +919,15 @@ __ASM_GLOBAL_FUNC( RtlUserThreadStart,
+  */
+ void WINAPI LdrInitializeThunk( CONTEXT *context, ULONG_PTR unk2, ULONG_PTR unk3, ULONG_PTR unk4 )
+ {
++    if (NtCurrentTeb()->WowTebOffset && InterlockedCompareExchange( &apc_worker_started, 1, 0 ) == 0)
++    {
++        HANDLE handle;
++        NtCreateThreadEx( &handle, SYNCHRONIZE | THREAD_QUERY_INFORMATION, NULL, NtCurrentProcess(),
++                          apc_worker_thread, NULL,
++                          THREAD_CREATE_FLAGS_SKIP_THREAD_ATTACH | THREAD_CREATE_FLAGS_SKIP_LOADER_INIT |
++                          THREAD_CREATE_FLAGS_HIDE_FROM_DEBUGGER, 0, 0, 0, NULL );
++    }
++
+     loader_init( context, (void **)&context->X0 );
+     TRACE_(relay)( "\1Starting thread proc %p (arg=%p)\n", (void *)context->X0, (void *)context->X1 );
+     NtContinue( context, TRUE );

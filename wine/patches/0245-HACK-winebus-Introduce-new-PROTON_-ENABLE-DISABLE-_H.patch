@@ -1,0 +1,126 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Sat, 3 Dec 2022 08:03:58 +0100
+Subject: [PATCH] HACK: winebus: Introduce new PROTON_(ENABLE|DISABLE)_HIDRAW
+ env vars.
+
+To easily enable/disable hidraw for new devices.
+
+(cherry picked from commit de1bed5325cdba391d6a461158492b2318c63081)
+---
+ dlls/winebus.sys/main.c      | 47 +++++++++++++++++++++++++++++++++++-
+ programs/services/services.c | 23 ++++++++++++------
+ 2 files changed, 62 insertions(+), 8 deletions(-)
+
+diff --git a/dlls/winebus.sys/main.c b/dlls/winebus.sys/main.c
+index 97ca2716309..e943d9c3b71 100644
+--- a/dlls/winebus.sys/main.c
++++ b/dlls/winebus.sys/main.c
+@@ -498,18 +498,49 @@ static DWORD check_bus_option(const WCHAR *option, DWORD default_value)
+     return default_value;
+ }
+ 
++static const WCHAR *wcscasestr(const WCHAR *search, const WCHAR *needle)
++{
++    UNICODE_STRING search_str, needle_str;
++
++    RtlInitUnicodeString(&search_str, search);
++    RtlInitUnicodeString(&needle_str, needle);
++
++    while (needle_str.Length <= search_str.Length)
++    {
++        UNICODE_STRING tmp;
++
++        tmp.Buffer = search_str.Buffer;
++        tmp.Length = tmp.MaximumLength = needle_str.Length;
++
++        if (!RtlCompareUnicodeString(&tmp, &needle_str, TRUE)) return search_str.Buffer;
++        search_str.Length -= sizeof(WCHAR);
++        search_str.Buffer += 1;
++    }
++
++    return NULL;
++}
++
+ static BOOL is_hidraw_enabled(WORD vid, WORD pid, const USAGE_AND_PAGE *usages, UINT buttons)
+ {
+     char buffer[FIELD_OFFSET(KEY_VALUE_PARTIAL_INFORMATION, Data[1024])];
+     KEY_VALUE_PARTIAL_INFORMATION *info = (KEY_VALUE_PARTIAL_INFORMATION *)buffer;
+     struct device_options *device;
+-    WCHAR vidpid[MAX_PATH], *tmp;
++    WCHAR vidpid[MAX_PATH], *tmp, value[1024];
+     BOOL prefer_hidraw = FALSE;
+     UNICODE_STRING str;
++    SIZE_T len;
+     DWORD size;
+ 
+     if (options.disable_hidraw) return FALSE;
+ 
++    if (!RtlQueryEnvironmentVariable(NULL, L"PROTON_DISABLE_HIDRAW", 21, value, ARRAY_SIZE(value) - 1, &len))
++    {
++        value[len] = 0;
++        if (!wcscmp(value, L"1")) return FALSE;
++        swprintf(vidpid, ARRAY_SIZE(vidpid), L"0x%04X/0x%04X", vid, pid);
++        if (wcscasestr(value, vidpid)) return FALSE;
++    }
++
+     LIST_FOR_EACH_ENTRY(device, &options.devices, struct device_options, entry)
+     {
+         if (device->vid != vid) continue;
+@@ -518,6 +549,20 @@ static BOOL is_hidraw_enabled(WORD vid, WORD pid, const USAGE_AND_PAGE *usages,
+         return !!device->hidraw;
+     }
+ 
++    if (usages->UsagePage == HID_USAGE_PAGE_DIGITIZER)
++    {
++        WARN("Ignoring unsupported %04X:%04X hidraw touchscreen\n", vid, pid);
++        return FALSE;
++    }
++
++    if (!RtlQueryEnvironmentVariable(NULL, L"PROTON_ENABLE_HIDRAW", 20, value, ARRAY_SIZE(value) - 1, &len))
++    {
++        value[len] = 0;
++        if (!wcscmp(value, L"1")) return TRUE;
++        swprintf(vidpid, ARRAY_SIZE(vidpid), L"0x%04X/0x%04X", vid, pid);
++        if (wcscasestr(value, vidpid)) return TRUE;
++    }
++
+     if (usages->UsagePage == HID_USAGE_PAGE_DIGITIZER)
+     {
+         WARN("Ignoring unsupported %04X:%04X hidraw touchscreen\n", vid, pid);
+diff --git a/programs/services/services.c b/programs/services/services.c
+index 43cbd94f5d2..2075567f244 100644
+--- a/programs/services/services.c
++++ b/programs/services/services.c
+@@ -1038,15 +1038,24 @@ found:
+ 
+     if (!environment && OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY | TOKEN_DUPLICATE, &token))
+     {
+-        WCHAR val[16];
+-        CreateEnvironmentBlock(&environment, token, FALSE);
+-        if (GetEnvironmentVariableW( L"WINEBOOTSTRAPMODE", val, ARRAY_SIZE(val) ))
++        static const WCHAR *preserve[] =
+         {
+-            UNICODE_STRING name = RTL_CONSTANT_STRING(L"WINEBOOTSTRAPMODE");
+-            UNICODE_STRING value;
++            L"WINEBOOTSTRAPMODE",
++            L"PROTON_DISABLE_HIDRAW",
++            L"PROTON_ENABLE_HIDRAW",
++        };
++        WCHAR buffer[1024];
+ 
+-            RtlInitUnicodeString( &value, val );
+-            RtlSetEnvironmentVariable( (WCHAR **)&environment, &name, &value );
++        CreateEnvironmentBlock(&environment, token, FALSE);
++        for (size_t i = 0; i < ARRAY_SIZE(preserve); i++)
++        {
++            if (GetEnvironmentVariableW( preserve[i], buffer, ARRAY_SIZE(buffer) ))
++            {
++                UNICODE_STRING value, name;
++                RtlInitUnicodeString( &name, preserve[i] );
++                RtlInitUnicodeString( &value, buffer );
++                RtlSetEnvironmentVariable( (WCHAR **)&environment, &name, &value );
++            }
+         }
+         CloseHandle(token);
+     }

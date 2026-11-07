@@ -1,0 +1,44 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Zhiyi Zhang <zzhang@codeweavers.com>
+Date: Mon, 10 Apr 2023 16:54:38 +0800
+Subject: [PATCH] amd_ags_x64: Stub agsSetDisplayMode().
+
+CW-Bug-Id: #22067
+(cherry picked from commit f7b18a7454b5c03f66d0a46150f2826c0acd1561)
+---
+ dlls/amd_ags_x64/amd_ags_x64.spec   |  2 +-
+ dlls/amd_ags_x64/amd_ags_x64_main.c | 11 +++++++++++
+ 2 files changed, 12 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/amd_ags_x64/amd_ags_x64.spec b/dlls/amd_ags_x64/amd_ags_x64.spec
+index 1a456e2aa71..4fe7ea9ebfc 100644
+--- a/dlls/amd_ags_x64/amd_ags_x64.spec
++++ b/dlls/amd_ags_x64/amd_ags_x64.spec
+@@ -42,4 +42,4 @@
+ @ stdcall agsGetVersionNumber()
+ @ stdcall agsInit(ptr ptr ptr)
+ @ stdcall agsInitialize(long ptr ptr ptr)
+-@ stub agsSetDisplayMode
++@ stdcall agsSetDisplayMode(ptr long long ptr)
+diff --git a/dlls/amd_ags_x64/amd_ags_x64_main.c b/dlls/amd_ags_x64/amd_ags_x64_main.c
+index b691521a1fa..4952a9f3b75 100644
+--- a/dlls/amd_ags_x64/amd_ags_x64_main.c
++++ b/dlls/amd_ags_x64/amd_ags_x64_main.c
+@@ -641,6 +641,17 @@ AGSReturnCode WINAPI agsDeInitialize(AGSContext *context)
+     return AGS_SUCCESS;
+ }
+ 
++AGSReturnCode WINAPI agsSetDisplayMode(AGSContext *context, int device_index, int display_index, const AGSDisplaySettings *settings)
++{
++    FIXME("context %p device_index %d display_index %d settings %p stub!\n", context, device_index,
++          display_index, settings);
++
++    if (!context)
++        return AGS_INVALID_ARGS;
++
++    return AGS_SUCCESS;
++}
++
+ AGSReturnCode WINAPI agsGetCrossfireGPUCount(AGSContext *context, int *gpu_count)
+ {
+     TRACE("context %p gpu_count %p stub!\n", context, gpu_count);

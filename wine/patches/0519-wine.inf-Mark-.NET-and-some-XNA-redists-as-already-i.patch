@@ -1,0 +1,29 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Billy Laws <blaws05@gmail.com>
+Date: Mon, 6 May 2024 15:55:42 +0000
+Subject: [PATCH] wine.inf: Mark .NET and some XNA redists as already
+ installed.
+
+CW-Bug-Id: #26280
+(cherry picked from commit 550eb4528c1e65eb4260d815bc2c23b7d9af8858)
+---
+ loader/wine.inf.in | 9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+diff --git a/loader/wine.inf.in b/loader/wine.inf.in
+index 8190e17b125..3625286ae12 100644
+--- a/loader/wine.inf.in
++++ b/loader/wine.inf.in
+@@ -1421,3 +1421,12 @@ HKCU,Software\Wine\DllOverrides,"vcomp140",0x2,"native,builtin"
+ HKCU,Software\Wine\DllOverrides,"vcruntime140",0x2,"native,builtin"
+ HKCU,Software\Wine\DllOverrides,"vccorlib140",0x2,"native,builtin"
+ HKCU,Software\Wine\DllOverrides,"vcruntime140_1",0x2,"native,builtin"
++HKLM,Software\Wow6432Node\Valve\Steam\Apps\CommonRedist\.NET\4.8,"4.8",0x10001,1
++HKLM,Software\Wow6432Node\Valve\Steam\Apps\CommonRedist\.NET\4.7.2,"4.7.2",0x10001,1
++HKLM,Software\Wow6432Node\Valve\Steam\Apps\CommonRedist\.NET\4.6.2,"4.6.2",0x10001,1
++HKLM,Software\Wow6432Node\Valve\Steam\Apps\CommonRedist\.NET\4.5.2,"4.5.2",0x10001,1
++HKLM,Software\Wow6432Node\Valve\Steam\Apps\CommonRedist\.NET\4.0,"4.0",0x10001,1
++HKLM,Software\Wow6432Node\Valve\Steam\Apps\CommonRedist\.NET\4.0 Client Profile,"4.0 Client Profile",0x10001,1
++HKLM,Software\Wow6432Node\Valve\Steam\Apps\CommonRedist\.NET\3.5,"3.5",0x10001,1
++HKLM,Software\Wow6432Node\Valve\Steam\Apps\CommonRedist\.NET\3.5 Client Profile,"3.5 Client Profile",0x10001,1
++HKLM,Software\Wow6432Node\Valve\Steam\Apps\CommonRedist\XNA\4.0,"4.0",0x10001,1

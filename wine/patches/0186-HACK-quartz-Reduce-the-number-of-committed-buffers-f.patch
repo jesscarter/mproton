@@ -1,0 +1,39 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Wed, 17 Aug 2022 08:58:46 +0200
+Subject: [PATCH] HACK: quartz: Reduce the number of committed buffers for P4G.
+
+The game requests 30 buffers of 8M for the video and 30 additional
+buffers for the audio stream. We're already near the 32bit VM limit
+and fragmentation often makes it fail. 8 buffers should hopefully be
+enough overall.
+
+CW-Bug-Id: #20363
+(cherry picked from commit b5c1ca787aa6c65c4effc847554530756a763a6b)
+---
+ dlls/quartz/memallocator.c | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/dlls/quartz/memallocator.c b/dlls/quartz/memallocator.c
+index ca786ab0046..38f2ce7a524 100644
+--- a/dlls/quartz/memallocator.c
++++ b/dlls/quartz/memallocator.c
+@@ -162,6 +162,7 @@ static ULONG WINAPI BaseMemAllocator_Release(IMemAllocator * iface)
+ static HRESULT WINAPI BaseMemAllocator_SetProperties(IMemAllocator * iface, ALLOCATOR_PROPERTIES *pRequest, ALLOCATOR_PROPERTIES *pActual)
+ {
+     BaseMemAllocator *This = impl_from_IMemAllocator(iface);
++    const char *sgi;
+     HRESULT hr;
+ 
+     TRACE("(%p)->(%p, %p)\n", This, pRequest, pActual);
+@@ -169,6 +170,10 @@ static HRESULT WINAPI BaseMemAllocator_SetProperties(IMemAllocator * iface, ALLO
+     TRACE("Requested %ld buffers, size %ld, alignment %ld, prefix %ld.\n",
+             pRequest->cBuffers, pRequest->cbBuffer, pRequest->cbAlign, pRequest->cbPrefix);
+ 
++    sgi = getenv("SteamGameId");
++    if (sgi && (!strcmp(sgi, "1113000")))
++        pRequest->cBuffers = min(8, pRequest->cBuffers);
++
+     EnterCriticalSection(This->pCritSect);
+     {
+         if (!list_empty(&This->used_list))

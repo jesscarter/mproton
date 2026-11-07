@@ -1,0 +1,20 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Anna Lasky <alasky@codeweavers.com>
+Date: Fri, 5 Feb 2021 08:31:07 -0600
+Subject: [PATCH] wine.inf: Use built-in atiadlxx for Need For Speed.
+
+(cherry picked from commit 27fce6bf46323a88d3fa375816346e751048124f)
+---
+ loader/wine.inf.in | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/loader/wine.inf.in b/loader/wine.inf.in
+index 883f146a63f..d89894b3287 100644
+--- a/loader/wine.inf.in
++++ b/loader/wine.inf.in
+@@ -1439,4 +1439,5 @@ HKCU,Software\Wine\AppDefaults\h1_sp64_ship.exe\DllOverrides,"atiadlxx",,"builti
+ HKCU,Software\Wine\AppDefaults\h1_mp64_ship.exe\DllOverrides,"atiadlxx",,"builtin"
+ HKCU,Software\Wine\AppDefaults\iw7_ship.exe\DllOverrides,"atiadlxx",,"builtin"
+ HKCU,Software\Wine\AppDefaults\BlackOps3.exe\DllOverrides,"atiadlxx",,"builtin"
++HKCU,Software\Wine\AppDefaults\NFS16.exe\DllOverrides,"atiadlxx",,"builtin"
+ HKCU,Software\Wine\AppDefaults\ShadowOfWar.exe\DllOverrides,"atiadlxx",,"builtin"

@@ -1,0 +1,380 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Bernhard=20K=C3=B6lbl?= <besentv@gmail.com>
+Date: Mon, 20 Feb 2023 23:11:02 +0100
+Subject: [PATCH] windows.media.speech: Implement Vosk create and release
+ functions in the unixlib.
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Signed-off-by: Bernhard Kölbl <besentv@gmail.com>
+CW-Bug-Id: #20134
+(cherry picked from commit 2285894c9327e1b372920bbc06cb486a19657fdf)
+---
+ dlls/windows.media.speech/Makefile.in  |   2 +-
+ dlls/windows.media.speech/private.h    |   3 +
+ dlls/windows.media.speech/recognizer.c |  42 ++++++
+ dlls/windows.media.speech/unixlib.c    | 169 ++++++++++++++++++++++++-
+ dlls/windows.media.speech/unixlib.h    |  16 +++
+ 5 files changed, 230 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/windows.media.speech/Makefile.in b/dlls/windows.media.speech/Makefile.in
+index 52e82c79006..e9dc6943d29 100644
+--- a/dlls/windows.media.speech/Makefile.in
++++ b/dlls/windows.media.speech/Makefile.in
+@@ -1,6 +1,6 @@
+ MODULE = windows.media.speech.dll
+ UNIXLIB = windows.media.speech.so
+-IMPORTS = combase uuid
++IMPORTS = combase uuid user32
+ 
+ SOURCES = \
+ 	async.c \
+diff --git a/dlls/windows.media.speech/private.h b/dlls/windows.media.speech/private.h
+index e645e6e3428..a27669cc3fb 100644
+--- a/dlls/windows.media.speech/private.h
++++ b/dlls/windows.media.speech/private.h
+@@ -31,6 +31,7 @@
+ #include "windef.h"
+ #include "winbase.h"
+ #include "winstring.h"
++#include "winuser.h"
+ #include "objbase.h"
+ 
+ #include "activation.h"
+@@ -50,6 +51,8 @@
+ 
+ #include "async_private.h"
+ 
++#define SPERR_WINRT_INTERNAL_ERROR 0x800455a0
++
+ /*
+  *
+  * Windows.Media.SpeechRecognition
+diff --git a/dlls/windows.media.speech/recognizer.c b/dlls/windows.media.speech/recognizer.c
+index e102f543c00..4c367b5195e 100644
+--- a/dlls/windows.media.speech/recognizer.c
++++ b/dlls/windows.media.speech/recognizer.c
+@@ -25,6 +25,9 @@
+ 
+ #include "wine/debug.h"
+ 
++#include "unixlib.h"
++#include "wine/unixlib.h"
++
+ WINE_DEFAULT_DEBUG_CHANNEL(speech);
+ 
+ /*
+@@ -171,6 +174,8 @@ struct session
+     IAudioCaptureClient *capture_client;
+     WAVEFORMATEX capture_wfx;
+ 
++    speech_recognizer_handle unix_handle;
++
+     HANDLE worker_thread, worker_control_event, audio_buf_event;
+     BOOLEAN worker_running, worker_paused;
+     CRITICAL_SECTION cs;
+@@ -319,7 +324,9 @@ static ULONG WINAPI session_AddRef( ISpeechContinuousRecognitionSession *iface )
+ static ULONG WINAPI session_Release( ISpeechContinuousRecognitionSession *iface )
+ {
+     struct session *impl = impl_from_ISpeechContinuousRecognitionSession(iface);
++    struct speech_release_recognizer_params release_params;
+     ULONG ref = InterlockedDecrement(&impl->ref);
++
+     TRACE("iface %p, ref %lu.\n", iface, ref);
+ 
+     if (!ref)
+@@ -345,6 +352,9 @@ static ULONG WINAPI session_Release( ISpeechContinuousRecognitionSession *iface
+         impl->cs.DebugInfo->Spare[0] = 0;
+         DeleteCriticalSection(&impl->cs);
+ 
++        release_params.handle = impl->unix_handle;
++        WINE_UNIX_CALL(unix_speech_release_recognizer, &release_params);
++
+         IVector_ISpeechRecognitionConstraint_Release(impl->constraints);
+         free(impl);
+     }
+@@ -1095,6 +1105,35 @@ cleanup:
+     return hr;
+ }
+ 
++static HRESULT recognizer_factory_create_unix_instance( struct session *session )
++{
++    struct speech_create_recognizer_params create_params = { 0 };
++    WCHAR locale[LOCALE_NAME_MAX_LENGTH];
++    NTSTATUS status;
++    INT len;
++
++    if (!(len = GetUserDefaultLocaleName(locale, LOCALE_NAME_MAX_LENGTH)))
++        return E_FAIL;
++
++    if (CharLowerBuffW(locale, len) != len)
++        return E_FAIL;
++
++    if (!WideCharToMultiByte(CP_ACP, 0, locale, len, create_params.locale, ARRAY_SIZE(create_params.locale), NULL, NULL))
++        return HRESULT_FROM_WIN32(GetLastError());
++
++    create_params.sample_rate = (FLOAT)session->capture_wfx.nSamplesPerSec;
++
++    if ((status = WINE_UNIX_CALL(unix_speech_create_recognizer, &create_params)))
++    {
++        ERR("Unable to create Vosk instance for locale %s, status %#lx. Speech recognition won't work.\n", debugstr_a(create_params.locale), status);
++        return SPERR_WINRT_INTERNAL_ERROR;
++    }
++
++    session->unix_handle = create_params.handle;
++
++    return S_OK;
++}
++
+ static HRESULT WINAPI recognizer_factory_Create( ISpeechRecognizerFactory *iface, ILanguage *language, ISpeechRecognizer **speechrecognizer )
+ {
+     struct recognizer *impl;
+@@ -1141,6 +1180,9 @@ static HRESULT WINAPI recognizer_factory_Create( ISpeechRecognizerFactory *iface
+     if (FAILED(hr = recognizer_factory_create_audio_capture(session)))
+         goto error;
+ 
++    if (FAILED(hr = recognizer_factory_create_unix_instance(session)))
++        goto error;
++
+     InitializeCriticalSectionEx(&session->cs, 0, RTL_CRITICAL_SECTION_FLAG_FORCE_DEBUG_INFO);
+     session->cs.DebugInfo->Spare[0] = (DWORD_PTR)(__FILE__ ": recognition_session.cs");
+ 
+diff --git a/dlls/windows.media.speech/unixlib.c b/dlls/windows.media.speech/unixlib.c
+index 6a9dac6f067..155780a3e4b 100644
+--- a/dlls/windows.media.speech/unixlib.c
++++ b/dlls/windows.media.speech/unixlib.c
+@@ -26,9 +26,12 @@
+ 
+ #include <stdio.h>
+ #include <stdlib.h>
+-#include <string.h>
+ #include <stdarg.h>
++#include <string.h>
++#include <dirent.h>
+ #include <dlfcn.h>
++#include <errno.h>
++#include <sys/stat.h>
+ 
+ #ifdef SONAME_LIBVOSK
+ #pragma GCC diagnostic push
+@@ -97,6 +100,164 @@ static NTSTATUS process_detach( void *args )
+     return STATUS_SUCCESS;
+ }
+ 
++static inline speech_recognizer_handle vosk_recognizer_to_handle( VoskRecognizer *recognizer )
++{
++    return (speech_recognizer_handle)(UINT_PTR)recognizer;
++}
++
++static inline VoskRecognizer *vosk_recognizer_from_handle( speech_recognizer_handle handle )
++{
++    return (VoskRecognizer *)(UINT_PTR)handle;
++}
++
++static NTSTATUS find_model_by_locale_and_path( const char *path, const char *locale, VoskModel **model )
++{
++    static const char *vosk_model_identifier_small = "vosk-model-small-";
++    static const char *vosk_model_identifier = "vosk-model-";
++    size_t ident_small_len = strlen(vosk_model_identifier_small);
++    size_t ident_len = strlen(vosk_model_identifier);
++    char *ent_name, *model_path, *best_match, *delim;
++    NTSTATUS status = STATUS_UNSUCCESSFUL;
++    struct dirent *dirent;
++    size_t path_len, len;
++    DIR *dir;
++
++    TRACE("path %s, locale %s, model %p.\n", path, debugstr_a(locale), model);
++
++    if (!path || !locale || (len = strlen(locale)) < 4)
++        return STATUS_UNSUCCESSFUL;
++
++    if (!(dir = opendir(path)))
++        return STATUS_UNSUCCESSFUL;
++
++    delim = strchr(locale, '-');
++    path_len = strlen(path);
++    best_match = NULL;
++    *model = NULL;
++
++    while ((dirent = readdir(dir)))
++    {
++        ent_name = dirent->d_name;
++
++        if (!strncmp(ent_name, vosk_model_identifier_small, ident_small_len))
++            ent_name += ident_small_len;
++        else if (!strncmp(ent_name, vosk_model_identifier, ident_len))
++            ent_name += ident_len;
++        else
++            continue;
++
++        /*
++         * Find the first matching model for lang and region (en-us).
++         * If there isn't any, pick the first one just matching lang (en).
++         */
++        if (!strncmp(ent_name, locale, len))
++        {
++            if (best_match) free(best_match);
++            best_match = strdup(dirent->d_name);
++            break;
++        }
++
++        if (!best_match && !strncmp(ent_name, locale, delim - locale))
++            best_match = strdup(dirent->d_name);
++    }
++
++    closedir(dir);
++
++    if (!best_match)
++        return STATUS_UNSUCCESSFUL;
++
++    if (!(model_path = malloc(path_len + 1 /* '/' */ + strlen(best_match) + 1)))
++    {
++        status = STATUS_NO_MEMORY;
++        goto done;
++    }
++
++    sprintf(model_path, "%s/%s", path, best_match);
++
++    TRACE("trying to load Vosk model %s.\n", debugstr_a(model_path));
++
++    if ((*model = p_vosk_model_new(model_path)) != NULL)
++        status = STATUS_SUCCESS;
++
++done:
++    free(model_path);
++    free(best_match);
++
++    return status;
++}
++
++static NTSTATUS find_model_by_locale( const char *locale, VoskModel **model )
++{
++    const char *suffix = NULL;
++    char *env, *path = NULL;
++    NTSTATUS status;
++
++    TRACE("locale %s, model %p.\n", debugstr_a(locale), model);
++
++    if (!model)
++        return STATUS_UNSUCCESSFUL;
++
++    if (!find_model_by_locale_and_path(getenv("VOSK_MODEL_PATH"), locale, model))
++        return STATUS_SUCCESS;
++    if (!find_model_by_locale_and_path("/usr/share/vosk", locale, model))
++        return STATUS_SUCCESS;
++
++    if ((env = getenv("XDG_CACHE_HOME")))
++        suffix = "/vosk";
++    else if ((env = getenv("HOME")))
++        suffix = "/.cache/vosk";
++    else
++        return STATUS_UNSUCCESSFUL;
++
++    if (!(path = malloc(strlen(env) + strlen(suffix) + 1)))
++        return STATUS_NO_MEMORY;
++
++    sprintf(path, "%s%s", env, suffix);
++    status = find_model_by_locale_and_path(path, locale, model);
++    free(path);
++
++    return status;
++}
++
++static NTSTATUS speech_create_recognizer( void *args )
++{
++    struct speech_create_recognizer_params *params = args;
++    VoskRecognizer *recognizer = NULL;
++    VoskModel *model = NULL;
++    NTSTATUS status = STATUS_SUCCESS;
++
++    TRACE("args %p.\n", args);
++
++    if (!vosk_handle)
++        return STATUS_NOT_SUPPORTED;
++
++    if ((status = find_model_by_locale(params->locale, &model)))
++        return status;
++
++    if (!(recognizer = p_vosk_recognizer_new(model, params->sample_rate)))
++        status = STATUS_UNSUCCESSFUL;
++
++    /* VoskModel is reference-counted.  A VoskRecognizer keeps a reference to its model. */
++    p_vosk_model_free(model);
++
++    params->handle = vosk_recognizer_to_handle(recognizer);
++    return status;
++}
++
++static NTSTATUS speech_release_recognizer( void *args )
++{
++    struct speech_release_recognizer_params *params = args;
++
++    TRACE("args %p.\n", args);
++
++    if (!vosk_handle)
++        return STATUS_NOT_SUPPORTED;
++
++    p_vosk_recognizer_free(vosk_recognizer_from_handle(params->handle));
++
++    return STATUS_SUCCESS;
++}
++
+ #else /* SONAME_LIBVOSK */
+ 
+ #define MAKE_UNSUPPORTED_FUNC( f ) \
+@@ -108,6 +269,8 @@ static NTSTATUS process_detach( void *args )
+ 
+ MAKE_UNSUPPORTED_FUNC(process_attach)
+ MAKE_UNSUPPORTED_FUNC(process_detach)
++MAKE_UNSUPPORTED_FUNC(speech_create_recognizer)
++MAKE_UNSUPPORTED_FUNC(speech_release_recognizer)
+ #undef MAKE_UNSUPPORTED_FUNC
+ 
+ #endif /* SONAME_LIBVOSK */
+@@ -116,10 +279,14 @@ const unixlib_entry_t __wine_unix_call_funcs[] =
+ {
+     process_attach,
+     process_detach,
++    speech_create_recognizer,
++    speech_release_recognizer,
+ };
+ 
+ const unixlib_entry_t __wine_unix_call_wow64_funcs[] =
+ {
+     process_attach,
+     process_detach,
++    speech_create_recognizer,
++    speech_release_recognizer,
+ };
+diff --git a/dlls/windows.media.speech/unixlib.h b/dlls/windows.media.speech/unixlib.h
+index 6c337e54511..974e8d5f797 100644
+--- a/dlls/windows.media.speech/unixlib.h
++++ b/dlls/windows.media.speech/unixlib.h
+@@ -30,10 +30,26 @@
+ 
+ #include "wine/unixlib.h"
+ 
++typedef UINT64 speech_recognizer_handle;
++
++struct speech_create_recognizer_params
++{
++    speech_recognizer_handle handle;
++    CHAR locale[LOCALE_NAME_MAX_LENGTH];
++    FLOAT sample_rate;
++};
++
++struct speech_release_recognizer_params
++{
++    speech_recognizer_handle handle;
++};
++
+ enum unix_funcs
+ {
+     unix_process_attach,
+     unix_process_detach,
++    unix_speech_create_recognizer,
++    unix_speech_release_recognizer,
+ };
+ 
+ #endif

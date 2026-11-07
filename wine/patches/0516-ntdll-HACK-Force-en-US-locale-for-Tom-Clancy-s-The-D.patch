@@ -1,0 +1,28 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Mon, 8 Jun 2026 12:34:52 -0600
+Subject: [PATCH] =?UTF-8?q?ntdll:=20HACK:=20Force=20en-US=20locale=20for?=
+ =?UTF-8?q?=20Tom=20Clancy=E2=80=99s=20The=20Division=202=20EAC=20launcher?=
+ =?UTF-8?q?.?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+CW-Bug-Id: #27182
+(cherry picked from commit 4fe450d241ec9d0b2e8c5eda59066966318b7abe)
+---
+ dlls/ntdll/unix/env.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/dlls/ntdll/unix/env.c b/dlls/ntdll/unix/env.c
+index 05efb2b9780..89ae808a46a 100644
+--- a/dlls/ntdll/unix/env.c
++++ b/dlls/ntdll/unix/env.c
+@@ -748,6 +748,7 @@ static void init_locale(void)
+     if (main_argc > 1 && (
+             strstr(main_argv[1], "start_protected_game.exe")
+             || strstr(main_argv[1], "RocketLeague_EAC.exe")
++            || ((p = getenv( "SteamGameId" )) && !strcmp( p, "2221490" ) && !strcmp( main_argv[1], "-public_key_store_address" ))
+        ))
+     {
+         FIXME( "HACK setting EN locale.\n" );

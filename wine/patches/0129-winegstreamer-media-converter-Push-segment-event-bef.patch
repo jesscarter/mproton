@@ -1,0 +1,49 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Wed, 15 May 2024 21:12:06 +0200
+Subject: [PATCH] winegstreamer/media-converter: Push segment event before data
+ in push mode.
+
+CW-Bug-Id: #20833
+(cherry picked from commit 3d20b35327e79e28e68f336eff4a956dd61d4614)
+---
+ .../winegstreamer/media-converter/videoconv.c | 19 +++++++++++++++++++
+ 1 file changed, 19 insertions(+)
+
+diff --git a/dlls/winegstreamer/media-converter/videoconv.c b/dlls/winegstreamer/media-converter/videoconv.c
+index 51e78c39ec0..c9ec31be422 100644
+--- a/dlls/winegstreamer/media-converter/videoconv.c
++++ b/dlls/winegstreamer/media-converter/videoconv.c
+@@ -757,6 +757,23 @@ static gboolean video_conv_push_caps(VideoConv *conv, uint32_t transcode_tag)
+     return ret;
+ }
+ 
++static gboolean video_conv_push_segment(VideoConv *conv)
++{
++    struct video_conv_state *state;
++    GstSegment segment;
++
++    gst_segment_init(&segment, GST_FORMAT_BYTES);
++    if (!(state = video_conv_lock_state(conv)))
++    {
++        GST_ERROR("VideoConv not yet in READY state?");
++        return false;
++    }
++    segment.stop = state->our_duration;
++    pthread_mutex_unlock(&conv->state_mutex);
++
++    return push_event(conv->src_pad, gst_event_new_segment(&segment));
++}
++
+ static gboolean video_conv_sink_event_caps(VideoConv *conv, GstEvent *event)
+ {
+     struct video_conv_state *state;
+@@ -841,6 +858,8 @@ static gboolean video_conv_sink_event_eos(VideoConv *conv, GstEvent *event)
+             return false;
+         if (!video_conv_push_caps(conv, transcode_tag))
+             return false;
++        if (!video_conv_push_segment(conv))
++            return false;
+ 
+         /* return false to cancel upstream pads EOS event handling and avoid setting EOS flag */
+         return false;

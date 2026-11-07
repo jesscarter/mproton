@@ -1,0 +1,31 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Giovanni Mascellani <gmascellani@codeweavers.com>
+Date: Tue, 10 Aug 2021 11:56:55 +0200
+Subject: [PATCH] HACK: loader/wine.inf: Add registry entries for the new
+ fonts.
+
+They are required for DWrite to enumerate the fonts.
+
+For Cyberpunk 2077 launcher font support.
+
+CW-Bug-Id: #19125
+(cherry picked from commit 2b467cfa3e9903c60e643453dd21580c77c528a4)
+---
+ loader/wine.inf.in | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/loader/wine.inf.in b/loader/wine.inf.in
+index a1f419a0707..a034f83703d 100644
+--- a/loader/wine.inf.in
++++ b/loader/wine.inf.in
+@@ -544,6 +544,10 @@ HKLM,%FontsNT%,"Arial (TrueType)",,"arial.ttf"
+ HKLM,%FontsNT%,"Arial Bold (TrueType)",,"arialbd.ttf"
+ HKLM,%FontsNT%,"Times New Roman (TrueType)",,"times.ttf"
+ HKLM,%FontsNT%,"Courier New (TrueType)",,"cour.ttf"
++HKLM,%FontsNT%,"Malgun Gothic (TrueType)",,"malgun.ttf"
++HKLM,%FontsNT%,"Microsoft YaHei (TrueType)",,"msyh.ttf"
++HKLM,%FontsNT%,"MS Gothic (TrueType)",,"msgothic.ttc"
++HKLM,%FontsNT%,"SimSun (TrueType)",,"simsun.ttc"
+ HKCU,Software\Wine\Fonts\Replacements,"Palatino Linotype",,"Times New Roman"
+ 
+ [MCI]

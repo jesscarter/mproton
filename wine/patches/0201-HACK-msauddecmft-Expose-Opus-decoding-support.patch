@@ -1,0 +1,22 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Tue, 24 Dec 2024 10:11:38 +0100
+Subject: [PATCH] HACK: msauddecmft: Expose Opus decoding support.
+
+(cherry picked from commit 3315734a72e4e0cfeaf8bdda098b8cdda64066de)
+---
+ dlls/msauddecmft/msauddecmft.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/dlls/msauddecmft/msauddecmft.c b/dlls/msauddecmft/msauddecmft.c
+index dd6f91fe5b6..672389564a2 100644
+--- a/dlls/msauddecmft/msauddecmft.c
++++ b/dlls/msauddecmft/msauddecmft.c
+@@ -124,6 +124,7 @@ HRESULT WINAPI DllRegisterServer(void)
+     MFT_REGISTER_TYPE_INFO audio_decoder_mft_inputs[] =
+     {
+         {MFMediaType_Audio, MFAudioFormat_Vorbis},
++        {MFMediaType_Audio, MFAudioFormat_Opus},
+     };
+     MFT_REGISTER_TYPE_INFO audio_decoder_mft_outputs[] =
+     {

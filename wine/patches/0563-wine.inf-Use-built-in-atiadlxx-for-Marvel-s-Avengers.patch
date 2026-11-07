@@ -1,0 +1,20 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Thu, 25 Nov 2021 21:33:24 +0300
+Subject: [PATCH] wine.inf: Use built-in atiadlxx for Marvel's Avengers.
+
+CW-Bug-Id: #19687
+(cherry picked from commit 0f1c9385548b478305a517362649a2310057e036)
+---
+ loader/wine.inf.in | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/loader/wine.inf.in b/loader/wine.inf.in
+index 98064cd7a3a..482a34e2c8b 100644
+--- a/loader/wine.inf.in
++++ b/loader/wine.inf.in
+@@ -1444,3 +1444,4 @@ HKCU,Software\Wine\AppDefaults\ShadowOfWar.exe\DllOverrides,"atiadlxx",,"builtin
+ HKCU,Software\Wine\AppDefaults\DIRT5.exe\DllOverrides,"atiadlxx",,"builtin"
+ HKCU,Software\Wine\AppDefaults\gotg.exe\DllOverrides,"atiadlxx",,"builtin"
+ HKCU,Software\Wine\AppDefaults\RelicCardinal.exe\DllOverrides,"atiadlxx",,"builtin"
++HKCU,Software\Wine\AppDefaults\Avengers.exe\DllOverrides,"atiadlxx",,"builtin"

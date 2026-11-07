@@ -1,0 +1,132 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Thu, 5 Dec 2024 23:36:09 +0100
+Subject: [PATCH] HACK: winegstreamer/wg_transform: Implement vorbis decoder
+ support.
+
+(cherry picked from commit 992c78d1d217fa0c561ff59a99cc5a4ca9a4fdef)
+---
+ dlls/winegstreamer/wg_media_type.c | 13 ++++++
+ dlls/winegstreamer/wg_transform.c  | 71 ++++++++++++++++++++++++++++++
+ 2 files changed, 84 insertions(+)
+
+diff --git a/dlls/winegstreamer/wg_media_type.c b/dlls/winegstreamer/wg_media_type.c
+index d40583975ca..5fb54c01e09 100644
+--- a/dlls/winegstreamer/wg_media_type.c
++++ b/dlls/winegstreamer/wg_media_type.c
+@@ -162,6 +162,17 @@ static void init_caps_from_wave_format_wma3(GstCaps *caps, const WMAUDIO3WAVEFOR
+     gst_caps_set_simple(caps, "bitrate", G_TYPE_INT, format->wfx.nAvgBytesPerSec * 8, NULL);
+ }
+ 
++static void init_caps_from_wave_format_vorbis(GstCaps *caps, const WAVEFORMATEX *format, UINT32 format_size)
++{
++    init_caps_codec_data(caps, format + 1, format->cbSize);
++
++    gst_structure_remove_field(gst_caps_get_structure(caps, 0), "format");
++    gst_structure_set_name(gst_caps_get_structure(caps, 0), "audio/x-vorbis");
++    gst_caps_set_simple(caps, "block_align", G_TYPE_INT, format->nBlockAlign, NULL);
++    gst_caps_set_simple(caps, "depth", G_TYPE_INT, format->wBitsPerSample, NULL);
++    gst_caps_set_simple(caps, "bitrate", G_TYPE_INT, format->nAvgBytesPerSec * 8, NULL);
++}
++
+ static void init_caps_from_wave_format(GstCaps *caps, const GUID *subtype,
+         const void *format, UINT32 format_size)
+ {
+@@ -181,6 +192,8 @@ static void init_caps_from_wave_format(GstCaps *caps, const GUID *subtype,
+         return init_caps_from_wave_format_wma3(caps, format, format_size, 3);
+     if (IsEqualGUID(subtype, &MFAudioFormat_WMAudio_Lossless))
+         return init_caps_from_wave_format_wma3(caps, format, format_size, 4);
++    if (IsEqualGUID(subtype, &MFAudioFormat_Vorbis))
++        return init_caps_from_wave_format_vorbis(caps, format, format_size);
+ 
+     GST_FIXME("Unsupported subtype " WG_GUID_FORMAT, WG_GUID_ARGS(*subtype));
+ }
+diff --git a/dlls/winegstreamer/wg_transform.c b/dlls/winegstreamer/wg_transform.c
+index 415effebd34..c071b5335f4 100644
+--- a/dlls/winegstreamer/wg_transform.c
++++ b/dlls/winegstreamer/wg_transform.c
+@@ -545,6 +545,74 @@ static GstCaps *transform_get_parsed_caps(GstCaps *caps, const char *media_type)
+     return parsed_caps;
+ }
+ 
++static GstBuffer *caps_get_buffer(const GstCaps *caps, const char *name, UINT32 *buffer_size)
++{
++    const GstStructure *structure = gst_caps_get_structure(caps, 0);
++    const GValue *buffer_value;
++
++    if ((buffer_value = gst_structure_get_value(structure, name)))
++    {
++        GstBuffer *buffer = gst_value_get_buffer(buffer_value);
++        *buffer_size = gst_buffer_get_size(buffer);
++        return buffer;
++    }
++
++    *buffer_size = 0;
++    return NULL;
++}
++
++static void push_vorbis_headers(struct wg_transform *transform)
++{
++    const uint8_t *ptr, *beg, *end;
++    GstBuffer *codec_data, *hdr;
++    UINT32 codec_data_size;
++    GstBufferMapInfo info;
++    int i, count, len;
++
++    if (!(codec_data = caps_get_buffer(transform->input_caps, "codec_data",
++            &codec_data_size)) || !codec_data_size) return;
++    gst_buffer_map(codec_data, &info, GST_MAP_READ);
++    ptr = info.data;
++    end = ptr + info.size;
++
++    for (len = 0, i = 0, count = *ptr++; ptr < end && i < count; i++)
++    {
++        while (ptr < end && *ptr++ == 0xff) len += 0xff;
++        len += ptr[-1];
++        GST_DEBUG("buffer %d: %u bytes", i, len);
++    }
++    if (len > end - ptr) goto failed;
++    beg = ptr;
++    ptr = info.data;
++
++    GST_DEBUG("%u stream headers, total length=%u bytes", count + 1, codec_data_size);
++    for (len = 0, i = 0, count = *ptr++; ptr < end && i < count; i++, len = 0)
++    {
++        while (ptr < end && *ptr++ == 0xff) len += 0xff;
++        len += ptr[-1];
++
++        if (!(hdr = gst_buffer_new_memdup(beg, len))) break;
++        GST_DEBUG("buffer %d: %u bytes", i, len);
++        GST_BUFFER_FLAG_SET(hdr, GST_BUFFER_FLAG_HEADER);
++        GST_MEMDUMP("data", beg, len);
++        gst_pad_push(transform->my_src, hdr);
++        beg += len;
++    }
++
++    if ((hdr = gst_buffer_new_memdup(beg, end - beg)))
++    {
++        GST_DEBUG("buffer %d: %zu bytes", i, end - beg);
++        GST_MEMDUMP("data", beg, end - beg);
++        GST_BUFFER_FLAG_SET(hdr, GST_BUFFER_FLAG_HEADER);
++        gst_pad_push(transform->my_src, hdr);
++    }
++
++failed:
++    gst_buffer_unmap(codec_data, &info);
++    gst_buffer_unref(codec_data);
++}
++
++
+ static bool transform_create_decoder_elements(struct wg_transform *transform,
+         const gchar *input_mime, const gchar *output_mime, GstElement **first, GstElement **last)
+ {
+@@ -801,6 +869,9 @@ NTSTATUS wg_transform_create(void *args)
+             || !push_event(transform->my_src, event))
+         goto out;
+ 
++    if (!strcmp(input_mime, "audio/x-vorbis"))
++        push_vorbis_headers(transform);
++
+     GST_INFO("Created winegstreamer transform %p.", transform);
+     params->transform = (wg_transform_t)(ULONG_PTR)transform;
+     return STATUS_SUCCESS;

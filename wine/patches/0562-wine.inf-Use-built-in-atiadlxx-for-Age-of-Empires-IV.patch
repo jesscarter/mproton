@@ -1,0 +1,23 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Andrew Eikum <aeikum@codeweavers.com>
+Date: Sun, 12 Dec 2021 14:07:16 +0100
+Subject: [PATCH] wine.inf: Use built-in atiadlxx for Age of Empires IV.
+
+CW-Bug-ID: #19602
+
+Avoids the warning about too old drivers on start.
+
+(cherry picked from commit 4b44c4aad7c4e4fdaac4cb79331d2b5124a697e5)
+---
+ loader/wine.inf.in | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/loader/wine.inf.in b/loader/wine.inf.in
+index 09ffa6b8256..98064cd7a3a 100644
+--- a/loader/wine.inf.in
++++ b/loader/wine.inf.in
+@@ -1443,3 +1443,4 @@ HKCU,Software\Wine\AppDefaults\NFS16.exe\DllOverrides,"atiadlxx",,"builtin"
+ HKCU,Software\Wine\AppDefaults\ShadowOfWar.exe\DllOverrides,"atiadlxx",,"builtin"
+ HKCU,Software\Wine\AppDefaults\DIRT5.exe\DllOverrides,"atiadlxx",,"builtin"
+ HKCU,Software\Wine\AppDefaults\gotg.exe\DllOverrides,"atiadlxx",,"builtin"
++HKCU,Software\Wine\AppDefaults\RelicCardinal.exe\DllOverrides,"atiadlxx",,"builtin"

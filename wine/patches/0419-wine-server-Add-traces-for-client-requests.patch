@@ -1,0 +1,58 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Mon, 2 Nov 2020 13:21:49 +0100
+Subject: [PATCH] wine/server: Add traces for client requests.
+
+(cherry picked from commit e48b139fe30f024606a8b19bd32ba29e9d9c48db)
+---
+ dlls/ntdll/unix/thread.c | 2 +-
+ include/wine/server.h    | 5 +++++
+ 2 files changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/ntdll/unix/thread.c b/dlls/ntdll/unix/thread.c
+index 63cf573d3af..f2b7046d0fa 100644
+--- a/dlls/ntdll/unix/thread.c
++++ b/dlls/ntdll/unix/thread.c
+@@ -2082,7 +2082,7 @@ static void set_native_thread_name( HANDLE handle, const UNICODE_STRING *name )
+ #ifdef linux
+     unsigned int status;
+     char path[64], nameA[64];
+-    int unix_pid, unix_tid, len, fd;
++    int unix_pid = -1, unix_tid = -1, len, fd;
+ 
+     SERVER_START_REQ( get_thread_times )
+     {
+diff --git a/include/wine/server.h b/include/wine/server.h
+index 4ebc8aafad5..e7b53c6d17d 100644
+--- a/include/wine/server.h
++++ b/include/wine/server.h
+@@ -26,6 +26,7 @@
+ #include <winbase.h>
+ #include <winternl.h>
+ #include <wine/server_protocol.h>
++#include <wine/debug.h>
+ 
+ /* client communication functions */
+ 
+@@ -155,6 +156,8 @@ static inline struct rectangle wine_server_rectangle( RECT rect )
+ 
+ #define SERVER_START_REQ(type) \
+     do { \
++        WINE_DECLARE_DEBUG_CHANNEL(client); \
++        static const char *const __req_name = #type; \
+         struct __server_request_info __req; \
+         struct type##_request * const req = &__req.u.req.type##_request; \
+         const struct type##_reply * const reply = &__req.u.reply.type##_reply; \
+@@ -162,10 +165,12 @@ static inline struct rectangle wine_server_rectangle( RECT rect )
+         __req.u.req.request_header.req = REQ_##type; \
+         __req.data_count = 0; \
+         (void)reply; \
++        TRACE_(client)("%s start\n", __req_name); \
+         do
+ 
+ #define SERVER_END_REQ \
+         while(0); \
++        TRACE_(client)("%s end\n", __req_name); \
+     } while(0)
+ 
+ 

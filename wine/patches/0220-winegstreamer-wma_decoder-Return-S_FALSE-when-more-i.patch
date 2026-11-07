@@ -1,0 +1,29 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Thu, 20 Feb 2025 16:17:41 +0100
+Subject: [PATCH] winegstreamer/wma_decoder: Return S_FALSE when more input is
+ needed.
+
+CW-Bug-Id: #21303
+CW-Bug-Id: #21304
+CW-Bug-Id: #23630
+CW-Bug-Id: #24374
+CW-Bug-Id: #24857
+(cherry picked from commit 6c26c2df9962c361cc6259af92aa1571359a8275)
+---
+ dlls/winegstreamer/wma_decoder.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/dlls/winegstreamer/wma_decoder.c b/dlls/winegstreamer/wma_decoder.c
+index 791c7bba04b..a4166dfd23e 100644
+--- a/dlls/winegstreamer/wma_decoder.c
++++ b/dlls/winegstreamer/wma_decoder.c
+@@ -1041,6 +1041,8 @@ static HRESULT WINAPI media_object_ProcessOutput(IMediaObject *iface, DWORD flag
+     }
+ 
+ 
++    if (hr == MF_E_TRANSFORM_NEED_MORE_INPUT)
++        return S_FALSE;
+     return hr;
+ }
+ 

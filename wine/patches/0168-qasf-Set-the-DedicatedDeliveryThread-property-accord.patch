@@ -1,0 +1,39 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Tue, 30 Aug 2022 15:44:15 +0200
+Subject: [PATCH] qasf: Set the DedicatedDeliveryThread property according to
+ ReceiveCanBlock.
+
+CW-Bug-Id: #21147
+(cherry picked from commit 17d54956dfb38030625cb166774565d1af60e9cf)
+---
+ dlls/qasf/asfreader.c | 9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+diff --git a/dlls/qasf/asfreader.c b/dlls/qasf/asfreader.c
+index bcd9651684f..d3a7e08fadb 100644
+--- a/dlls/qasf/asfreader.c
++++ b/dlls/qasf/asfreader.c
+@@ -488,6 +488,7 @@ static HRESULT asf_reader_init_stream(struct strmbase_filter *iface)
+     WORD stream_numbers[ARRAY_SIZE(filter->streams)];
+     IWMReaderAdvanced2 *reader_advanced;
+     HRESULT hr = S_OK;
++    BOOL value;
+     int i;
+ 
+     TRACE("iface %p\n", iface);
+@@ -540,6 +541,14 @@ static HRESULT asf_reader_init_stream(struct strmbase_filter *iface)
+             break;
+         }
+ 
++        value = IMemInputPin_ReceiveCanBlock(stream->source.pMemInputPin) == S_OK;
++        if (FAILED(hr = IWMReaderAdvanced2_SetOutputSetting(reader_advanced, i, L"DedicatedDeliveryThread",
++                WMT_TYPE_BOOL, (BYTE *)&value, sizeof(value))))
++        {
++            WARN("Failed to set DedicatedDeliveryThread for stream %u, hr %#lx\n", i, hr);
++            break;
++        }
++
+         selections[i] = WMT_ON;
+     }
+ 

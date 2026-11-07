@@ -1,0 +1,30 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Billy Laws <blaws05@gmail.com>
+Date: Mon, 5 Jan 2026 19:54:15 +0000
+Subject: [PATCH] wow64: Always suspend GetContextThread target when under
+ emulation.
+
+(cherry picked from commit 93f5940f1315cbd99968c9330bf5ed8331ea3601)
+---
+ dlls/wow64/syscall.c | 7 ++++++-
+ 1 file changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/wow64/syscall.c b/dlls/wow64/syscall.c
+index d53b3e8678d..1ea3e2b6ec2 100644
+--- a/dlls/wow64/syscall.c
++++ b/dlls/wow64/syscall.c
+@@ -732,8 +732,13 @@ NTSTATUS WINAPI wow64_NtGetContextThread( UINT *args )
+ {
+     HANDLE handle = get_handle( &args );
+     WOW64_CONTEXT *context = get_ptr( &args );
++    NTSTATUS status;
++    ULONG count;
+ 
+-    return RtlWow64GetThreadContext( handle, context );
++    if (wow64info->CpuFlags & WOW64_CPUFLAGS_SOFTWARE) RtlWow64SuspendThread( handle, &count );
++    status = RtlWow64GetThreadContext( handle, context );
++    if (wow64info->CpuFlags & WOW64_CPUFLAGS_SOFTWARE) NtResumeThread( handle, &count );
++    return status;
+ }
+ 
+ 

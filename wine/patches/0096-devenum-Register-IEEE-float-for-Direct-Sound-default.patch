@@ -1,0 +1,43 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Wed, 16 Jun 2021 17:36:15 +0200
+Subject: [PATCH] devenum: Register IEEE float for Direct Sound default device.
+
+Fixes some music does not play in Planet Coaster.
+
+CW-Bug-Id: #18986
+(cherry picked from commit 4d48bdaf965195ea9dc6fd7577ff1ae49e5d470e)
+---
+ dlls/devenum/createdevenum.c | 12 +++++++-----
+ 1 file changed, 7 insertions(+), 5 deletions(-)
+
+diff --git a/dlls/devenum/createdevenum.c b/dlls/devenum/createdevenum.c
+index ea8e770dd1b..d48f60f9965 100644
+--- a/dlls/devenum/createdevenum.c
++++ b/dlls/devenum/createdevenum.c
+@@ -473,7 +473,7 @@ static BOOL CALLBACK register_dsound_devices(GUID *guid, const WCHAR *desc, cons
+     static const WCHAR defaultW[] = L"Default DirectSound Device";
+     IPropertyBag *prop_bag = NULL;
+     REGFILTERPINS2 rgpins = {0};
+-    REGPINTYPES rgtypes = {0};
++    REGPINTYPES rgtypes[2] = {};
+     REGFILTER2 rgf = {0};
+     WCHAR clsid[CHARS_IN_GUID];
+     VARIANT var;
+@@ -504,10 +504,12 @@ static BOOL CALLBACK register_dsound_devices(GUID *guid, const WCHAR *desc, cons
+     rgf.rgPins2 = &rgpins;
+     rgpins.dwFlags = REG_PINFLAG_B_RENDERER;
+     /* FIXME: native registers many more formats */
+-    rgpins.nMediaTypes = 1;
+-    rgpins.lpMediaType = &rgtypes;
+-    rgtypes.clsMajorType = &MEDIATYPE_Audio;
+-    rgtypes.clsMinorType = &MEDIASUBTYPE_PCM;
++    rgpins.nMediaTypes = 2;
++    rgpins.lpMediaType = rgtypes;
++    rgtypes[0].clsMajorType = &MEDIATYPE_Audio;
++    rgtypes[0].clsMinorType = &MEDIASUBTYPE_PCM;
++    rgtypes[1].clsMajorType = &MEDIATYPE_Audio;
++    rgtypes[1].clsMinorType = &MEDIASUBTYPE_IEEE_FLOAT;
+ 
+     write_filter_data(prop_bag, &rgf);
+ 

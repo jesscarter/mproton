@@ -1,0 +1,37 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arkadiusz Hiler <ahiler@codeweavers.com>
+Date: Mon, 19 Jun 2023 17:45:01 +0300
+Subject: [PATCH] winemenubuilder: Force-disable creating associations.
+
+CW-Bug-Id: #20433
+(cherry picked from commit d28a166f47d6184bb18c2236b6414ffbed29fd44)
+---
+ programs/winemenubuilder/winemenubuilder.c | 15 +--------------
+ 1 file changed, 1 insertion(+), 14 deletions(-)
+
+diff --git a/programs/winemenubuilder/winemenubuilder.c b/programs/winemenubuilder/winemenubuilder.c
+index 281e02f63d4..500bc33b9d4 100644
+--- a/programs/winemenubuilder/winemenubuilder.c
++++ b/programs/winemenubuilder/winemenubuilder.c
+@@ -2851,20 +2851,7 @@ static BOOL init_xdg(void)
+ 
+ static BOOL associations_enabled(void)
+ {
+-    BOOL ret = TRUE;
+-    HKEY hkey;
+-    BYTE buf[32];
+-    DWORD len;
+-
+-    if ((hkey = open_associations_reg_key()))
+-    {
+-        len = sizeof(buf);
+-        if (!RegQueryValueExA(hkey, "Enable", NULL, NULL, buf, &len))
+-            ret = IS_OPTION_TRUE(buf[0]);
+-        RegCloseKey( hkey );
+-    }
+-
+-    return ret;
++    return FALSE;
+ }
+ 
+ /***********************************************************************

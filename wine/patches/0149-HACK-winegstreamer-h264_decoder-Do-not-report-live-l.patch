@@ -1,0 +1,29 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Sun, 17 Nov 2024 20:50:13 +0100
+Subject: [PATCH] HACK: winegstreamer/h264_decoder: Do not report live latency
+ for some games.
+
+CW-Bug-Id: #22581
+(cherry picked from commit 60875765ef97730722a2dea16fbf3f035bfcf7b4)
+---
+ dlls/winegstreamer/video_decoder.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/dlls/winegstreamer/video_decoder.c b/dlls/winegstreamer/video_decoder.c
+index b4cb0a86440..0df1a0acff8 100644
+--- a/dlls/winegstreamer/video_decoder.c
++++ b/dlls/winegstreamer/video_decoder.c
+@@ -333,6 +333,12 @@ static HRESULT try_create_wg_transform(struct video_decoder *decoder, IMFMediaTy
+     if (SUCCEEDED(IMFAttributes_GetUINT32(decoder->attributes, &MF_LOW_LATENCY, &low_latency)))
+         decoder->wg_transform_attrs.low_latency = !!low_latency;
+ 
++    {
++        const char *sgi;
++        if ((sgi = getenv("SteamGameId")) && (!strcmp(sgi, "2009100") || !strcmp(sgi, "2555360") || !strcmp(sgi, "1630110")))
++            decoder->wg_transform_attrs.low_latency = FALSE;
++    }
++
+     return wg_transform_create_mf(decoder->input_type, output_type, &decoder->wg_transform_attrs, &decoder->wg_transform);
+ }
+ 

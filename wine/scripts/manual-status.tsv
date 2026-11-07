@@ -1,0 +1,6 @@
+# commit	status	note  (overrides for Proton commits that conflict but need no port)
+5b8cb810c67	dropped-upstream	superseded: athei/11.20 generates from vk.xml 1.4.363 (make_vulkan downloads it); Proton's in-tree 1.4.325 copy would downgrade the spec
+dfaffd22c1d	dropped-upstream	superseded: Proton's vk.xml 1.4.344 is older than 11.20's 1.4.363
+f73a44de7a4	dropped-upstream	superseded: wine-11.20 implements PdhGetFormattedCounterArrayA/W (d30dcd75bc9); Proton's stub would redefine them
+965d4e24cdd	conflict	removed from the series: needs the xinput controller_destroy()/open_device_at_index() refactors (64ca68c68d6 and others), which conflict
+544a0817198	conflict	removed from the series: needs SEND_HWMSG_NO_RAW from the rawinput server commits (eb0c49cf1ed), which conflict

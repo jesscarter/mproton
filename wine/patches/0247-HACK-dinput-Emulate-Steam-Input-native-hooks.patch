@@ -1,0 +1,32 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Mon, 8 Jan 2024 14:35:42 +0100
+Subject: [PATCH] HACK: dinput: Emulate Steam Input native hooks.
+
+CW-Bug-Id: #23185
+(cherry picked from commit 8c78bf97070624e6bb0d48b2282d7fd27996551d)
+---
+ dlls/dinput/joystick_hid.c | 10 ++++++++++
+ 1 file changed, 10 insertions(+)
+
+diff --git a/dlls/dinput/joystick_hid.c b/dlls/dinput/joystick_hid.c
+index d2dba88688c..306a93248cb 100644
+--- a/dlls/dinput/joystick_hid.c
++++ b/dlls/dinput/joystick_hid.c
+@@ -1100,6 +1100,16 @@ static HRESULT hid_joystick_get_property( IDirectInputDevice8W *iface, DWORD pro
+     {
+         DIPROPGUIDANDPATH *value = (DIPROPGUIDANDPATH *)header;
+         value->guidClass = GUID_DEVCLASS_HIDCLASS;
++
++        /* CW-Bug-Id: #23185 Emulate Steam Input native hooks for native SDL */
++        if (impl->attrs.VendorID == 0x28de && impl->attrs.ProductID == 0x11ff)
++        {
++            const WCHAR *tmp;
++            if ((tmp = wcschr( impl->device_path, '#' ))) tmp = wcschr( tmp + 1, '#' );
++            lstrcpynW( value->wszPath, impl->device_path, tmp - impl->device_path + 1 );
++            return DI_OK;
++        }
++
+         lstrcpynW( value->wszPath, impl->device_path, MAX_PATH );
+         return DI_OK;
+     }

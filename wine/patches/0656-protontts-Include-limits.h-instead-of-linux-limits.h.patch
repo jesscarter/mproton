@@ -1,0 +1,26 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: mproton <mproton@localhost>
+Date: Sat, 7 Nov 2026 02:36:19 +0000
+Subject: [PATCH] protontts: Include <limits.h> instead of <linux/limits.h>.
+
+PATH_MAX is POSIX and comes from <limits.h> on Linux (glibc) and on
+macOS; <linux/limits.h> does not exist on darwin.
+
+mproton: darwin build blocker 5 in docs/wine-patch-triage.md.
+---
+ dlls/protontts/unixlib.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/dlls/protontts/unixlib.c b/dlls/protontts/unixlib.c
+index 1b0fa7a9836..c47671da6eb 100644
+--- a/dlls/protontts/unixlib.c
++++ b/dlls/protontts/unixlib.c
+@@ -27,7 +27,7 @@
+ #include <unistd.h>
+ #include <pthread.h>
+ #include <fcntl.h>
+-#include <linux/limits.h>
++#include <limits.h>
+ #include <sys/stat.h>
+ 
+ #include <piper/piper_c.h>

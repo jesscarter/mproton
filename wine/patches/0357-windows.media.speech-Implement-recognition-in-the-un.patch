@@ -1,0 +1,232 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Bernhard=20K=C3=B6lbl?= <besentv@gmail.com>
+Date: Mon, 27 Feb 2023 13:22:00 +0100
+Subject: [PATCH] windows.media.speech: Implement recognition in the unixlib.
+
+CW-Bug-Id: #20134
+(cherry picked from commit 7e809dc748bc8e98b96638009ce260f4a2bc4bd5)
+---
+ dlls/windows.media.speech/recognizer.c | 35 +++++++++++-
+ dlls/windows.media.speech/unixlib.c    | 76 ++++++++++++++++++++++++++
+ dlls/windows.media.speech/unixlib.h    | 26 ++++++++-
+ 3 files changed, 135 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/windows.media.speech/recognizer.c b/dlls/windows.media.speech/recognizer.c
+index ecfdf470351..ffca58f809e 100644
+--- a/dlls/windows.media.speech/recognizer.c
++++ b/dlls/windows.media.speech/recognizer.c
+@@ -196,10 +196,13 @@ static DWORD CALLBACK session_worker_thread_cb( void *args )
+ {
+     ISpeechContinuousRecognitionSession *iface = args;
+     struct session *impl = impl_from_ISpeechContinuousRecognitionSession(iface);
++    struct speech_get_recognition_result_params recognition_result_params;
++    struct speech_recognize_audio_params recognize_audio_params;
+     BOOLEAN running = TRUE, paused = FALSE;
+     UINT32 frame_count, tmp_buf_size;
+     BYTE *audio_buf, *tmp_buf = NULL;
+     DWORD flags, status;
++    NTSTATUS nt_status;
+     HANDLE events[2];
+     HRESULT hr;
+ 
+@@ -269,7 +272,37 @@ static DWORD CALLBACK session_worker_thread_cb( void *args )
+                 IAudioCaptureClient_ReleaseBuffer(impl->capture_client, frames_available);
+             }
+ 
+-            /* TODO: Send mic data to recognizer and handle results. */
++            recognize_audio_params.handle = impl->unix_handle;
++            recognize_audio_params.samples = tmp_buf;
++            recognize_audio_params.samples_size = tmp_buf_offset;
++            recognize_audio_params.status = RECOGNITION_STATUS_EXCEPTION;
++
++            if (NT_ERROR(nt_status = WINE_UNIX_CALL(unix_speech_recognize_audio, &recognize_audio_params)))
++                WARN("unix_speech_recognize_audio failed with status %#lx.\n", nt_status);
++
++            if (recognize_audio_params.status != RECOGNITION_STATUS_RESULT_AVAILABLE)
++                continue;
++
++            recognition_result_params.handle = impl->unix_handle;
++            recognition_result_params.result_buf = NULL;
++            recognition_result_params.result_buf_size = 512;
++
++            do
++            {
++                recognition_result_params.result_buf = realloc(recognition_result_params.result_buf, recognition_result_params.result_buf_size);
++            }
++            while (WINE_UNIX_CALL(unix_speech_get_recognition_result, &recognition_result_params) == STATUS_BUFFER_TOO_SMALL &&
++                   recognition_result_params.result_buf);
++
++            if (!recognition_result_params.result_buf)
++            {
++                WARN("memory allocation failed.\n");
++                break;
++            }
++
++            /* TODO: Compare recognized text to available options. */
++
++            free(recognition_result_params.result_buf);
+         }
+         else
+         {
+diff --git a/dlls/windows.media.speech/unixlib.c b/dlls/windows.media.speech/unixlib.c
+index 155780a3e4b..90cf29ad903 100644
+--- a/dlls/windows.media.speech/unixlib.c
++++ b/dlls/windows.media.speech/unixlib.c
+@@ -59,6 +59,9 @@ MAKE_FUNCPTR(vosk_model_new);
+ MAKE_FUNCPTR(vosk_model_free);
+ MAKE_FUNCPTR(vosk_recognizer_new);
+ MAKE_FUNCPTR(vosk_recognizer_free);
++MAKE_FUNCPTR(vosk_recognizer_accept_waveform);
++MAKE_FUNCPTR(vosk_recognizer_final_result);
++MAKE_FUNCPTR(vosk_recognizer_reset);
+ #undef MAKE_FUNCPTR
+ 
+ static NTSTATUS process_attach( void *args )
+@@ -80,6 +83,9 @@ static NTSTATUS process_attach( void *args )
+     LOAD_FUNCPTR(vosk_model_free)
+     LOAD_FUNCPTR(vosk_recognizer_new)
+     LOAD_FUNCPTR(vosk_recognizer_free)
++    LOAD_FUNCPTR(vosk_recognizer_accept_waveform)
++    LOAD_FUNCPTR(vosk_recognizer_final_result)
++    LOAD_FUNCPTR(vosk_recognizer_reset)
+ #undef LOAD_FUNCPTR
+ 
+     return STATUS_SUCCESS;
+@@ -258,6 +264,70 @@ static NTSTATUS speech_release_recognizer( void *args )
+     return STATUS_SUCCESS;
+ }
+ 
++static NTSTATUS speech_recognize_audio( void *args )
++{
++    struct speech_recognize_audio_params *params = args;
++    VoskRecognizer *recognizer = vosk_recognizer_from_handle(params->handle);
++
++    if (!vosk_handle)
++        return STATUS_NOT_SUPPORTED;
++
++    if (!recognizer)
++        return STATUS_UNSUCCESSFUL;
++
++    params->status = p_vosk_recognizer_accept_waveform(recognizer, (const char *)params->samples, params->samples_size);
++
++    return STATUS_SUCCESS;
++}
++
++static NTSTATUS speech_get_recognition_result( void* args )
++{
++    struct speech_get_recognition_result_params *params = args;
++    VoskRecognizer *recognizer = vosk_recognizer_from_handle(params->handle);
++    static const char *result_json_start = "{\n  \"text\" : \"";
++    const size_t json_start_len = strlen(result_json_start);
++    static size_t last_result_len = 0;
++    static char *last_result = NULL;
++    const char *tmp = NULL;
++
++    if (!vosk_handle)
++        return STATUS_NOT_SUPPORTED;
++
++    if (!recognizer)
++        return STATUS_UNSUCCESSFUL;
++
++    if (!last_result)
++    {
++        if ((tmp = p_vosk_recognizer_final_result(recognizer)))
++        {
++            last_result = strdup(tmp);
++            tmp = last_result;
++
++            /* Operations to remove the JSON wrapper "{\n  \"text\" : \"some recognized text\"\n}" -> "some recognized text\0" */
++            memmove(last_result, last_result + json_start_len, strlen(last_result) - json_start_len + 1);
++            last_result = strrchr(last_result, '\"');
++            last_result[0] = '\0';
++
++            last_result = (char *)tmp;
++            last_result_len = strlen(last_result);
++        }
++        else return STATUS_NOT_FOUND;
++    }
++    else if (params->result_buf_size >= last_result_len + 1)
++    {
++        memcpy(params->result_buf, last_result, last_result_len + 1);
++        p_vosk_recognizer_reset(recognizer);
++
++        free (last_result);
++        last_result = NULL;
++
++        return STATUS_SUCCESS;
++    }
++
++    params->result_buf_size = last_result_len + 1;
++    return STATUS_BUFFER_TOO_SMALL;
++}
++
+ #else /* SONAME_LIBVOSK */
+ 
+ #define MAKE_UNSUPPORTED_FUNC( f ) \
+@@ -271,6 +341,8 @@ MAKE_UNSUPPORTED_FUNC(process_attach)
+ MAKE_UNSUPPORTED_FUNC(process_detach)
+ MAKE_UNSUPPORTED_FUNC(speech_create_recognizer)
+ MAKE_UNSUPPORTED_FUNC(speech_release_recognizer)
++MAKE_UNSUPPORTED_FUNC(speech_recognize_audio)
++MAKE_UNSUPPORTED_FUNC(speech_get_recognition_result)
+ #undef MAKE_UNSUPPORTED_FUNC
+ 
+ #endif /* SONAME_LIBVOSK */
+@@ -281,6 +353,8 @@ const unixlib_entry_t __wine_unix_call_funcs[] =
+     process_detach,
+     speech_create_recognizer,
+     speech_release_recognizer,
++    speech_recognize_audio,
++    speech_get_recognition_result,
+ };
+ 
+ const unixlib_entry_t __wine_unix_call_wow64_funcs[] =
+@@ -289,4 +363,6 @@ const unixlib_entry_t __wine_unix_call_wow64_funcs[] =
+     process_detach,
+     speech_create_recognizer,
+     speech_release_recognizer,
++    speech_recognize_audio,
++    speech_get_recognition_result,
+ };
+diff --git a/dlls/windows.media.speech/unixlib.h b/dlls/windows.media.speech/unixlib.h
+index 974e8d5f797..a07d76705d5 100644
+--- a/dlls/windows.media.speech/unixlib.h
++++ b/dlls/windows.media.speech/unixlib.h
+@@ -44,12 +44,36 @@ struct speech_release_recognizer_params
+     speech_recognizer_handle handle;
+ };
+ 
+-enum unix_funcs
++enum speech_recognition_status
++{
++    RECOGNITION_STATUS_CONTINUING,
++    RECOGNITION_STATUS_RESULT_AVAILABLE,
++    RECOGNITION_STATUS_EXCEPTION,
++};
++
++struct speech_recognize_audio_params
++{
++    speech_recognizer_handle handle;
++    const BYTE *samples;
++    UINT32 samples_size;
++    enum speech_recognition_status status;
++};
++
++struct speech_get_recognition_result_params
++{
++    speech_recognizer_handle handle;
++    char *result_buf;
++    UINT32 result_buf_size;
++};
++
++enum vosk_funcs
+ {
+     unix_process_attach,
+     unix_process_detach,
+     unix_speech_create_recognizer,
+     unix_speech_release_recognizer,
++    unix_speech_recognize_audio,
++    unix_speech_get_recognition_result,
+ };
+ 
+ #endif

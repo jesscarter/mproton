@@ -1,0 +1,138 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Connor McAdams <cmcadams@codeweavers.com>
+Date: Tue, 13 Jan 2026 11:56:16 -0500
+Subject: [PATCH] d3dx11: Add support for the thread pump argument in
+ D3DX11CreateTextureFrom{File,Memory,Resource}().
+
+Signed-off-by: Connor McAdams <cmcadams@codeweavers.com>
+
+CW-Bug-Id: #20442
+CW-Bug-Id: #23084
+CW-Bug-Id: #23301
+(cherry picked from commit 64a48633a1fa50b4c04b0e4bad2734a82e0cc8da)
+---
+ dlls/d3dx11_43/tests/d3dx11.c |  2 +-
+ dlls/d3dx11_43/texture.c      | 76 +++++++++++++++++++++++++++++++++--
+ 2 files changed, 73 insertions(+), 5 deletions(-)
+
+diff --git a/dlls/d3dx11_43/tests/d3dx11.c b/dlls/d3dx11_43/tests/d3dx11.c
+index 7521e31ebb6..ecdf65e22a8 100644
+--- a/dlls/d3dx11_43/tests/d3dx11.c
++++ b/dlls/d3dx11_43/tests/d3dx11.c
+@@ -4326,7 +4326,7 @@ static void test_create_texture(void)
+     add_work_item_count = 0;
+     hr = D3DX11CreateTextureFromMemory(device, test_image[0].data, test_image[0].size,
+             NULL, &thread_pump, &resource, &hr2);
+-    todo_wine ok(add_work_item_count == 1, "Got unexpected add_work_item_count %u.\n", add_work_item_count);
++    ok(add_work_item_count == 1, "Got unexpected add_work_item_count %u.\n", add_work_item_count);
+     ok(hr == S_OK, "Got unexpected hr %#lx.\n", hr);
+     ok(hr == hr2, "Got unexpected hr2 %#lx.\n", hr2);
+     check_resource_info(resource, test_image, __LINE__);
+diff --git a/dlls/d3dx11_43/texture.c b/dlls/d3dx11_43/texture.c
+index abd6600d39b..1c3adcab7fc 100644
+--- a/dlls/d3dx11_43/texture.c
++++ b/dlls/d3dx11_43/texture.c
+@@ -764,7 +764,24 @@ HRESULT WINAPI D3DX11CreateTextureFromFileW(ID3D11Device *device, const WCHAR *s
+         return E_FAIL;
+ 
+     if (pump)
+-        FIXME("D3DX11 thread pump is currently unimplemented.\n");
++    {
++        ID3DX11DataProcessor *processor;
++        ID3DX11DataLoader *loader;
++
++        if (FAILED((hr = D3DX11CreateAsyncFileLoaderW(src_file, &loader))))
++            return hr;
++        if (FAILED((hr = D3DX11CreateAsyncTextureProcessor(device, load_info, &processor))))
++        {
++            ID3DX11DataLoader_Destroy(loader);
++            return hr;
++        }
++        if (FAILED((hr = ID3DX11ThreadPump_AddWorkItem(pump, loader, processor, hresult, (void **)texture))))
++        {
++            ID3DX11DataLoader_Destroy(loader);
++            ID3DX11DataProcessor_Destroy(processor);
++        }
++        return hr;
++    }
+ 
+     if (SUCCEEDED((hr = load_file(src_file, &buffer, &size))))
+     {
+@@ -790,7 +807,24 @@ HRESULT WINAPI D3DX11CreateTextureFromResourceA(ID3D11Device *device, HMODULE mo
+         return E_INVALIDARG;
+ 
+     if (pump)
+-        FIXME("D3DX11 thread pump is currently unimplemented.\n");
++    {
++        ID3DX11DataProcessor *processor;
++        ID3DX11DataLoader *loader;
++
++        if (FAILED((hr = D3DX11CreateAsyncResourceLoaderA(module, resource, &loader))))
++            return hr;
++        if (FAILED((hr = D3DX11CreateAsyncTextureProcessor(device, load_info, &processor))))
++        {
++            ID3DX11DataLoader_Destroy(loader);
++            return hr;
++        }
++        if (FAILED((hr = ID3DX11ThreadPump_AddWorkItem(pump, loader, processor, hresult, (void **)texture))))
++        {
++            ID3DX11DataLoader_Destroy(loader);
++            ID3DX11DataProcessor_Destroy(processor);
++        }
++        return hr;
++    }
+ 
+     if (FAILED((hr = d3dx_load_resource_a(module, resource, &buffer, &size))))
+         return hr;
+@@ -814,7 +848,24 @@ HRESULT WINAPI D3DX11CreateTextureFromResourceW(ID3D11Device *device, HMODULE mo
+         return E_INVALIDARG;
+ 
+     if (pump)
+-        FIXME("D3DX11 thread pump is currently unimplemented.\n");
++    {
++        ID3DX11DataProcessor *processor;
++        ID3DX11DataLoader *loader;
++
++        if (FAILED((hr = D3DX11CreateAsyncResourceLoaderW(module, resource, &loader))))
++            return hr;
++        if (FAILED((hr = D3DX11CreateAsyncTextureProcessor(device, load_info, &processor))))
++        {
++            ID3DX11DataLoader_Destroy(loader);
++            return hr;
++        }
++        if (FAILED((hr = ID3DX11ThreadPump_AddWorkItem(pump, loader, processor, hresult, (void **)texture))))
++        {
++            ID3DX11DataLoader_Destroy(loader);
++            ID3DX11DataProcessor_Destroy(processor);
++        }
++        return hr;
++    }
+ 
+     if (FAILED((hr = d3dx_load_resource_w(module, resource, &buffer, &size))))
+         return hr;
+@@ -849,7 +900,24 @@ HRESULT WINAPI D3DX11CreateTextureFromMemory(ID3D11Device *device, const void *d
+         return E_FAIL;
+ 
+     if (pump)
+-        FIXME("D3DX11 thread pump is currently unimplemented.\n");
++    {
++        ID3DX11DataProcessor *processor;
++        ID3DX11DataLoader *loader;
++
++        if (FAILED((hr = D3DX11CreateAsyncMemoryLoader(data, data_size, &loader))))
++            return hr;
++        if (FAILED((hr = D3DX11CreateAsyncTextureProcessor(device, load_info, &processor))))
++        {
++            ID3DX11DataLoader_Destroy(loader);
++            return hr;
++        }
++        if (FAILED((hr = ID3DX11ThreadPump_AddWorkItem(pump, loader, processor, hresult, (void **)texture))))
++        {
++            ID3DX11DataLoader_Destroy(loader);
++            ID3DX11DataProcessor_Destroy(processor);
++        }
++        return hr;
++    }
+ 
+     hr = create_texture(device, data, data_size, load_info, texture);
+     if (hresult)

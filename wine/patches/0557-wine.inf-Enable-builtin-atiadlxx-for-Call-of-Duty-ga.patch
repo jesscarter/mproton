@@ -1,0 +1,28 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Thu, 30 Sep 2021 20:01:10 +0200
+Subject: [PATCH] wine.inf: Enable builtin atiadlxx for Call of Duty games.
+
+The games call several functions from this DLL to check driver version,
+which we stub to some acceptable value to avoid warnings.
+
+(cherry picked from commit e69cfb8eb3d9300687cc468eeb062d13f3ebb53a)
+---
+ loader/wine.inf.in | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/loader/wine.inf.in b/loader/wine.inf.in
+index 8edf56a4e8e..5d5a29a9299 100644
+--- a/loader/wine.inf.in
++++ b/loader/wine.inf.in
+@@ -1431,3 +1431,10 @@ HKLM,Software\Wow6432Node\Valve\Steam\Apps\CommonRedist\.NET\4.0 Client Profile,
+ HKLM,Software\Wow6432Node\Valve\Steam\Apps\CommonRedist\.NET\3.5,"3.5",0x10001,1
+ HKLM,Software\Wow6432Node\Valve\Steam\Apps\CommonRedist\.NET\3.5 Client Profile,"3.5 Client Profile",0x10001,1
+ HKLM,Software\Wow6432Node\Valve\Steam\Apps\CommonRedist\XNA\4.0,"4.0",0x10001,1
++;;App-specific overrides for atiadlxx.dll.
++HKCU,Software\Wine\AppDefaults\s2_sp64_ship.exe\DllOverrides,"atiadlxx",,"builtin"
++HKCU,Software\Wine\AppDefaults\s2_mp64_ship.exe\DllOverrides,"atiadlxx",,"builtin"
++HKCU,Software\Wine\AppDefaults\h1_sp64_ship.exe\DllOverrides,"atiadlxx",,"builtin"
++HKCU,Software\Wine\AppDefaults\h1_mp64_ship.exe\DllOverrides,"atiadlxx",,"builtin"
++HKCU,Software\Wine\AppDefaults\iw7_ship.exe\DllOverrides,"atiadlxx",,"builtin"
++HKCU,Software\Wine\AppDefaults\BlackOps3.exe\DllOverrides,"atiadlxx",,"builtin"

@@ -1,0 +1,36 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Mon, 22 Aug 2022 18:49:06 +0200
+Subject: [PATCH] winegstreamer/wm_reader: Avoid entering sync reader CS in
+ GetNextSample when aggregated.
+
+CW-Bug-Id: #21147
+(cherry picked from commit 1aed5eb3fec53b36d904aeac64aaf27ca5ae9a2a)
+---
+ dlls/winegstreamer/wm_reader.c | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/winegstreamer/wm_reader.c b/dlls/winegstreamer/wm_reader.c
+index 328ab937984..f3302d4acb8 100644
+--- a/dlls/winegstreamer/wm_reader.c
++++ b/dlls/winegstreamer/wm_reader.c
+@@ -2068,7 +2068,8 @@ static HRESULT WINAPI reader_GetNextSample(IWMSyncReader2 *iface,
+         return E_INVALIDARG;
+ 
+     ReleaseSemaphore(reader->read_sem, 1, NULL);
+-    EnterCriticalSection(&reader->cs);
++    if (reader->outer == &reader->IUnknown_inner)
++        EnterCriticalSection(&reader->cs);
+ 
+     if (!stream_number)
+         stream = NULL;
+@@ -2106,7 +2107,8 @@ static HRESULT WINAPI reader_GetNextSample(IWMSyncReader2 *iface,
+     if (ret_stream_number && (hr == S_OK || stream_number))
+         *ret_stream_number = stream_number;
+ 
+-    LeaveCriticalSection(&reader->cs);
++    if (reader->outer == &reader->IUnknown_inner)
++        LeaveCriticalSection(&reader->cs);
+     if (WaitForSingleObject(reader->read_sem, INFINITE) != WAIT_OBJECT_0)
+         ERR("Failed to wait for read thread to pause.\n");
+     return hr;

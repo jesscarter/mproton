@@ -1,0 +1,51 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Tue, 14 Apr 2026 09:43:45 -0600
+Subject: [PATCH] atiadlxx: Add ADL2_Adapter_AdapterInfo_Get().
+
+CW-Bug-Id: #26918
+(cherry picked from commit cc7266f9775ee6cad8508667e1cdb858b726ffdf)
+---
+ dlls/atiadlxx/atiadlxx.spec   | 2 +-
+ dlls/atiadlxx/atiadlxx_main.c | 9 +++++++--
+ 2 files changed, 8 insertions(+), 3 deletions(-)
+
+diff --git a/dlls/atiadlxx/atiadlxx.spec b/dlls/atiadlxx/atiadlxx.spec
+index 50bd9877a21..81559eca3c9 100644
+--- a/dlls/atiadlxx/atiadlxx.spec
++++ b/dlls/atiadlxx/atiadlxx.spec
+@@ -20,7 +20,7 @@
+ @ cdecl ADL2_Adapter_AdapterInfoX2_Get(ptr ptr)
+ @ stub ADL2_Adapter_AdapterInfoX3_Get
+ @ stub ADL2_Adapter_AdapterInfoX4_Get
+-@ stub ADL2_Adapter_AdapterInfo_Get
++@ cdecl ADL2_Adapter_AdapterInfo_Get(ptr ptr long)
+ @ stub ADL2_Adapter_AdapterList_Disable
+ @ stub ADL2_Adapter_AdapterLocationPath_Get
+ @ stub ADL2_Adapter_Aspects_Get
+diff --git a/dlls/atiadlxx/atiadlxx_main.c b/dlls/atiadlxx/atiadlxx_main.c
+index 8eb7d6503a3..23ff101e71b 100644
+--- a/dlls/atiadlxx/atiadlxx_main.c
++++ b/dlls/atiadlxx/atiadlxx_main.c
+@@ -762,14 +762,19 @@ static int adapter_info_get(ADL_CONTEXT_HANDLE ctx, ADLAdapterInfo *adapters, in
+     return ADL_OK;
+ }
+ 
+-int CDECL ADL_Adapter_AdapterInfo_Get(ADLAdapterInfo *adapters, int input_size)
++int CDECL ADL2_Adapter_AdapterInfo_Get(ADL_CONTEXT_HANDLE ctx, ADLAdapterInfo *adapters, int input_size)
+ {
+     TRACE("adapters %p, input_size %d.\n", adapters, input_size);
+ 
+     if (!adapters) return ADL_ERR_INVALID_PARAM;
+     if (input_size != default_ctx->adapter_count * sizeof(ADLAdapterInfo)) return ADL_ERR_INVALID_PARAM;
+ 
+-    return adapter_info_get(default_ctx, adapters, input_size);
++    return adapter_info_get(ctx, adapters, input_size);
++}
++
++int CDECL ADL_Adapter_AdapterInfo_Get(ADLAdapterInfo *adapters, int input_size)
++{
++    return ADL2_Adapter_AdapterInfo_Get(default_ctx, adapters, input_size);
+ }
+ 
+ int CDECL ADL2_Adapter_AdapterInfoX2_Get(ADL_CONTEXT_HANDLE ctx, ADLAdapterInfo **info)

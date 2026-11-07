@@ -1,0 +1,75 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Thu, 25 Mar 2021 17:53:37 +0300
+Subject: [PATCH] wine.inf: Create package repository for VCLibs.140.
+
+For Forza Horizon 4.
+
+(cherry picked from commit 09fbb2c010216c304c2e8cf2b145d43002c4b082)
+---
+ loader/wine.inf.in | 17 +++++++++++++++++
+ 1 file changed, 17 insertions(+)
+
+diff --git a/loader/wine.inf.in b/loader/wine.inf.in
+index a6e3fa9e6be..ad930f7bbd8 100644
+--- a/loader/wine.inf.in
++++ b/loader/wine.inf.in
+@@ -86,6 +86,7 @@ AddReg=\
+ Needs=BaseInstall
+ WineFakeDlls=FakeDllsWin32
+ AddReg=\
++    Packages,\
+     VCRuntime.ntx86,\
+     VersionInfo
+ 
+@@ -100,6 +101,7 @@ Needs=BaseInstall
+ WineFakeDlls=FakeDllsWin64
+ AddReg=\
+     CurrentVersionWow64.ntamd64,\
++    Packages.ntamd64,\
+     SteamClient64, \
+     VCRuntime.ntamd64,\
+     VersionInfo
+@@ -109,6 +111,7 @@ Needs=BaseInstall
+ WineFakeDlls=FakeDllsWin64
+ AddReg=\
+     CurrentVersionWow64.ntarm64,\
++    Packages.ntarm64,\
+     SteamClient64, \
+     VCRuntime.ntamd64,\
+     VCRuntime.ntarm64,\
+@@ -131,6 +134,7 @@ AddReg=\
+ Needs=BaseWow64Install
+ AddReg=\
+     CurrentVersionWow64.ntx86,\
++    Packages.wow64,\
+     SteamClient64, \
+     VCRuntime.ntamd64,\
+     VCRuntime.ntx86
+@@ -232,6 +236,7 @@ CurrentVersionNT="Software\Microsoft\Windows NT\CurrentVersion"
+ FontSubStr="Software\Microsoft\Windows NT\CurrentVersion\FontSubstitutes"
+ Control="System\CurrentControlSet\Control"
+ FontsNT="Software\Microsoft\Windows NT\CurrentVersion\Fonts"
++Packages="Software\Classes\Local Settings\Software\Microsoft\Windows\CurrentVersion\AppModel\PackageRepository\Packages"
+ 
+ [Classes]
+ HKCR,.chm,,2,"chm.file"
+@@ -688,6 +693,18 @@ HKCU,Software\Microsoft\Windows\Shell\Associations\UrlAssociations\https\UserCho
+ HKLM,"Software\Microsoft\OLE","EnableDCOM",,"Y"
+ HKLM,"Software\Microsoft\OLE","EnableRemoteConnect",,"N"
+ 
++[Packages]
++HKLM,"%Packages%\Microsoft.VCLibs.140.00_14.0.29231.0_x86__8wekyb3d8bbwe","Path",0x00020002,"%SystemRoot%\system32"
++
++[Packages.ntamd64]
++HKLM,"%Packages%\Microsoft.VCLibs.140.00_14.0.29231.0_x64__8wekyb3d8bbwe","Path",0x00020002,"%SystemRoot%\system32"
++
++[Packages.wow64]
++HKLM,"%Packages%\Microsoft.VCLibs.140.00_14.0.29231.0_x86__8wekyb3d8bbwe","Path",0x00020002,"%SystemRoot%\syswow64"
++
++[Packages.arm64]
++HKLM,"%Packages%\Microsoft.VCLibs.140.00_14.0.29231.0_arm64__8wekyb3d8bbwe","Path",0x00020002,"%SystemRoot%\system32"
++
+ [Printing]
+ HKLM,%Control%\Print\Monitors\Local Port,"Driver",2,"localspl.dll"
+ HKLM,%Control%\Print\Printers,"DefaultSpoolDirectory",2,"%11%\spool\printers"

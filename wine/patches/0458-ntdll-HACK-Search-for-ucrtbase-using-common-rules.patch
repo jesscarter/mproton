@@ -1,0 +1,46 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Mon, 20 Mar 2023 10:03:16 -0600
+Subject: [PATCH] ntdll: HACK: Search for ucrtbase using common rules.
+
+CW-Bug-Id: #22048
+(cherry picked from commit d9e1c67bc93c8af2247cab1d0c17e491127a5a1b)
+---
+ dlls/ntdll/loader.c | 9 ++++++++-
+ 1 file changed, 8 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
+index 166b519a8ce..94b3e88870b 100644
+--- a/dlls/ntdll/loader.c
++++ b/dlls/ntdll/loader.c
+@@ -2769,6 +2769,7 @@ static NTSTATUS open_known_dll( const WCHAR *libname, UNICODE_STRING *nt_name, W
+     OBJECT_ATTRIBUTES attr;
+ 
+     if (!known_dlls_ntdir) return STATUS_DLL_NOT_FOUND;
++    if (libname && !_wcsicmp( libname, L"ucrtbase.dll" )) return STATUS_DLL_NOT_FOUND;
+     RtlInitUnicodeString( &str, libname );
+     InitializeObjectAttributes( &attr, &str, OBJ_CASE_INSENSITIVE, known_dlls_ntdir, NULL );
+     if ((status = NtOpenSection( mapping, MAXIMUM_ALLOWED, &attr ))) return status;
+@@ -3333,7 +3334,14 @@ static NTSTATUS find_dll_file( const WCHAR *load_path, const WCHAR *libname, UNI
+ 
+         if (status == STATUS_SUCCESS)
+         {
++            static const WCHAR ucrtbase[] = L"ucrtbase.dll";
++            unsigned int len;
++
+             TRACE ("found %s for %s\n", debugstr_w(fullname), debugstr_w(libname) );
++            len = wcslen( fullname );
++            if (len > ARRAY_SIZE(ucrtbase) - 1 && !_wcsicmp( fullname + len - (ARRAY_SIZE(ucrtbase) - 1), ucrtbase )
++                && (*pwm = find_basename_module( ucrtbase )))
++                return STATUS_SUCCESS;
+             libname = fullname;
+         }
+         else
+@@ -3628,7 +3636,6 @@ NTSTATUS WINAPI LdrGetDllHandleEx( ULONG flags, LPCWSTR load_path, ULONG *dll_ch
+ 
+     status = find_dll_file( load_path, dllname ? dllname : name->Buffer,
+                             &nt_name, &wm, &mapping, &image_info, &id, &redirected, TRUE );
+-
+     if (wm) *base = wm->ldr.DllBase;
+     else
+     {

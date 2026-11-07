@@ -1,0 +1,78 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Mon, 13 Jul 2020 10:21:49 -0500
+Subject: [PATCH] ntdll: Handle NULL object name buffer in
+ nt_to_unix_file_name_attr().
+
+CW-Bug-Id: #17864
+(cherry picked from commit dffefdfc3f7cf7324960e88471ba1f8c0e1eabfd)
+---
+ dlls/ntdll/tests/file.c | 22 +++++++++++++++++++++-
+ dlls/ntdll/unix/file.c  |  5 ++++-
+ 2 files changed, 25 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/ntdll/tests/file.c b/dlls/ntdll/tests/file.c
+index cb9a0d98899..70bb6588afd 100644
+--- a/dlls/ntdll/tests/file.c
++++ b/dlls/ntdll/tests/file.c
+@@ -146,16 +146,36 @@ static void create_file_test(void)
+     static const WCHAR nodirW[] = {'n','o','s','u','c','h','d','i','r','\\','f','i','l','e',0};
+     static const char testdata[] = "Hello World";
+     FILE_NETWORK_OPEN_INFORMATION info;
++    UNICODE_STRING nameW, null_string;
+     NTSTATUS status;
+     HANDLE dir, file;
+     WCHAR path[MAX_PATH];
+     OBJECT_ATTRIBUTES attr;
+     IO_STATUS_BLOCK io;
+-    UNICODE_STRING nameW;
+     LARGE_INTEGER offset;
+     char buf[32];
+     DWORD ret;
+ 
++    attr.Length = sizeof(attr);
++    attr.RootDirectory = NULL;
++    attr.ObjectName = &null_string;
++    attr.Attributes = 0;
++    attr.SecurityDescriptor = NULL;
++    attr.SecurityQualityOfService = NULL;
++
++    null_string.Buffer = NULL;
++    null_string.Length = 256;
++
++    /* try various open modes and options on directories */
++    status = pNtCreateFile( &dir, GENERIC_READ|GENERIC_WRITE, &attr, &io, NULL, 0,
++                            FILE_SHARE_READ|FILE_SHARE_WRITE, FILE_OPEN, FILE_DIRECTORY_FILE, NULL, 0 );
++    ok( status == STATUS_ACCESS_VIOLATION, "Got unexpected status %#x.\n",  status );
++
++    null_string.Length = 0;
++    status = pNtCreateFile( &dir, GENERIC_READ|GENERIC_WRITE, &attr, &io, NULL, 0,
++                            FILE_SHARE_READ|FILE_SHARE_WRITE, FILE_OPEN, FILE_DIRECTORY_FILE, NULL, 0 );
++    ok( status == STATUS_OBJECT_PATH_SYNTAX_BAD, "Got unexpected status %#x.\n",  status );
++
+     GetCurrentDirectoryW( MAX_PATH, path );
+     pRtlDosPathNameToNtPathName_U( path, &nameW, NULL, NULL );
+     InitializeObjectAttributes( &attr, &nameW, OBJ_CASE_INSENSITIVE, 0, NULL );
+diff --git a/dlls/ntdll/unix/file.c b/dlls/ntdll/unix/file.c
+index d0bdd987551..4b1c5aa0b43 100644
+--- a/dlls/ntdll/unix/file.c
++++ b/dlls/ntdll/unix/file.c
+@@ -3507,7 +3507,7 @@ static NTSTATUS nt_to_unix_file_name_no_root( OBJECT_ATTRIBUTES *attr, UNICODE_S
+     name     = attr->ObjectName->Buffer;
+     name_len = attr->ObjectName->Length / sizeof(WCHAR);
+ 
+-    if (!name_len || name[0] != '\\') return STATUS_OBJECT_PATH_SYNTAX_BAD;
++    if (!name || !name_len || name[0] != '\\') return STATUS_OBJECT_PATH_SYNTAX_BAD;
+ 
+     if (!(nt_pos = get_dos_prefix_len( attr->ObjectName )))
+         return STATUS_BAD_DEVICE_TYPE;  /* no DOS prefix, assume NT native name */
+@@ -3617,6 +3617,9 @@ static NTSTATUS nt_to_unix_file_name( OBJECT_ATTRIBUTES *attr, UNICODE_STRING *n
+     int name_len, unix_len;
+     NTSTATUS status;
+ 
++    if (!attr->ObjectName->Buffer && attr->ObjectName->Length)
++        return STATUS_ACCESS_VIOLATION;
++
+     if (!attr->RootDirectory)  /* without root dir fall back to normal lookup */
+         return nt_to_unix_file_name_no_root( attr, nt_name, name_ret, disposition, open_reparse, 0 );
+ 

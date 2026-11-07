@@ -1,0 +1,70 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Fri, 5 Jan 2024 15:35:46 -0600
+Subject: [PATCH] amd_ags_x64: Implement agsGetGPUMemorySize().
+
+CW-Bug-Id: #23209
+(cherry picked from commit 7d86df42b6e4aad4f7751701efcc20e2002ddcb7)
+---
+ dlls/amd_ags_x64/amd_ags.h          | 13 +++++++++++++
+ dlls/amd_ags_x64/amd_ags_x64.spec   |  1 +
+ dlls/amd_ags_x64/amd_ags_x64_main.c | 13 +++++++++++++
+ 3 files changed, 27 insertions(+)
+
+diff --git a/dlls/amd_ags_x64/amd_ags.h b/dlls/amd_ags_x64/amd_ags.h
+index 848c90273a9..8eab0732d5b 100644
+--- a/dlls/amd_ags_x64/amd_ags.h
++++ b/dlls/amd_ags_x64/amd_ags.h
+@@ -1058,6 +1058,19 @@ typedef struct AGSDX12ReturnedParams
+ //
+ AMD_AGS_API AGSReturnCode agsGetTotalGPUCount( AGSContext* context, int* numGPUs );
+ 
++// Description
++//   Function used to query the memory size of a GPU. The number of GPUs should
++//   be obtained using agsGetTotalGPUCount
++//
++// Input params
++//   context - Pointer to a context.
++//   gpuIndex - The GPU index to query
++//
++// Output params
++//   sizeInBytes - Memory size on the device in bytes
++//
++AMD_AGS_API AGSReturnCode agsGetGPUMemorySize( AGSContext* context, int gpuIndex, long long* sizeInBytes );
++
+ // Description
+ //   Function used to query Eyefinity configuration state information relevant to ISVs. State info returned
+ //   includes: whether Eyefinity is enabled or not, SLS grid configuration, SLS dimensions, whether bezel
+diff --git a/dlls/amd_ags_x64/amd_ags_x64.spec b/dlls/amd_ags_x64/amd_ags_x64.spec
+index 19666569599..20a16b4e3da 100644
+--- a/dlls/amd_ags_x64/amd_ags_x64.spec
++++ b/dlls/amd_ags_x64/amd_ags_x64.spec
+@@ -44,3 +44,4 @@
+ @ stdcall agsInitialize(long ptr ptr ptr)
+ @ stdcall agsSetDisplayMode(ptr long long ptr)
+ @ stdcall agsGetTotalGPUCount(ptr ptr)
++@ stdcall agsGetGPUMemorySize(ptr long ptr)
+diff --git a/dlls/amd_ags_x64/amd_ags_x64_main.c b/dlls/amd_ags_x64/amd_ags_x64_main.c
+index 4a973f1298f..404eab7b343 100644
+--- a/dlls/amd_ags_x64/amd_ags_x64_main.c
++++ b/dlls/amd_ags_x64/amd_ags_x64_main.c
+@@ -847,6 +847,19 @@ AGSReturnCode WINAPI agsGetTotalGPUCount(AGSContext *context, int *numGPUs)
+     return AGS_SUCCESS;
+ }
+ 
++AGSReturnCode WINAPI agsGetGPUMemorySize( AGSContext *context, int gpuIndex, long long *sizeInBytes )
++{
++    struct AGSDeviceInfo_511 *device = &((struct AGSDeviceInfo_511 *)context->devices)[gpuIndex];
++
++    TRACE("context %p, gpuIndex %d, sizeInBytes %p.\n", context, gpuIndex, sizeInBytes);
++
++    if ((unsigned)gpuIndex >= context->device_count)
++        return AGS_INVALID_ARGS;
++
++    *sizeInBytes = device->localMemoryInBytes;
++    return AGS_SUCCESS;
++}
++
+ static DXGI_COLOR_SPACE_TYPE convert_ags_colorspace_506(AGSDisplaySettings_Mode_506 mode)
+ {
+     switch (mode)

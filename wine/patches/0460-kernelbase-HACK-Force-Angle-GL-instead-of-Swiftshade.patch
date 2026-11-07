@@ -1,0 +1,25 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Tue, 7 Mar 2023 09:01:39 -0600
+Subject: [PATCH] kernelbase: HACK: Force Angle GL instead of Swiftshader for
+ Paradox Launcher.
+
+CW-Bug-Id: #21997
+(cherry picked from commit 82e842a7bacb68133ff70282e792a6d04a09add0)
+---
+ dlls/kernelbase/process.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/dlls/kernelbase/process.c b/dlls/kernelbase/process.c
+index 529d532a644..fcf8b51214c 100644
+--- a/dlls/kernelbase/process.c
++++ b/dlls/kernelbase/process.c
+@@ -599,7 +599,7 @@ static const WCHAR *hack_append_command_line( const WCHAR *cmd )
+     }
+     options[] =
+     {
+-        {L"Paradox Launcher.exe", L" --use-gl=swiftshader --in-process-gpu"},
++        {L"Paradox Launcher.exe", L" --use-angle=gl"},
+         {L"Montaro\\nw.exe", L" --use-gl=swiftshader"},
+         {L"Aisling and the Tavern of Elves\\nw.exe", L" --use-gl=swiftshader"},
+         {L"Snares of Ruin 2\\SoR2.exe", L" --use-gl=swiftshader"},

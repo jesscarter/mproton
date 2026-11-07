@@ -1,0 +1,23 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Fri, 29 May 2026 09:29:09 +0200
+Subject: [PATCH] fixup! atiadlxx: Query adapter config at context creation.
+
+(cherry picked from commit 1aa0943fb0d307701e7088c5586ee8544aa00065)
+---
+ dlls/atiadlxx/atiadlxx_main.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/dlls/atiadlxx/atiadlxx_main.c b/dlls/atiadlxx/atiadlxx_main.c
+index 9014407bc81..09c2176c205 100644
+--- a/dlls/atiadlxx/atiadlxx_main.c
++++ b/dlls/atiadlxx/atiadlxx_main.c
+@@ -459,7 +459,7 @@ static int init_info(ADL_CONTEXT_HANDLE ctx)
+         if (CM_Locate_DevNodeW(&devinst, instance_id, 0))
+             continue;
+         size = sizeof(ctx->gpus[i].luid);
+-        if (CM_Get_DevNode_PropertyW(devinst, &DEVPROPKEY_GPU_LUID, &type, &ctx->gpus[ctx->gpu_count].luid, &size, 0))
++        if (CM_Get_DevNode_PropertyW(devinst, &DEVPROPKEY_GPU_LUID, &type, (BYTE *)&ctx->gpus[ctx->gpu_count].luid, &size, 0))
+             continue;
+ 
+         ++ctx->gpu_count;

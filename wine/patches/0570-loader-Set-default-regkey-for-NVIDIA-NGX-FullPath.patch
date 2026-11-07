@@ -1,0 +1,38 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Liam Middlebrook <lmiddlebrook@nvidia.com>
+Date: Mon, 11 Oct 2021 11:16:49 +0200
+Subject: [PATCH] loader: Set default regkey for NVIDIA NGX FullPath
+
+Sets the default location for the NVIDIA NGX SDK search-path to be
+C:\Windows\System32\
+
+This is required for supporting NVIDIA DLSS within Proton.
+
+Reviewed-by: Adam Moss <amoss@nvidia.com>
+(cherry picked from commit 760bf5af6eeee29092e213bbebf4b9304f2b54db)
+---
+ loader/wine.inf.in | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/loader/wine.inf.in b/loader/wine.inf.in
+index 5badde00d57..d41833c4759 100644
+--- a/loader/wine.inf.in
++++ b/loader/wine.inf.in
+@@ -66,6 +66,7 @@ AddReg=\
+     LicenseInformation,\
+     MCI,\
+     Misc,\
++    NVIDIANGX, \
+     OLE,\
+     Printing,\
+     ProtonOverrides,\
+@@ -1387,6 +1388,9 @@ HKCU,Software\Valve\Steam\ActiveProcess,"SteamClientDll64",,"%16426%\Steam\steam
+ HKCU,Software\Valve\Steam\ActiveProcess,"SteamPath",,"%16426%\Steam"
+ HKLM,Software\Wow6432Node\Valve\Steam,"InstallPath",,"%16422%\Steam"
+ 
++[NVIDIANGX]
++HKLM,Software\NVIDIA Corporation\Global\NGXCore,"FullPath",,"C:\Windows\System32"
++
+ [ProtonOverrides]
+ ;;Likely want *80 and *90 too, but those require removing Wine's manifest files.
+ HKCU,Software\Wine\DllOverrides,"atl100",0x2,"native,builtin"

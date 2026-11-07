@@ -1,0 +1,58 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Sun, 1 Dec 2024 10:45:03 +0100
+Subject: [PATCH] include: Install wine/vulkan_driver.h.
+
+(cherry picked from commit c7e5f974f817bf372a692425852dd5f931531725)
+---
+ dlls/winevulkan/make_vulkan  | 5 +++++
+ include/wine/rbtree.h        | 4 ++++
+ include/wine/vulkan_driver.h | 4 ++++
+ 3 files changed, 13 insertions(+)
+
+diff --git a/dlls/winevulkan/make_vulkan b/dlls/winevulkan/make_vulkan
+index f57005f18ba..f01efc64280 100755
+--- a/dlls/winevulkan/make_vulkan
++++ b/dlls/winevulkan/make_vulkan
+@@ -2594,6 +2594,11 @@ class Generator(object):
+ 
+     def generate_vulkan_h(self, f):
+         self._generate_copyright(f)
++
++        f.write("#if 0\n")
++        f.write("#pragma makedep install\n")
++        f.write("#endif\n\n")
++
+         f.write("#ifndef __WINE_VULKAN_H\n")
+         f.write("#define __WINE_VULKAN_H\n\n")
+ 
+diff --git a/include/wine/rbtree.h b/include/wine/rbtree.h
+index 81367f3f7c4..12004010a85 100644
+--- a/include/wine/rbtree.h
++++ b/include/wine/rbtree.h
+@@ -20,6 +20,10 @@
+  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
+  */
+ 
++#if 0
++#pragma makedep install
++#endif
++
+ #ifndef __WINE_WINE_RBTREE_H
+ #define __WINE_WINE_RBTREE_H
+ 
+diff --git a/include/wine/vulkan_driver.h b/include/wine/vulkan_driver.h
+index d2209a3ef54..a49efcf30c6 100644
+--- a/include/wine/vulkan_driver.h
++++ b/include/wine/vulkan_driver.h
+@@ -17,6 +17,10 @@
+  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
+  */
+ 
++#if 0
++#pragma makedep install
++#endif
++
+ #ifndef __WINE_VULKAN_DRIVER_H
+ #define __WINE_VULKAN_DRIVER_H
+ 

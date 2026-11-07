@@ -1,0 +1,59 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Derek Lesho <dlesho@codeweavers.com>
+Date: Fri, 26 Mar 2021 10:48:14 -0400
+Subject: [PATCH] ntdll: Try to load builtin DLLs from Battleye Runtime
+ directory.
+
+Signed-off-by: Derek Lesho <dlesho@codeweavers.com>
+
+CW-Bug-Id: #16650
+(cherry picked from commit 66f58509e2e8633e8f9b6bab5b06bd75c1a94a61)
+---
+ dlls/ntdll/unix/loader.c | 23 ++++++++++++++++++++++-
+ 1 file changed, 22 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/ntdll/unix/loader.c b/dlls/ntdll/unix/loader.c
+index b1ed34e7b90..05886a02fe2 100644
+--- a/dlls/ntdll/unix/loader.c
++++ b/dlls/ntdll/unix/loader.c
+@@ -431,11 +431,14 @@ int ntdll_get_compat_opengl(void)
+ 
+ static void set_dll_path(void)
+ {
+-    char *p, *path = getenv( "WINEDLLPATH" );
++    char *p, *path = getenv( "WINEDLLPATH" ), *be_runtime = getenv( "PROTON_BATTLEYE_RUNTIME" );
+     int i, count = 0;
+ 
+     if (path) for (p = path, count = 1; *p; p++) if (*p == ':') count++;
+ 
++    if (be_runtime)
++        count += 2;
++
+     dll_paths = malloc( (count + 2) * sizeof(*dll_paths) );
+     count = 0;
+ 
+@@ -448,6 +451,24 @@ static void set_dll_path(void)
+         free( path );
+     }
+ 
++    if (be_runtime)
++    {
++        const char lib32[] = "/v1/lib/wine/";
++        const char lib64[] = "/v1/lib64/wine/";
++
++        p = malloc( strlen(be_runtime) + strlen(lib32) + 1 );
++        strcpy(p, be_runtime);
++        strcat(p, lib32);
++
++        dll_paths[count++] = p;
++
++        p = malloc( strlen(be_runtime) + strlen(lib64) + 1 );
++        strcpy(p, be_runtime);
++        strcat(p, lib64);
++
++        dll_paths[count++] = p;
++    }
++
+     for (i = 0; i < count; i++) dll_path_maxlen = max( dll_path_maxlen, strlen(dll_paths[i]) );
+     dll_paths[count] = NULL;
+ }

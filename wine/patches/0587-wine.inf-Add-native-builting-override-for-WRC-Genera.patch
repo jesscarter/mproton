@@ -1,0 +1,23 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Fri, 6 Jun 2025 16:32:18 -0600
+Subject: [PATCH] wine.inf: Add native,builting override for WRC Generations.
+
+CW-Bug-Id: #25518
+(cherry picked from commit bb27d047652c68ad34817c616af6344cb03e0dbb)
+---
+ loader/wine.inf.in | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/loader/wine.inf.in b/loader/wine.inf.in
+index 8544e7b23d2..b3d3910b898 100644
+--- a/loader/wine.inf.in
++++ b/loader/wine.inf.in
+@@ -1438,6 +1438,7 @@ HKLM,Software\Wow6432Node\Valve\Steam\Apps\CommonRedist\.NET\3.5 Client Profile,
+ HKLM,Software\Wow6432Node\Valve\Steam\Apps\CommonRedist\XNA\4.0,"4.0",0x10001,1
+ HKCU,Software\Wine\AppDefaults\ShadowOfWar.exe\DllOverrides,"amd_ags_x64",,"disabled"
+ HKCU,Software\Wine\AppDefaults\TDUSC.exe\DllOverrides,"xinput1_3",,"native,builtin"
++HKCU,Software\Wine\AppDefaults\WRCG.exe\DllOverrides,"xinput1_3",,"native,builtin"
+ ;;App-specific overrides for atiadlxx.dll.
+ HKCU,Software\Wine\AppDefaults\s2_sp64_ship.exe\DllOverrides,"atiadlxx",,"builtin"
+ HKCU,Software\Wine\AppDefaults\s2_mp64_ship.exe\DllOverrides,"atiadlxx",,"builtin"

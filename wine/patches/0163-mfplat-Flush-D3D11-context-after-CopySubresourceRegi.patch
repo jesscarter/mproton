@@ -1,0 +1,27 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Tue, 16 Jul 2024 10:51:02 +0200
+Subject: [PATCH] mfplat: Flush D3D11 context after CopySubresourceRegion on
+ unmap.
+
+Fixes some garbled video frames when the texture is later used as input
+by the video processor.
+
+CW-Bug-Id: #20833
+(cherry picked from commit 5bf184765f324723275872d4263a716e3cdbffbe)
+---
+ dlls/mfplat/buffer.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/dlls/mfplat/buffer.c b/dlls/mfplat/buffer.c
+index 0ab7cd0336d..5d52dca51fe 100644
+--- a/dlls/mfplat/buffer.c
++++ b/dlls/mfplat/buffer.c
+@@ -1041,6 +1041,7 @@ static void dxgi_surface_buffer_unmap(struct buffer *buffer, MF2DBuffer_LockFlag
+     {
+         ID3D11DeviceContext_CopySubresourceRegion(immediate_context, (ID3D11Resource *)buffer->dxgi_surface.texture,
+                 buffer->dxgi_surface.sub_resource_idx, 0, 0, 0, (ID3D11Resource *)buffer->dxgi_surface.rb_texture, 0, NULL);
++        ID3D11DeviceContext_Flush(immediate_context);
+     }
+ 
+     ID3D11DeviceContext_Release(immediate_context);

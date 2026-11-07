@@ -1,0 +1,86 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Thu, 25 Nov 2021 21:26:01 +0300
+Subject: [PATCH] atiadlxx: Add stub for ADL_Display_DisplayMapConfig_Get().
+
+CW-Bug-Id: #19687
+(cherry picked from commit 1305bf82b3edbbb69260bdc5c93451b2ad13c670)
+---
+ dlls/atiadlxx/atiadlxx.spec   |  2 +-
+ dlls/atiadlxx/atiadlxx_main.c | 46 +++++++++++++++++++++++++++++++++++
+ 2 files changed, 47 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/atiadlxx/atiadlxx.spec b/dlls/atiadlxx/atiadlxx.spec
+index e2fb060ae8d..1e447f38ded 100644
+--- a/dlls/atiadlxx/atiadlxx.spec
++++ b/dlls/atiadlxx/atiadlxx.spec
+@@ -845,7 +845,7 @@
+ @ stub ADL_Display_DisplayContent_Get
+ @ stub ADL_Display_DisplayContent_Set
+ @ stdcall ADL_Display_DisplayInfo_Get(long long ptr long)
+-@ stub ADL_Display_DisplayMapConfig_Get
++@ stdcall ADL_Display_DisplayMapConfig_Get(long ptr ptr ptr ptr long)
+ @ stub ADL_Display_DisplayMapConfig_PossibleAddAndRemove
+ @ stub ADL_Display_DisplayMapConfig_Set
+ @ stub ADL_Display_DisplayMapConfig_Validate
+diff --git a/dlls/atiadlxx/atiadlxx_main.c b/dlls/atiadlxx/atiadlxx_main.c
+index 65c6d6ca988..2f9b1102c37 100644
+--- a/dlls/atiadlxx/atiadlxx_main.c
++++ b/dlls/atiadlxx/atiadlxx_main.c
+@@ -135,6 +135,40 @@ typedef struct ADLMemoryInfo
+     long long iMemoryBandwidth;
+ } ADLMemoryInfo, *LPADLMemoryInfo;
+ 
++typedef struct ADLDisplayTarget
++{
++    ADLDisplayID displayID;
++    int iDisplayMapIndex;
++    int iDisplayTargetMask;
++    int iDisplayTargetValue;
++} ADLDisplayTarget, *LPADLDisplayTarget;
++
++typedef struct ADLMode
++{
++    int iAdapterIndex;
++    ADLDisplayID displayID;
++    int iXPos;
++    int iYPos;
++    int iXRes;
++    int iYRes;
++    int iColourDepth;
++    float fRefreshRate;
++    int iOrientation;
++    int iModeFlag;
++    int iModeMask;
++    int iModeValue;
++} ADLMode, *LPADLMode;
++
++typedef struct ADLDisplayMap
++{
++    int iDisplayMapIndex;
++    ADLMode displayMode;
++    int iNumDisplayTarget;
++    int iFirstDisplayTargetArrayIndex;
++    int iDisplayMapMask;
++    int iDisplayMapValue;
++} ADLDisplayMap, *LPADLDisplayMap;
++
+ static const ADLVersionsInfo version = {
+     "21.20.01",
+     "21.20.01",
+@@ -432,3 +466,15 @@ int WINAPI ADL_Graphics_Platform_Get(int *platform)
+ 
+     return ADL_OK;
+ }
++
++
++int WINAPI ADL_Display_DisplayMapConfig_Get(int adapter_index, int *display_map_count, ADLDisplayMap **display_maps,
++        int *display_target_count, ADLDisplayTarget **display_targets, int options)
++{
++    FIXME("adapter_index %d, display_map_count %p, display_maps %p, "
++            "display_target_count %p, display_targets %p, options %d stub.\n",
++            adapter_index, display_map_count, display_maps, display_target_count,
++            display_targets, options);
++
++    return ADL_ERR;
++}

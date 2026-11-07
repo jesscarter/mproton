@@ -1,0 +1,78 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Fri, 5 May 2023 17:16:58 -0600
+Subject: [PATCH] amd_ags_x64: Update to 6.1.0.
+
+(cherry picked from commit 911ad1daa730a194831b2e80f48b647f36c05b22)
+---
+ dlls/amd_ags_x64/amd_ags.h          |  5 +++--
+ dlls/amd_ags_x64/amd_ags_x64_main.c | 10 ++++++----
+ 2 files changed, 9 insertions(+), 6 deletions(-)
+
+diff --git a/dlls/amd_ags_x64/amd_ags.h b/dlls/amd_ags_x64/amd_ags.h
+index 9b521de75b8..f0afda73d37 100644
+--- a/dlls/amd_ags_x64/amd_ags.h
++++ b/dlls/amd_ags_x64/amd_ags.h
+@@ -417,6 +417,7 @@ typedef enum AsicFamily
+     AsicFamily_Vega,                                            ///< AMD Vega architecture, including Raven Ridge (ie AMD Ryzen CPU + AMD Vega GPU).
+     AsicFamily_RDNA,                                            ///< AMD RDNA architecture
+     AsicFamily_RDNA2,                                           ///< AMD RDNA2 architecture
++    AsicFamily_RDNA3,                                           ///< AMD RDNA3 architecture
+ 
+     AsicFamily_Count                                            ///< Number of enumerated ASIC families
+ } AsicFamily;
+@@ -1422,11 +1423,11 @@ AMD_AGS_API AGSReturnCode agsDriverExtensionsDX11_WriteBreadcrumb( AGSContext* c
+ /// @{
+ 
+ /// Additional topologies supported via extensions
+-typedef enum AGSPrimitiveTopology
++typedef enum AGSPrimitiveTopologyDX11
+ {
+     AGS_PRIMITIVE_TOPOLOGY_QUADLIST                         = 7,    ///< Quad list
+     AGS_PRIMITIVE_TOPOLOGY_SCREENRECTLIST                   = 9     ///< Screen rect list
+-} AGSPrimitiveTopology;
++} AGSPrimitiveTopologyDX11;
+ 
+ ///
+ /// Function used to set the primitive topology. If you are using any of the extended topology types, then this function should
+diff --git a/dlls/amd_ags_x64/amd_ags_x64_main.c b/dlls/amd_ags_x64/amd_ags_x64_main.c
+index 26c7a11cdfa..3847dffb122 100644
+--- a/dlls/amd_ags_x64/amd_ags_x64_main.c
++++ b/dlls/amd_ags_x64/amd_ags_x64_main.c
+@@ -41,6 +41,7 @@ enum amd_ags_version
+     AMD_AGS_VERSION_5_4_2,
+     AMD_AGS_VERSION_6_0_0,
+     AMD_AGS_VERSION_6_0_1,
++    AMD_AGS_VERSION_6_1_0,
+ 
+     AMD_AGS_VERSION_COUNT
+ };
+@@ -64,23 +65,24 @@ amd_ags_info[AMD_AGS_VERSION_COUNT] =
+     {5, 4, 2, sizeof(AGSDeviceInfo_542), sizeof(AGSDX11ReturnedParams_520)},
+     {6, 0, 0, sizeof(AGSDeviceInfo_600), sizeof(AGSDX11ReturnedParams_600)},
+     {6, 0, 1, sizeof(AGSDeviceInfo_600), sizeof(AGSDX11ReturnedParams_600)},
++    {6, 1, 0, sizeof(AGSDeviceInfo_600), sizeof(AGSDX11ReturnedParams_600)},
+ };
+ 
+ #define DEF_FIELD(name) {DEVICE_FIELD_##name, {offsetof(AGSDeviceInfo_511, name), offsetof(AGSDeviceInfo_520, name), \
+         offsetof(AGSDeviceInfo_520, name), offsetof(AGSDeviceInfo_520, name), offsetof(AGSDeviceInfo_540, name), \
+         offsetof(AGSDeviceInfo_541, name), offsetof(AGSDeviceInfo_542, name), offsetof(AGSDeviceInfo_600, name), \
+-        offsetof(AGSDeviceInfo_600, name)}}
++        offsetof(AGSDeviceInfo_600, name), offsetof(AGSDeviceInfo_600, name)}}
+ #define DEF_FIELD_520_BELOW(name) {DEVICE_FIELD_##name, {offsetof(AGSDeviceInfo_511, name), offsetof(AGSDeviceInfo_520, name), \
+         offsetof(AGSDeviceInfo_520, name), offsetof(AGSDeviceInfo_520, name), -1, \
+-        -1, -1, -1, -1}}
++        -1, -1, -1, -1, -1}}
+ #define DEF_FIELD_540_UP(name) {DEVICE_FIELD_##name, {-1, -1, \
+         -1, -1, offsetof(AGSDeviceInfo_540, name), \
+         offsetof(AGSDeviceInfo_541, name), offsetof(AGSDeviceInfo_542, name), offsetof(AGSDeviceInfo_600, name), \
+-        offsetof(AGSDeviceInfo_600, name)}}
++        offsetof(AGSDeviceInfo_600, name), offsetof(AGSDeviceInfo_600, name)}}
+ #define DEF_FIELD_600_BELOW(name) {DEVICE_FIELD_##name, {offsetof(AGSDeviceInfo_511, name), offsetof(AGSDeviceInfo_520, name), \
+         offsetof(AGSDeviceInfo_520, name), offsetof(AGSDeviceInfo_520, name), offsetof(AGSDeviceInfo_540, name), \
+         offsetof(AGSDeviceInfo_541, name), offsetof(AGSDeviceInfo_542, name), -1, \
+-        -1}}
++        -1, -1}}
+ 
+ #define DEVICE_FIELD_adapterString 0
+ #define DEVICE_FIELD_architectureVersion 1

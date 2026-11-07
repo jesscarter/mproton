@@ -1,0 +1,28 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Esme Povirk <esme@codeweavers.com>
+Date: Mon, 9 Oct 2023 15:49:27 -0500
+Subject: [PATCH] HACK: mscoree: Add work-around for Grotesque Tactics.
+
+CW-Bug-Id: #22841
+(cherry picked from commit 13eed521396d5ff83255d0cf86fc43637d0c651e)
+---
+ dlls/mscoree/metahost.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/dlls/mscoree/metahost.c b/dlls/mscoree/metahost.c
+index 9d853e20ffe..72a95fef56b 100644
+--- a/dlls/mscoree/metahost.c
++++ b/dlls/mscoree/metahost.c
+@@ -1919,6 +1919,12 @@ static MonoAssembly* CDECL wine_mono_assembly_preload_hook_v2_fn(MonoAssemblyNam
+                 "321360", /* Primal Carnage: Extinction */
+                 "namespace ContentBrowser { class IContentBrowserBackendInterface {} class Package {} } "
+             },
++            {
++                "DockPanel",
++                "DockPanel.dll",
++                "46450", /* Grotesque Tactics: Evil Heroes  */
++                "namespace WeifenLuo.WinFormsUI { class DockPanel {} }"
++            },
+         };
+ 
+         for (i = 0; i < ARRAY_SIZE(assembly_hacks); ++i)

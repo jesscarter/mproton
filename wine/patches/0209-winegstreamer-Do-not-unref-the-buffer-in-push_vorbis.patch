@@ -1,0 +1,25 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Conor McCarthy <cmccarthy@codeweavers.com>
+Date: Mon, 13 Jan 2025 15:37:56 +1000
+Subject: [PATCH] winegstreamer: Do not unref the buffer in
+ push_vorbis_headers().
+
+gst_value_get_buffer() does not return a reference to the buffer.
+
+(cherry picked from commit a76b7b113ea5e7b2e58ba43fc250313b03d741de)
+---
+ dlls/winegstreamer/wg_transform.c | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/dlls/winegstreamer/wg_transform.c b/dlls/winegstreamer/wg_transform.c
+index c071b5335f4..7b4d97f5951 100644
+--- a/dlls/winegstreamer/wg_transform.c
++++ b/dlls/winegstreamer/wg_transform.c
+@@ -609,7 +609,6 @@ static void push_vorbis_headers(struct wg_transform *transform)
+ 
+ failed:
+     gst_buffer_unmap(codec_data, &info);
+-    gst_buffer_unref(codec_data);
+ }
+ 
+ 

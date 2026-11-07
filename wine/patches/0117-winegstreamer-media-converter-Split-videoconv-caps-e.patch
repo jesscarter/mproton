@@ -1,0 +1,105 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Tue, 5 Mar 2024 10:55:06 +0100
+Subject: [PATCH] winegstreamer/media-converter: Split videoconv caps event
+ handler to a separate helper.
+
+CW-Bug-Id: #22319
+(cherry picked from commit 49bb6f0bd7cbacd089468feb3a84d512fc15962a)
+---
+ .../winegstreamer/media-converter/videoconv.c | 71 ++++++++++---------
+ 1 file changed, 38 insertions(+), 33 deletions(-)
+
+diff --git a/dlls/winegstreamer/media-converter/videoconv.c b/dlls/winegstreamer/media-converter/videoconv.c
+index 2dd7446cedb..9c82f0a9cbf 100644
+--- a/dlls/winegstreamer/media-converter/videoconv.c
++++ b/dlls/winegstreamer/media-converter/videoconv.c
+@@ -663,50 +663,55 @@ static void video_conv_init_transcode(VideoConv *conv)
+     pthread_mutex_unlock(&dump_fozdb.mutex);
+ }
+ 
+-static gboolean video_conv_sink_event(GstPad *pad, GstObject *parent, GstEvent *event)
++static gboolean video_conv_sink_event_caps(VideoConv *conv, GstEvent *event)
+ {
+-    VideoConv *conv = VIDEO_CONV(parent);
++    struct video_conv_state *state;
++    uint32_t transcode_tag;
++    GstCaps *caps;
+     bool ret;
+ 
+-    GST_DEBUG_OBJECT(pad, "Got event %"GST_PTR_FORMAT".", event);
++    gst_event_unref(event);
+ 
+-    if (event->type == GST_EVENT_CAPS)
++    /* push_event, below, can also grab state and cause a deadlock, so make sure it's
++     * unlocked before calling */
++    if (!(state = video_conv_lock_state(conv)))
+     {
+-        struct video_conv_state *state;
+-        uint32_t transcode_tag;
+-        GstCaps *caps;
++        GST_ERROR("VideoConv not yet in READY state?");
++        return false;
++    }
+ 
+-        /* push_event, below, can also grab state and cause a deadlock, so make sure it's
+-         * unlocked before calling */
+-        if (!(state = video_conv_lock_state(conv)))
+-        {
+-            GST_ERROR("VideoConv not yet in READY state?");
+-            return false;
+-        }
++    if (!gst_pad_activate_mode(conv->sink_pad, GST_PAD_MODE_PULL, true))
++    {
++        GST_ERROR("Failed to activate sink pad in pull mode.");
++        pthread_mutex_unlock(&conv->state_mutex);
++        return false;
++    }
+ 
+-        if (!gst_pad_activate_mode(conv->sink_pad, GST_PAD_MODE_PULL, true))
+-        {
+-            GST_ERROR("Failed to activate sink pad in pull mode.");
+-            pthread_mutex_unlock(&conv->state_mutex);
+-            return false;
+-        }
++    video_conv_init_transcode(conv);
++    transcode_tag = state->transcoded_tag;
+ 
+-        video_conv_init_transcode(conv);
+-        transcode_tag = state->transcoded_tag;
++    pthread_mutex_unlock(&conv->state_mutex);
+ 
+-        pthread_mutex_unlock(&conv->state_mutex);
++    if (transcode_tag == VIDEO_CONV_FOZ_TAG_MKVDATA)
++        caps = gst_caps_from_string("video/x-matroska");
++    else if (transcode_tag == VIDEO_CONV_FOZ_TAG_OGVDATA)
++        caps = gst_caps_from_string("application/ogg");
++    else
++        return false;
+ 
+-        if (transcode_tag == VIDEO_CONV_FOZ_TAG_MKVDATA)
+-            caps = gst_caps_from_string("video/x-matroska");
+-        else if (transcode_tag == VIDEO_CONV_FOZ_TAG_OGVDATA)
+-            caps = gst_caps_from_string("application/ogg");
+-        else
+-            return false;
++    ret = push_event(conv->src_pad, gst_event_new_caps(caps));
++    gst_caps_unref(caps);
++    return ret;
++}
+ 
+-        ret = push_event(conv->src_pad, gst_event_new_caps(caps));
+-        gst_caps_unref(caps);
+-        return ret;
+-    }
++static gboolean video_conv_sink_event(GstPad *pad, GstObject *parent, GstEvent *event)
++{
++    VideoConv *conv = VIDEO_CONV(parent);
++
++    GST_DEBUG_OBJECT(pad, "Got event %"GST_PTR_FORMAT".", event);
++
++    if (event->type == GST_EVENT_CAPS)
++        return video_conv_sink_event_caps(conv, event);
+ 
+     return gst_pad_event_default(pad, parent, event);
+ }

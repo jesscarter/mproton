@@ -1,0 +1,35 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Fri, 5 May 2023 17:55:53 -0600
+Subject: [PATCH] amd_ags_x64: Skip non-physical devices.
+
+(cherry picked from commit 28699099d8f3c3bcf8769835982eef2c8c59b158)
+---
+ dlls/amd_ags_x64/amd_ags_x64_main.c | 12 ++++++++++--
+ 1 file changed, 10 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/amd_ags_x64/amd_ags_x64_main.c b/dlls/amd_ags_x64/amd_ags_x64_main.c
+index 261c739bd77..a27b5a54175 100644
+--- a/dlls/amd_ags_x64/amd_ags_x64_main.c
++++ b/dlls/amd_ags_x64/amd_ags_x64_main.c
+@@ -229,10 +229,18 @@ static AGSReturnCode vk_get_physical_device_properties(unsigned int *out_count,
+     }
+ 
+     for (i = 0; i < count; ++i)
++    {
+         vkGetPhysicalDeviceProperties(vk_physical_devices[i], &properties[i]);
+-
+-    for (i = 0; i < count; ++i)
++        if (properties[i].deviceType != VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU
++                && properties[i].deviceType != VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
++        {
++            TRACE("Skipping device type %d.\n", properties[i].deviceType);
++            --i;
++            --count;
++            continue;
++        }
+         vkGetPhysicalDeviceMemoryProperties(vk_physical_devices[i], &memory_properties[i]);
++    }
+ 
+     *out_count = count;
+     *out = properties;

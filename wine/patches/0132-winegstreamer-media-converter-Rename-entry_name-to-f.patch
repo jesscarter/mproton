@@ -1,0 +1,119 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Thu, 5 Dec 2024 10:55:30 +0100
+Subject: [PATCH] winegstreamer/media-converter: Rename entry_name to
+ fozdb_key.
+
+(cherry picked from commit 8bb00396854034b04db88e9a6aa6f2283d79e1cc)
+---
+ dlls/winegstreamer/media-converter/audioconv.c       |  4 ++--
+ dlls/winegstreamer/media-converter/fossilize.c       | 12 ++++++------
+ dlls/winegstreamer/media-converter/media-converter.h |  8 ++++----
+ 3 files changed, 12 insertions(+), 12 deletions(-)
+
+diff --git a/dlls/winegstreamer/media-converter/audioconv.c b/dlls/winegstreamer/media-converter/audioconv.c
+index 5acce9a7915..8d69d813416 100644
+--- a/dlls/winegstreamer/media-converter/audioconv.c
++++ b/dlls/winegstreamer/media-converter/audioconv.c
+@@ -329,7 +329,7 @@ static void dump_fozdb_discard_transcoded(void)
+ 
+                 for (list_iter = stream_chunks; list_iter; list_iter = list_iter->next)
+                 {
+-                    struct entry_name *entry = list_iter->data;
++                    struct fozdb_key *entry = list_iter->data;
+                     if (has_all)
+                     {
+                         chunks_to_discard = g_list_append(chunks_to_discard,
+@@ -358,7 +358,7 @@ static void dump_fozdb_discard_transcoded(void)
+ 
+     for (list_iter = chunks_to_discard; list_iter; list_iter = list_iter->next)
+     {
+-        struct entry_name *entry = list_iter->data;
++        struct fozdb_key *entry = list_iter->data;
+         if (!g_list_find_custom(chunks_to_keep, entry, entry_name_compare))
+             chunks = g_list_append(chunks, entry_name_create(entry->tag, &entry->hash));
+     }
+diff --git a/dlls/winegstreamer/media-converter/fossilize.c b/dlls/winegstreamer/media-converter/fossilize.c
+index 44a9cbf7c65..c1fadcd5242 100644
+--- a/dlls/winegstreamer/media-converter/fossilize.c
++++ b/dlls/winegstreamer/media-converter/fossilize.c
+@@ -272,7 +272,7 @@ static bool fozdb_write_entry_name(struct fozdb *db, uint32_t tag, struct fozdb_
+ 
+ /* Copy an entry to write_pos. */
+ static int fozdb_copy_entry(struct fozdb *db,
+-        struct entry_name *name, struct payload_header *header, uint64_t entry_data_offset)
++        struct fozdb_key *key, struct payload_header *header, uint64_t entry_data_offset)
+ {
+     uint64_t read_offset, entry_end = entry_data_offset + header->size;
+     ssize_t read_size;
+@@ -285,7 +285,7 @@ static int fozdb_copy_entry(struct fozdb *db,
+     }
+ 
+     /* Write entry name. */
+-    if (!fozdb_write_entry_name(db, name->tag, &name->hash))
++    if (!fozdb_write_entry_name(db, key->tag, &key->hash))
+         return CONV_ERROR_WRITE_FAILED;
+     db->write_pos += ENTRY_NAME_SIZE;
+ 
+@@ -677,15 +677,15 @@ int fozdb_discard_entries(struct fozdb *db, GList *to_discard_names)
+     {
+         struct payload_header header;
+         uint64_t entry_data_offset;
+-        struct entry_name name;
++        struct fozdb_key key;
+         bool truncated;
+ 
+-        if ((ret = fozdb_read_entry_tag_hash_header(db, &name.tag, &name.hash, &header) < 0))
++        if ((ret = fozdb_read_entry_tag_hash_header(db, &key.tag, &key.hash, &header) < 0))
+             return CONV_ERROR_READ_FAILED;
+         entry_data_offset = lseek(db->file, 0, SEEK_CUR);
+ 
+         /* Check if entry should be discarded. */
+-        if (g_list_find_custom(to_discard_names, &name, entry_name_compare))
++        if (g_list_find_custom(to_discard_names, &key, entry_name_compare))
+         {
+             if (!fozdb_seek_to_next_entry(db, &header, &truncated))
+                 return CONV_ERROR_SEEK_FAILED;
+@@ -706,7 +706,7 @@ int fozdb_discard_entries(struct fozdb *db, GList *to_discard_names)
+             else
+             {
+                 /* We're offset, so we have to rewrite. */
+-                if ((ret = fozdb_copy_entry(db, &name, &header, entry_data_offset)) < 0)
++                if ((ret = fozdb_copy_entry(db, &key, &header, entry_data_offset)) < 0)
+                     return ret;
+             }
+         }
+diff --git a/dlls/winegstreamer/media-converter/media-converter.h b/dlls/winegstreamer/media-converter/media-converter.h
+index d737040ad15..3d82681d495 100644
+--- a/dlls/winegstreamer/media-converter/media-converter.h
++++ b/dlls/winegstreamer/media-converter/media-converter.h
+@@ -102,7 +102,7 @@ static inline const char *debugstr_fozdb_hash_( char *buffer, const struct fozdb
+     return buffer;
+ }
+ 
+-struct entry_name
++struct fozdb_key
+ {
+     uint32_t tag;
+     struct fozdb_hash hash;
+@@ -265,9 +265,9 @@ static inline bool file_exists(const char *file_path)
+     return access(file_path, F_OK) == 0;
+ }
+ 
+-static inline struct entry_name *entry_name_create(uint32_t tag, struct fozdb_hash *hash)
++static inline struct fozdb_key *entry_name_create(uint32_t tag, struct fozdb_hash *hash)
+ {
+-    struct entry_name *entry = calloc(1, sizeof(*entry));
++    struct fozdb_key *entry = calloc(1, sizeof(*entry));
+     entry->tag = tag;
+     entry->hash = *hash;
+     return entry;
+@@ -275,7 +275,7 @@ static inline struct entry_name *entry_name_create(uint32_t tag, struct fozdb_ha
+ 
+ static inline gint entry_name_compare(const void *a, const void *b)
+ {
+-    return memcmp(a, b, sizeof(struct entry_name));
++    return memcmp(a, b, sizeof(struct fozdb_key));
+ }
+ 
+ static inline uint32_t bytes_to_uint32(const uint8_t *bytes)

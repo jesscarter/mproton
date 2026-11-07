@@ -1,0 +1,98 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Mon, 2 Nov 2020 13:32:07 +0100
+Subject: [PATCH] ntdll: Add +microsecs channel for precise timestamps.
+
+(cherry picked from commit 43206e6347c9790c3cfb9858a4e47057f47163df)
+---
+ dlls/ntdll/thread.c     | 10 +++++++++-
+ dlls/ntdll/unix/debug.c | 10 +++++++++-
+ libs/winecrt0/debug.c   | 12 +++++++++++-
+ 3 files changed, 29 insertions(+), 3 deletions(-)
+
+diff --git a/dlls/ntdll/thread.c b/dlls/ntdll/thread.c
+index 1c25c8ff1d5..98caf418447 100644
+--- a/dlls/ntdll/thread.c
++++ b/dlls/ntdll/thread.c
+@@ -34,6 +34,7 @@ WINE_DEFAULT_DEBUG_CHANNEL(thread);
+ WINE_DECLARE_DEBUG_CHANNEL(relay);
+ WINE_DECLARE_DEBUG_CHANNEL(pid);
+ WINE_DECLARE_DEBUG_CHANNEL(timestamp);
++WINE_DECLARE_DEBUG_CHANNEL(microsecs);
+ 
+ struct _KUSER_SHARED_DATA *user_shared_data = (void *)0x7ffe0000;
+ 
+@@ -149,7 +150,14 @@ int __cdecl __wine_dbg_header( enum __wine_debug_class cls, struct __wine_debug_
+     /* only print header if we are at the beginning of the line */
+     if (info->out_pos) return 0;
+ 
+-    if (TRACE_ON(timestamp))
++    if (TRACE_ON(microsecs))
++    {
++        LARGE_INTEGER counter, frequency, microsecs;
++        NtQueryPerformanceCounter(&counter, &frequency);
++        microsecs.QuadPart = counter.QuadPart * 1000000 / frequency.QuadPart;
++        pos += sprintf( pos, "%3u.%06u:", (unsigned int)(microsecs.QuadPart / 1000000), (unsigned int)(microsecs.QuadPart % 1000000) );
++    }
++    else if (TRACE_ON(timestamp))
+     {
+         ULONG ticks = NtGetTickCount();
+         pos += sprintf( pos, "%3lu.%03lu:", ticks / 1000, ticks % 1000 );
+diff --git a/dlls/ntdll/unix/debug.c b/dlls/ntdll/unix/debug.c
+index 53516b94d70..2fd97e6fbc0 100644
+--- a/dlls/ntdll/unix/debug.c
++++ b/dlls/ntdll/unix/debug.c
+@@ -43,6 +43,7 @@
+ 
+ WINE_DECLARE_DEBUG_CHANNEL(pid);
+ WINE_DECLARE_DEBUG_CHANNEL(timestamp);
++WINE_DECLARE_DEBUG_CHANNEL(microsecs);
+ WINE_DEFAULT_DEBUG_CHANNEL(ntdll);
+ 
+ struct debug_info
+@@ -336,7 +337,14 @@ int __cdecl __wine_dbg_header( enum __wine_debug_class cls, struct __wine_debug_
+ 
+     if (data)
+     {
+-        if (TRACE_ON(timestamp))
++        if (TRACE_ON(microsecs))
++        {
++            LARGE_INTEGER counter, frequency, microsecs;
++            NtQueryPerformanceCounter(&counter, &frequency);
++            microsecs.QuadPart = counter.QuadPart * 1000000 / frequency.QuadPart;
++            pos += sprintf( pos, "%3u.%06u:", (unsigned int)(microsecs.QuadPart / 1000000), (unsigned int)(microsecs.QuadPart % 1000000) );
++        }
++        else if (TRACE_ON(timestamp))
+         {
+             UINT ticks = NtGetTickCount();
+             pos += snprintf( pos, sizeof(info->output) - (pos - info->output), "%3u.%03u:", ticks / 1000, ticks % 1000 );
+diff --git a/libs/winecrt0/debug.c b/libs/winecrt0/debug.c
+index 5f865711256..ff9a7d85431 100644
+--- a/libs/winecrt0/debug.c
++++ b/libs/winecrt0/debug.c
+@@ -37,6 +37,7 @@
+ 
+ WINE_DECLARE_DEBUG_CHANNEL(pid);
+ WINE_DECLARE_DEBUG_CHANNEL(timestamp);
++WINE_DECLARE_DEBUG_CHANNEL(microsecs);
+ 
+ static const char * (__cdecl *p__wine_dbg_strdup)( const char *str );
+ static int (__cdecl *p__wine_dbg_output)( const char *str );
+@@ -200,7 +201,16 @@ static int __cdecl fallback__wine_dbg_header( enum __wine_debug_class cls,
+     /* skip header if partial line and no other thread came in between */
+     if (partial_line_tid == GetCurrentThreadId()) return 0;
+ 
+-    if (TRACE_ON(timestamp))
++    if (TRACE_ON(microsecs))
++    {
++        static LARGE_INTEGER frequency;
++        LARGE_INTEGER counter, microsecs;
++        if (!frequency.QuadPart) QueryPerformanceFrequency(&frequency);
++        QueryPerformanceCounter(&counter);
++        microsecs.QuadPart = counter.QuadPart * 1000000 / frequency.QuadPart;
++        pos += sprintf( pos, "%3u.%06u:", (unsigned int)(microsecs.QuadPart / 1000000), (unsigned int)(microsecs.QuadPart % 1000000) );
++    }
++    else if (TRACE_ON(timestamp))
+     {
+         UINT ticks = GetTickCount();
+         pos += sprintf( pos, "%3u.%03u:", ticks / 1000, ticks % 1000 );

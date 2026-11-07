@@ -1,0 +1,27 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Bernhard=20K=C3=B6lbl?= <bkoelbl@codeweavers.com>
+Date: Thu, 20 Nov 2025 08:18:18 +0100
+Subject: [PATCH] win32u: Explicitly check for font family bits.
+
+CW-Bug-Id: #26161
+(cherry picked from commit c850f93f725f3bcc17e9bb4ee79bfa83cbc8f3ff)
+---
+ dlls/win32u/font.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/win32u/font.c b/dlls/win32u/font.c
+index 913bd093bb0..30d980338b0 100644
+--- a/dlls/win32u/font.c
++++ b/dlls/win32u/font.c
+@@ -1019,9 +1019,9 @@ static BOOL enum_fallbacks( DWORD pitch_and_family, int index, WCHAR buffer[LF_F
+     {
+         const char * const *defaults;
+ 
+-        if ((pitch_and_family & FIXED_PITCH) || (pitch_and_family & 0xf0) == FF_MODERN)
++        if ((pitch_and_family & FIXED_PITCH) || (pitch_and_family & 0x70) == FF_MODERN)
+             defaults = default_fixed_list;
+-        else if ((pitch_and_family & 0xf0) == FF_ROMAN)
++        else if ((pitch_and_family & 0x70) == FF_ROMAN)
+             defaults = default_serif_list;
+         else
+             defaults = default_sans_list;

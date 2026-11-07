@@ -1,0 +1,188 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Tue, 21 Nov 2023 18:42:14 +0100
+Subject: [PATCH] HACK: winegstreamer/wma_decoder: Support XMAudio2 input
+ format in WMA decoder.
+
+Wine-Bug: https://bugs.winehq.org/show_bug.cgi?id=51931
+Wine-Bug: https://bugs.winehq.org/show_bug.cgi?id=52391
+CW-Bug-Id: #16839
+CW-Bug-Id: #18678
+CW-Bug-Id: #19362
+
+Wine-Staging: mfplat-streaming-support
+
+CW-Bug-Id: #20833
+(cherry picked from commit f8d9f0de218f992104211e5f4e18220a91543cd8)
+---
+ dlls/winegstreamer/mfplat.c        | 11 ++++++++++-
+ dlls/winegstreamer/quartz_parser.c | 14 ++++++++++++--
+ dlls/winegstreamer/unixlib.h       |  1 +
+ dlls/winegstreamer/wg_format.c     | 18 ++++++++++++++----
+ dlls/winegstreamer/wma_decoder.c   |  3 +++
+ 5 files changed, 40 insertions(+), 7 deletions(-)
+
+diff --git a/dlls/winegstreamer/mfplat.c b/dlls/winegstreamer/mfplat.c
+index 094e19d2c75..86a3d7598ab 100644
+--- a/dlls/winegstreamer/mfplat.c
++++ b/dlls/winegstreamer/mfplat.c
+@@ -39,6 +39,7 @@ DEFINE_GUID(DMOVideoFormat_RGB565,D3DFMT_R5G6B5,0x524f,0x11ce,0x9f,0x53,0x00,0x2
+ DEFINE_GUID(DMOVideoFormat_RGB555,D3DFMT_X1R5G5B5,0x524f,0x11ce,0x9f,0x53,0x00,0x20,0xaf,0x0b,0xa7,0x70);
+ DEFINE_GUID(DMOVideoFormat_RGB8,D3DFMT_P8,0x524f,0x11ce,0x9f,0x53,0x00,0x20,0xaf,0x0b,0xa7,0x70);
+ DEFINE_MEDIATYPE_GUID(MFAudioFormat_RAW_AAC,WAVE_FORMAT_RAW_AAC1);
++DEFINE_MEDIATYPE_GUID(MFAudioFormat_XMAudio2, 0x0166);
+ DEFINE_MEDIATYPE_GUID(MFVideoFormat_VC1S,MAKEFOURCC('V','C','1','S'));
+ DEFINE_MEDIATYPE_GUID(MFVideoFormat_IV50,MAKEFOURCC('I','V','5','0'));
+ DEFINE_MEDIATYPE_GUID(MFVideoFormat_ABGR32,D3DFMT_A8B8G8R8);
+@@ -671,6 +672,7 @@ static void mf_media_type_to_wg_format_audio_wma(IMFMediaType *type, const GUID
+ {
+     UINT32 rate, depth, channels, block_align, bytes_per_second, codec_data_len;
+     BYTE codec_data[64];
++    bool is_xma = false;
+     UINT32 version;
+ 
+     if (FAILED(IMFMediaType_GetUINT32(type, &MF_MT_AUDIO_SAMPLES_PER_SECOND, &rate)))
+@@ -712,6 +714,11 @@ static void mf_media_type_to_wg_format_audio_wma(IMFMediaType *type, const GUID
+         version = 3;
+     else if (IsEqualGUID(subtype, &MFAudioFormat_WMAudio_Lossless))
+         version = 4;
++    else if (IsEqualGUID(subtype, &MFAudioFormat_XMAudio2))
++    {
++        version = 2;
++        is_xma = true;
++    }
+     else
+     {
+         assert(0);
+@@ -727,6 +734,7 @@ static void mf_media_type_to_wg_format_audio_wma(IMFMediaType *type, const GUID
+     format->u.audio.block_align = block_align;
+     format->u.audio.codec_data_len = codec_data_len;
+     memcpy(format->u.audio.codec_data, codec_data, codec_data_len);
++    format->u.audio.is_xma = is_xma;
+ }
+ 
+ static void mf_media_type_to_wg_format_video_h264(IMFMediaType *type, struct wg_format *format)
+@@ -883,7 +891,8 @@ void mf_media_type_to_wg_format(IMFMediaType *type, struct wg_format *format)
+         else if (IsEqualGUID(&subtype, &MEDIASUBTYPE_MSAUDIO1) ||
+                 IsEqualGUID(&subtype, &MFAudioFormat_WMAudioV8) ||
+                 IsEqualGUID(&subtype, &MFAudioFormat_WMAudioV9) ||
+-                IsEqualGUID(&subtype, &MFAudioFormat_WMAudio_Lossless))
++                IsEqualGUID(&subtype, &MFAudioFormat_WMAudio_Lossless) ||
++                IsEqualGUID(&subtype, &MFAudioFormat_XMAudio2))
+             mf_media_type_to_wg_format_audio_wma(type, &subtype, format);
+         else if (IsEqualGUID(&subtype, &MFAudioFormat_AAC) || IsEqualGUID(&subtype, &MFAudioFormat_RAW_AAC))
+             mf_media_type_to_wg_format_audio_mpeg4(type, &subtype, format);
+diff --git a/dlls/winegstreamer/quartz_parser.c b/dlls/winegstreamer/quartz_parser.c
+index 5cddd7bd254..46e29d816fc 100644
+--- a/dlls/winegstreamer/quartz_parser.c
++++ b/dlls/winegstreamer/quartz_parser.c
+@@ -42,6 +42,7 @@ static const GUID MEDIASUBTYPE_VC1S = {mmioFOURCC('V','C','1','S'), 0x0000, 0x00
+ static const GUID MEDIASUBTYPE_MP3  = {WAVE_FORMAT_MPEGLAYER3, 0x0000, 0x0010, {0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71}};
+ static const GUID MEDIASUBTYPE_WMV_Unknown = {0x7ce12ca9, 0xbfbf, 0x43d9, {0x9d, 0x00, 0x82, 0xb8, 0xed, 0x54, 0x31, 0x6b}};
+ DEFINE_GUID(MEDIASUBTYPE_ABGR32,D3DFMT_A8B8G8R8,0x524f,0x11ce,0x9f,0x53,0x00,0x20,0xaf,0x0b,0xa7,0x70);
++static const GUID MEDIASUBTYPE_XMAUDIO2 = {0x0166, 0x0000, 0x0010, {0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71}};
+ 
+ struct parser
+ {
+@@ -308,6 +309,11 @@ static bool amt_from_wg_format_audio_wma(AM_MEDIA_TYPE *mt, const struct wg_form
+             subtype = &MEDIASUBTYPE_WMAUDIO2;
+             codec_data_len = WMAUDIO2_WFX_EXTRA_BYTES;
+             fmt_tag = WAVE_FORMAT_WMAUDIO2;
++            if (format->u.audio.is_xma)
++            {
++                subtype = &MEDIASUBTYPE_XMAUDIO2;
++                fmt_tag = 0x0166;
++            }
+             break;
+         case 3:
+             subtype = &MEDIASUBTYPE_WMAUDIO3;
+@@ -952,7 +958,8 @@ static bool amt_to_wg_format_audio_mpeg1_layer3(const AM_MEDIA_TYPE *mt, struct
+     return true;
+ }
+ 
+-static bool amt_to_wg_format_audio_wma(const AM_MEDIA_TYPE *mt, struct wg_format *format)
++static bool amt_to_wg_format_audio_wma(const AM_MEDIA_TYPE *mt, struct wg_format *format,
++        bool is_xma)
+ {
+     const WAVEFORMATEX *audio_format = (const WAVEFORMATEX *)mt->pbFormat;
+ 
+@@ -978,6 +985,7 @@ static bool amt_to_wg_format_audio_wma(const AM_MEDIA_TYPE *mt, struct wg_format
+     else
+         assert(false);
+     format->major_type = WG_MAJOR_TYPE_AUDIO_WMA;
++    format->u.audio.is_xma = is_xma;
+     format->u.audio.bitrate = audio_format->nAvgBytesPerSec * 8;
+     format->u.audio.rate = audio_format->nSamplesPerSec;
+     format->u.audio.depth = audio_format->wBitsPerSample;
+@@ -1218,7 +1226,9 @@ bool amt_to_wg_format(const AM_MEDIA_TYPE *mt, struct wg_format *format)
+                 || IsEqualGUID(&mt->subtype, &MEDIASUBTYPE_WMAUDIO2)
+                 || IsEqualGUID(&mt->subtype, &MEDIASUBTYPE_WMAUDIO3)
+                 || IsEqualGUID(&mt->subtype, &MEDIASUBTYPE_WMAUDIO_LOSSLESS))
+-            return amt_to_wg_format_audio_wma(mt, format);
++            return amt_to_wg_format_audio_wma(mt, format, false);
++        if (IsEqualGUID(&mt->subtype, &MEDIASUBTYPE_XMAUDIO2))
++            return amt_to_wg_format_audio_wma(mt, format, true);
+         return amt_to_wg_format_audio(mt, format);
+     }
+ 
+diff --git a/dlls/winegstreamer/unixlib.h b/dlls/winegstreamer/unixlib.h
+index d274d6f7457..6751f02f55e 100644
+--- a/dlls/winegstreamer/unixlib.h
++++ b/dlls/winegstreamer/unixlib.h
+@@ -145,6 +145,7 @@ struct wg_format
+             uint32_t payload_type;
+             uint32_t codec_data_len;
+             unsigned char codec_data[64];
++            UINT8 is_xma;
+         } audio;
+ 
+         /* Valid members for different video formats:
+diff --git a/dlls/winegstreamer/wg_format.c b/dlls/winegstreamer/wg_format.c
+index fce3d27a0d3..52c3330e6a5 100644
+--- a/dlls/winegstreamer/wg_format.c
++++ b/dlls/winegstreamer/wg_format.c
+@@ -898,10 +898,20 @@ static GstCaps *wg_format_to_caps_audio_wma(const struct wg_format *format)
+     GstBuffer *buffer;
+     GstCaps *caps;
+ 
+-    if (!(caps = gst_caps_new_empty_simple("audio/x-wma")))
+-        return NULL;
+-    if (format->u.audio.version)
+-        gst_caps_set_simple(caps, "wmaversion", G_TYPE_INT, format->u.audio.version, NULL);
++    if (format->u.audio.is_xma)
++    {
++        if (!(caps = gst_caps_new_empty_simple("audio/x-xma")))
++            return NULL;
++        if (format->u.audio.version)
++            gst_caps_set_simple(caps, "xmaversion", G_TYPE_INT, format->u.audio.version, NULL);
++    }
++    else
++    {
++        if (!(caps = gst_caps_new_empty_simple("audio/x-wma")))
++            return NULL;
++        if (format->u.audio.version)
++            gst_caps_set_simple(caps, "wmaversion", G_TYPE_INT, format->u.audio.version, NULL);
++    }
+ 
+     if (format->u.audio.bitrate)
+         gst_caps_set_simple(caps, "bitrate", G_TYPE_INT, format->u.audio.bitrate, NULL);
+diff --git a/dlls/winegstreamer/wma_decoder.c b/dlls/winegstreamer/wma_decoder.c
+index 815c589b2a0..ffab17ef059 100644
+--- a/dlls/winegstreamer/wma_decoder.c
++++ b/dlls/winegstreamer/wma_decoder.c
+@@ -32,12 +32,15 @@
+ WINE_DEFAULT_DEBUG_CHANNEL(wmadec);
+ WINE_DECLARE_DEBUG_CHANNEL(winediag);
+ 
++extern const GUID MFAudioFormat_XMAudio2;
++
+ static const GUID *const wma_decoder_input_types[] =
+ {
+     &MEDIASUBTYPE_MSAUDIO1,
+     &MFAudioFormat_WMAudioV8,
+     &MFAudioFormat_WMAudioV9,
+     &MFAudioFormat_WMAudio_Lossless,
++    &MFAudioFormat_XMAudio2,
+ };
+ static const GUID *const wma_decoder_output_types[] =
+ {

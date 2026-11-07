@@ -1,0 +1,30 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Tue, 24 Dec 2024 10:08:24 +0100
+Subject: [PATCH] HACK: wmvdecod: Expose AV1 decoding support.
+
+(cherry picked from commit 7e37da5aba12fe5d1115f7242c5e87b8e21cb0b0)
+---
+ dlls/wmvdecod/wmvdecod.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/dlls/wmvdecod/wmvdecod.c b/dlls/wmvdecod/wmvdecod.c
+index aba1750d1bd..94ad04219bc 100644
+--- a/dlls/wmvdecod/wmvdecod.c
++++ b/dlls/wmvdecod/wmvdecod.c
+@@ -67,6 +67,7 @@ HRESULT WINAPI DllRegisterServer(void)
+         {MFMediaType_Video, MFVideoFormat_WVC1},
+         {MFMediaType_Video, MEDIASUBTYPE_VC1S},
+         {MFMediaType_Video, MFVideoFormat_theora},
++        {MFMediaType_Video, MFVideoFormat_AV1},
+     };
+     MFT_REGISTER_TYPE_INFO wmv_decoder_mft_outputs[] =
+     {
+@@ -107,6 +108,7 @@ HRESULT WINAPI DllRegisterServer(void)
+         {.type = MEDIATYPE_Video, .subtype = MEDIASUBTYPE_WVP2},
+         {.type = MEDIATYPE_Video, .subtype = MEDIASUBTYPE_VC1S},
+         {.type = MEDIATYPE_Video, .subtype = MFVideoFormat_theora},
++        {.type = MEDIATYPE_Video, .subtype = MFVideoFormat_AV1},
+     };
+     HRESULT hr;
+ 

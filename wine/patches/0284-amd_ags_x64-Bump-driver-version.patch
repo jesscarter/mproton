@@ -1,0 +1,27 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Fri, 16 Apr 2021 20:03:12 +0300
+Subject: [PATCH] amd_ags_x64: Bump driver version.
+
+For Forza Horizon 4.
+
+(cherry picked from commit 6545a494b98f63aa8c86b6ca601e7664f082e544)
+---
+ dlls/amd_ags_x64/amd_ags_x64_main.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/amd_ags_x64/amd_ags_x64_main.c b/dlls/amd_ags_x64/amd_ags_x64_main.c
+index 93d89693835..3fb52de1751 100644
+--- a/dlls/amd_ags_x64/amd_ags_x64_main.c
++++ b/dlls/amd_ags_x64/amd_ags_x64_main.c
+@@ -466,8 +466,8 @@ AGSReturnCode WINAPI agsInit(AGSContext **context, const AGSConfiguration *confi
+     gpu_info->agsVersionMajor = amd_ags_info[object->version].major;
+     gpu_info->agsVersionMinor = amd_ags_info[object->version].minor;
+     gpu_info->agsVersionPatch = amd_ags_info[object->version].patch;
+-    gpu_info->driverVersion = "20.20.2-180516a-328911C-RadeonSoftwareAdrenalin";
+-    gpu_info->radeonSoftwareVersion  = "20.20.2";
++    gpu_info->driverVersion = "20.50.03.05-210326a-365573E-RadeonSoftwareAdrenalin2020";
++    gpu_info->radeonSoftwareVersion  = "21.3.2";
+     gpu_info->numDevices = object->device_count;
+     gpu_info->devices = object->devices;
+ 

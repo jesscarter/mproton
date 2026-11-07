@@ -1,0 +1,1226 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Shaun Ren <sren@codeweavers.com>
+Date: Tue, 5 Mar 2024 23:50:48 -0500
+Subject: [PATCH] protontts: Implement basic TTS functionality using Piper.
+
+CW-Bug-Id: #18723
+CW-Bug-Id: #20918
+CW-Bug-Id: #21959
+CW-Bug-Id: #22520
+CW-Bug-Id: #22894
+(cherry picked from commit bc506509c64d3c5cb8234d19118be8c51f683ce8)
+
+mproton-resolved: dropped the libgcrypt check from the hunk (11.20 has none and Proton's gcrypt bcrypt patches are not carried); kept the Piper check
+---
+ configure.ac                         |  14 +
+ dlls/protontts/Makefile.in           |  11 +
+ dlls/protontts/main.c                | 130 ++++++++
+ dlls/protontts/protontts.spec        |   4 +
+ dlls/protontts/protontts_classes.idl |  32 ++
+ dlls/protontts/protontts_private.h   |  93 ++++++
+ dlls/protontts/tts.c                 | 453 +++++++++++++++++++++++++++
+ dlls/protontts/unixlib.c             | 391 +++++++++++++++++++++++
+ 8 files changed, 1128 insertions(+)
+ create mode 100644 dlls/protontts/Makefile.in
+ create mode 100644 dlls/protontts/main.c
+ create mode 100644 dlls/protontts/protontts.spec
+ create mode 100644 dlls/protontts/protontts_classes.idl
+ create mode 100644 dlls/protontts/protontts_private.h
+ create mode 100644 dlls/protontts/tts.c
+ create mode 100644 dlls/protontts/unixlib.c
+
+diff --git a/configure.ac b/configure.ac
+index f4c0c9c70a8..a23bc295863 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -52,6 +52,7 @@ AC_ARG_WITH(opengl,    AS_HELP_STRING([--without-opengl],[do not use OpenGL]))
+ AC_ARG_WITH(oss,       AS_HELP_STRING([--without-oss],[do not use the OSS sound support]))
+ AC_ARG_WITH(pcap,      AS_HELP_STRING([--without-pcap],[do not use the Packet Capture library]))
+ AC_ARG_WITH(pcsclite,  AS_HELP_STRING([--without-pcsclite],[do not use PCSC lite]))
++AC_ARG_WITH(piper,     AS_HELP_STRING([--without-piper],[do not use the Piper TTS library]))
+ AC_ARG_WITH(pthread,   AS_HELP_STRING([--without-pthread],[do not use the pthread library]))
+ AC_ARG_WITH(pulse,     AS_HELP_STRING([--without-pulse],[do not use PulseAudio sound support]))
+ AC_ARG_WITH(sane,      AS_HELP_STRING([--without-sane],[do not use SANE (scanner support)]))
+@@ -1941,6 +1942,18 @@ fi
+ WINE_NOTICE_WITH(vulkan,[test "x$ac_cv_lib_soname_vulkan$ac_cv_lib_soname_MoltenVK" = "x"],
+                  [libvulkan and libMoltenVK ${notice_platform}development files not found, Vulkan won't be supported.])
+ 
++dnl **** Check for libpiper ****
++if test "x$with_piper" != "xno"
++then
++    WINE_PACKAGE_FLAGS(PIPER,[piper],[-lpiper],,,
++        [AC_CHECK_HEADER(piper/piper_c.h,
++            [AC_CHECK_LIB(piper,piperInitialize,[:],[PIPER_LIBS=""],[$PIPER_LIBS])],
++            [PIPER_LIBS=""])])
++fi
++WINE_NOTICE_WITH(piper,[test "$ac_cv_lib_piper_piperInitialize" != "yes"],
++                 [libpiper ${notice_platform}development files not found, protontts won't be supported.],
++                 [enable_protontts])
++
+ dnl **** Check for gcc specific options ****
+ 
+ if test "x${GCC}" = "xyes"
+@@ -3061,6 +3074,7 @@ WINE_CONFIG_MAKEFILE(dlls/prntvpt/tests)
+ WINE_CONFIG_MAKEFILE(dlls/profapi)
+ WINE_CONFIG_MAKEFILE(dlls/propsys)
+ WINE_CONFIG_MAKEFILE(dlls/propsys/tests)
++WINE_CONFIG_MAKEFILE(dlls/protontts)
+ WINE_CONFIG_MAKEFILE(dlls/psapi)
+ WINE_CONFIG_MAKEFILE(dlls/psapi/tests)
+ WINE_CONFIG_MAKEFILE(dlls/pstorec)
+diff --git a/dlls/protontts/Makefile.in b/dlls/protontts/Makefile.in
+new file mode 100644
+index 00000000000..b4705778a47
+--- /dev/null
++++ b/dlls/protontts/Makefile.in
+@@ -0,0 +1,11 @@
++MODULE      = protontts.dll
++UNIXLIB     = protontts.so
++IMPORTS     = ole32
++UNIX_CFLAGS = $(PIPER_CFLAGS)
++UNIX_LIBS   = $(PIPER_LIBS) $(PTHREAD_LIBS)
++
++SOURCES = \
++	main.c \
++	tts.c \
++	protontts_classes.idl \
++	unixlib.c
+diff --git a/dlls/protontts/main.c b/dlls/protontts/main.c
+new file mode 100644
+index 00000000000..a9dad946400
+--- /dev/null
++++ b/dlls/protontts/main.c
+@@ -0,0 +1,130 @@
++/* protontts main file.
++ *
++ * Copyright 2023 Shaun Ren for CodeWeavers
++ *
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation; either
++ * version 2.1 of the License, or (at your option) any later version.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with this library; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
++ */
++
++#include <stdarg.h>
++
++#define COBJMACROS
++
++#include "windef.h"
++#include "winbase.h"
++#include "initguid.h"
++#include "objbase.h"
++#include "sapiddk.h"
++
++#include "wine/debug.h"
++
++#include "protontts_classes.h"
++#include "protontts_private.h"
++
++WINE_DEFAULT_DEBUG_CHANNEL(protontts);
++
++BOOL WINAPI DllMain(HINSTANCE instance, DWORD reason, void *reserved)
++{
++    if (reason == DLL_PROCESS_ATTACH)
++    {
++        DisableThreadLibraryCalls(instance);
++        __wine_init_unix_call();
++        WINE_UNIX_CALL(unix_process_attach, NULL);
++    }
++    else if (reason == DLL_PROCESS_DETACH)
++    {
++        free_tts();
++    }
++
++    return TRUE;
++}
++
++struct class_factory
++{
++    IClassFactory IClassFactory_iface;
++    HRESULT (*create_instance)(REFIID iid, void **out);
++};
++
++static inline struct class_factory *impl_from_IClassFactory(IClassFactory *iface)
++{
++    return CONTAINING_RECORD(iface, struct class_factory, IClassFactory_iface);
++}
++
++static HRESULT WINAPI class_factory_QueryInterface(IClassFactory *iface, REFIID iid, void **out)
++{
++    TRACE("(%p, %s, %p).\n", iface, debugstr_guid(iid), out);
++
++    if (IsEqualGUID(iid, &IID_IUnknown) || IsEqualGUID(iid, &IID_IClassFactory))
++    {
++        *out = iface;
++        IClassFactory_AddRef(iface);
++        return S_OK;
++    }
++
++    WARN("%s not implemented.\n", debugstr_guid(iid));
++    *out = NULL;
++    return E_NOINTERFACE;
++}
++
++static ULONG WINAPI class_factory_AddRef(IClassFactory *iface)
++{
++    return 2;
++}
++
++static ULONG WINAPI class_factory_Release(IClassFactory *iface)
++{
++    return 1;
++}
++
++static HRESULT WINAPI class_factory_CreateInstance(IClassFactory *iface, IUnknown *outer, REFIID iid, void **obj)
++{
++    struct class_factory *This = impl_from_IClassFactory(iface);
++
++    TRACE("(%p, %p, %s, %p).\n", iface, outer, debugstr_guid(iid), obj);
++
++    *obj = NULL;
++    if (outer) return CLASS_E_NOAGGREGATION;
++    return This->create_instance(iid, obj);
++}
++
++static HRESULT WINAPI class_factory_LockServer(IClassFactory *iface, BOOL lock)
++{
++    FIXME("(%d): stub.\n", lock);
++    return S_OK;
++}
++
++static const IClassFactoryVtbl class_factory_vtbl =
++{
++    class_factory_QueryInterface,
++    class_factory_AddRef,
++    class_factory_Release,
++    class_factory_CreateInstance,
++    class_factory_LockServer,
++};
++
++static struct class_factory ttsengine_cf = {{&class_factory_vtbl}, ttsengine_create};
++
++HRESULT WINAPI DllGetClassObject(REFCLSID clsid, REFIID iid, void **obj)
++{
++    IClassFactory *cf;
++
++    TRACE("(%s, %s, %p).\n", debugstr_guid(clsid), debugstr_guid(iid), obj);
++
++    if (IsEqualCLSID(clsid, &CLSID_TTSEngineCom))
++        cf = &ttsengine_cf.IClassFactory_iface;
++    else
++        return CLASS_E_CLASSNOTAVAILABLE;
++
++    return IClassFactory_QueryInterface(cf, iid, obj);
++}
+diff --git a/dlls/protontts/protontts.spec b/dlls/protontts/protontts.spec
+new file mode 100644
+index 00000000000..b16365d0c9f
+--- /dev/null
++++ b/dlls/protontts/protontts.spec
+@@ -0,0 +1,4 @@
++@ stdcall -private DllCanUnloadNow()
++@ stdcall -private DllGetClassObject(ptr ptr ptr)
++@ stdcall -private DllRegisterServer()
++@ stdcall -private DllUnregisterServer()
+diff --git a/dlls/protontts/protontts_classes.idl b/dlls/protontts/protontts_classes.idl
+new file mode 100644
+index 00000000000..28f25943199
+--- /dev/null
++++ b/dlls/protontts/protontts_classes.idl
+@@ -0,0 +1,32 @@
++/*
++ * protontts classes.
++ *
++ * Copyright 2023 Shaun Ren for CodeWeavers
++ *
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation; either
++ * version 2.1 of the License, or (at your option) any later version.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with this library; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
++ */
++
++#pragma makedep register
++
++[
++    uuid(52808ae1-d977-4cd8-92d2-feacb92fe276),
++    helpstring("Proton TTS Engine Class"),
++    threading(both)
++]
++coclass TTSEngineCom
++{
++    interface ISpTTSEngine;
++    interface ISpObjectWithToken;
++};
+diff --git a/dlls/protontts/protontts_private.h b/dlls/protontts/protontts_private.h
+new file mode 100644
+index 00000000000..36539af7d90
+--- /dev/null
++++ b/dlls/protontts/protontts_private.h
+@@ -0,0 +1,93 @@
++/*
++ * protontts private header file.
++ *
++ * Copyright 2023 Shaun Ren for CodeWeavers
++ *
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation; either
++ * version 2.1 of the License, or (at your option) any later version.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with this library; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
++ */
++
++#ifndef __PROTONTTS_PRIVATE_H
++#define __PROTONTTS_PRIVATE_H
++
++#include <stdbool.h>
++#include <stdint.h>
++#include "windef.h"
++#include "winternl.h"
++
++#include "wine/unixlib.h"
++
++void free_tts(void);
++HRESULT ttsengine_create(REFIID iid, void **obj);
++
++typedef UINT64 tts_t;
++typedef UINT64 tts_voice_t;
++
++struct tts_voice_load_params
++{
++    tts_t tts;
++    const char *model_path;
++    INT64 speaker_id;
++    tts_voice_t voice;
++};
++
++struct tts_voice_get_config_params
++{
++    tts_voice_t voice;
++    float length_scale;
++    INT32 sample_rate;
++    INT32 sample_width;
++    INT32 channels;
++};
++
++struct tts_voice_set_config_params
++{
++    tts_voice_t voice;
++    const float *length_scale;
++};
++
++struct tts_voice_synthesize_params
++{
++    tts_voice_t voice;
++    const char *text;
++    UINT32 size;
++    HANDLE abort_event;
++};
++
++struct tts_voice_audio_lock_params
++{
++    tts_voice_t voice;
++    void *buf;
++    UINT32 size;
++    UINT8 done;
++};
++
++enum unix_funcs
++{
++    unix_process_attach,
++
++    unix_tts_create,
++    unix_tts_destroy,
++
++    unix_tts_voice_load,
++    unix_tts_voice_destroy,
++    unix_tts_voice_get_config,
++    unix_tts_voice_set_config,
++    unix_tts_voice_synthesize,
++
++    unix_tts_voice_audio_lock,
++    unix_tts_voice_audio_release,
++};
++
++#endif /* __PROTONTTS_PRIVATE_H */
+diff --git a/dlls/protontts/tts.c b/dlls/protontts/tts.c
+new file mode 100644
+index 00000000000..f0f19d6ba21
+--- /dev/null
++++ b/dlls/protontts/tts.c
+@@ -0,0 +1,453 @@
++/*
++ * protontts SAPI engine implementation.
++ *
++ * Copyright 2023 Shaun Ren for CodeWeavers
++ *
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation; either
++ * version 2.1 of the License, or (at your option) any later version.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with this library; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
++ */
++
++#include <stdarg.h>
++
++#define COBJMACROS
++
++#include "windef.h"
++#include "winbase.h"
++#include "objbase.h"
++
++#include "sapiddk.h"
++#include "sperror.h"
++
++#include "wine/debug.h"
++
++#include "protontts_private.h"
++
++#include "initguid.h"
++
++WINE_DEFAULT_DEBUG_CHANNEL(protontts);
++
++DEFINE_GUID(SPDFID_WaveFormatEx, 0xc31adbae,0x527f,0x4ff5,0xa2,0x30,0xf6,0x2b,0xb6,0x1f,0xf7,0x0c);
++
++struct ttsengine
++{
++    ISpTTSEngine ISpTTSEngine_iface;
++    ISpObjectWithToken ISpObjectWithToken_iface;
++    LONG ref;
++
++    ISpObjectToken *token;
++    INT64 speaker_id;
++    float base_length_scale;
++    tts_voice_t voice;
++};
++
++static INIT_ONCE init_once = INIT_ONCE_STATIC_INIT;
++static tts_t tts = 0;
++
++static inline struct ttsengine *impl_from_ISpTTSEngine(ISpTTSEngine *iface)
++{
++    return CONTAINING_RECORD(iface, struct ttsengine, ISpTTSEngine_iface);
++}
++
++static inline struct ttsengine *impl_from_ISpObjectWithToken(ISpObjectWithToken *iface)
++{
++    return CONTAINING_RECORD(iface, struct ttsengine, ISpObjectWithToken_iface);
++}
++
++static BOOL WINAPI init_tts(INIT_ONCE *once, void *param, void **ctx)
++{
++    WINE_UNIX_CALL(unix_tts_create, &tts);
++    return tts != 0;
++}
++
++void free_tts(void)
++{
++    if (tts) WINE_UNIX_CALL(unix_tts_destroy, &tts);
++}
++
++static tts_voice_t tts_voice_load(tts_t tts, const char *model_path, INT64 speaker_id)
++{
++    struct tts_voice_load_params params =
++    {
++        .tts = tts,
++        .model_path = model_path,
++        .speaker_id = speaker_id,
++        .voice = 0,
++    };
++
++    WINE_UNIX_CALL(unix_tts_voice_load, &params);
++    return params.voice;
++}
++
++static void tts_voice_set_length_scale(tts_voice_t voice, float length_scale)
++{
++    struct tts_voice_set_config_params params =
++    {
++        .voice = voice,
++        .length_scale = &length_scale,
++    };
++
++    WINE_UNIX_CALL(unix_tts_voice_set_config, &params);
++}
++
++static void tts_voice_audio_lock(tts_voice_t voice, void **buf, UINT32 *size, bool *done)
++{
++    struct tts_voice_audio_lock_params params =
++    {
++        .voice = voice,
++    };
++
++    WINE_UNIX_CALL(unix_tts_voice_audio_lock, &params);
++    *buf = params.buf;
++    *size = params.size;
++    *done = params.done;
++
++    TRACE("buf = %p, size = %u, done = %d.\n", params.buf, params.size, params.done);
++}
++
++static HRESULT WINAPI ttsengine_QueryInterface(ISpTTSEngine *iface, REFIID iid, void **obj)
++{
++    struct ttsengine *This = impl_from_ISpTTSEngine(iface);
++
++    TRACE("(%p)->(%s %p)\n", This, debugstr_guid(iid), obj);
++
++    if (IsEqualIID(iid, &IID_IUnknown) ||
++        IsEqualIID(iid, &IID_ISpTTSEngine))
++    {
++        *obj = &This->ISpTTSEngine_iface;
++    }
++    else if (IsEqualIID(iid, &IID_ISpObjectWithToken))
++        *obj = &This->ISpObjectWithToken_iface;
++    else
++    {
++        *obj = NULL;
++        return E_NOINTERFACE;
++    }
++
++    IUnknown_AddRef((IUnknown *)*obj);
++    return S_OK;
++}
++
++static ULONG WINAPI ttsengine_AddRef(ISpTTSEngine *iface)
++{
++    struct ttsengine *This = impl_from_ISpTTSEngine(iface);
++    ULONG ref = InterlockedIncrement(&This->ref);
++
++    TRACE("(%p) ref=%lu\n", This, ref);
++
++    return ref;
++}
++
++static ULONG WINAPI ttsengine_Release(ISpTTSEngine *iface)
++{
++    struct ttsengine *This = impl_from_ISpTTSEngine(iface);
++    ULONG ref = InterlockedDecrement(&This->ref);
++
++    TRACE("(%p) ref=%lu\n", This, ref);
++
++    if (!ref)
++    {
++        if (This->token) ISpObjectToken_Release(This->token);
++        if (This->voice) WINE_UNIX_CALL(unix_tts_voice_destroy, &This->voice);
++
++        free(This);
++    }
++
++    return ref;
++}
++
++static DWORD CALLBACK synthesize_thread_proc(void *params)
++{
++    SetThreadDescription(GetCurrentThread(), L"protontts_synthesize");
++    return WINE_UNIX_CALL(unix_tts_voice_synthesize, params);
++}
++
++static HRESULT WINAPI ttsengine_Speak(ISpTTSEngine *iface, DWORD flags, REFGUID fmtid,
++                                      const WAVEFORMATEX *wfx, const SPVTEXTFRAG *frag_list,
++                                      ISpTTSEngineSite *site)
++{
++    struct ttsengine *This = impl_from_ISpTTSEngine(iface);
++    HANDLE abort_event;
++    HANDLE thread = NULL;
++    char *text = NULL;
++    HRESULT hr = S_OK;
++
++    TRACE("(%p, %#lx, %s, %p, %p, %p).\n", iface, flags, debugstr_guid(fmtid), wfx, frag_list, site);
++
++    if (!This->voice)
++        return SPERR_UNINITIALIZED;
++
++    if (!(abort_event = CreateEventW(NULL, FALSE, FALSE, NULL)))
++        return HRESULT_FROM_WIN32(GetLastError());
++
++    tts_voice_set_length_scale(This->voice, This->base_length_scale);
++    for (; frag_list; frag_list = frag_list->pNext)
++    {
++        struct tts_voice_synthesize_params params;
++        bool done;
++
++        if (ISpTTSEngineSite_GetActions(site) & SPVES_ABORT)
++            return S_OK;
++
++        params.size = WideCharToMultiByte(CP_UTF8, 0, frag_list->pTextStart, frag_list->ulTextLen, NULL, 0, NULL, NULL) + 1;
++        if (!(text = malloc(params.size)))
++        {
++            hr = E_OUTOFMEMORY;
++            goto done;
++        }
++        WideCharToMultiByte(CP_UTF8, 0, frag_list->pTextStart, frag_list->ulTextLen, text, params.size, NULL, NULL);
++        text[params.size - 1] = '\0';
++
++        params.voice       = This->voice;
++        params.text        = text;
++        params.abort_event = abort_event;
++
++        if (!(thread = CreateThread(NULL, 0, synthesize_thread_proc, &params, 0, NULL)))
++        {
++            hr = HRESULT_FROM_WIN32(GetLastError());
++            goto done;
++        }
++
++        for (done = false; !done;)
++        {
++            void *buf;
++            UINT32 size;
++
++            Sleep(50);
++
++            if (ISpTTSEngineSite_GetActions(site) & SPVES_ABORT)
++            {
++                SetEvent(abort_event);
++                goto done;
++            }
++
++            tts_voice_audio_lock(This->voice, &buf, &size, &done);
++            if (buf)
++                hr = ISpTTSEngineSite_Write(site, buf, size, NULL);
++            WINE_UNIX_CALL(unix_tts_voice_audio_release, &This->voice);
++
++            if (FAILED(hr))
++            {
++                SetEvent(abort_event);
++                goto done;
++            }
++        }
++
++        CloseHandle(thread);
++        thread = NULL;
++    }
++
++done:
++    if (thread)
++    {
++        WaitForSingleObject(thread, INFINITE);
++        CloseHandle(thread);
++    }
++    CloseHandle(abort_event);
++    free(text);
++
++    return hr;
++}
++
++static HRESULT WINAPI ttsengine_GetOutputFormat(ISpTTSEngine *iface, const GUID *fmtid,
++                                                const WAVEFORMATEX *wfx, GUID *out_fmtid,
++                                                WAVEFORMATEX **out_wfx)
++{
++    struct ttsengine *This = impl_from_ISpTTSEngine(iface);
++    struct tts_voice_get_config_params params =
++    {
++        .voice = This->voice,
++    };
++
++    TRACE("(%p, %s, %p, %p, %p).\n", iface, debugstr_guid(fmtid), wfx, out_fmtid, out_wfx);
++
++    if (!This->voice)
++        return SPERR_UNINITIALIZED;
++
++    *out_fmtid = SPDFID_WaveFormatEx;
++    if (!(*out_wfx = CoTaskMemAlloc(sizeof(WAVEFORMATEX))))
++        return E_OUTOFMEMORY;
++
++    WINE_UNIX_CALL(unix_tts_voice_get_config, &params);
++
++    (*out_wfx)->wFormatTag      = WAVE_FORMAT_PCM;
++    (*out_wfx)->nChannels       = params.channels;
++    (*out_wfx)->nSamplesPerSec  = params.sample_rate;
++    (*out_wfx)->wBitsPerSample  = params.sample_width * 8;
++    (*out_wfx)->nBlockAlign     = params.sample_width * params.channels;
++    (*out_wfx)->nAvgBytesPerSec = params.sample_rate * params.sample_width * params.channels;
++    (*out_wfx)->cbSize          = 0;
++
++    return S_OK;
++}
++
++static ISpTTSEngineVtbl ttsengine_vtbl =
++{
++    ttsengine_QueryInterface,
++    ttsengine_AddRef,
++    ttsengine_Release,
++    ttsengine_Speak,
++    ttsengine_GetOutputFormat,
++};
++
++static HRESULT WINAPI objwithtoken_QueryInterface(ISpObjectWithToken *iface, REFIID iid, void **obj)
++{
++    struct ttsengine *This = impl_from_ISpObjectWithToken(iface);
++
++    TRACE("(%p, %s, %p).\n", iface, debugstr_guid(iid), obj);
++
++    return ISpTTSEngine_QueryInterface(&This->ISpTTSEngine_iface, iid, obj);
++}
++
++static ULONG WINAPI objwithtoken_AddRef(ISpObjectWithToken *iface)
++{
++    struct ttsengine *This = impl_from_ISpObjectWithToken(iface);
++
++    TRACE("(%p).\n", iface);
++
++    return ISpTTSEngine_AddRef(&This->ISpTTSEngine_iface);
++}
++
++static ULONG WINAPI objwithtoken_Release(ISpObjectWithToken *iface)
++{
++    struct ttsengine *This = impl_from_ISpObjectWithToken(iface);
++
++    TRACE("(%p).\n", iface);
++
++    return ISpTTSEngine_Release(&This->ISpTTSEngine_iface);
++}
++
++static HRESULT WINAPI objwithtoken_SetObjectToken(ISpObjectWithToken *iface, ISpObjectToken *token)
++{
++    struct ttsengine *This = impl_from_ISpObjectWithToken(iface);
++    char *model_path = NULL;
++    size_t model_path_size;
++    WCHAR *value;
++    int ret;
++    HRESULT hr = S_OK;
++
++    TRACE("(%p, %p).\n", iface, token);
++
++    if (!token)
++        return E_INVALIDARG;
++    if (This->token)
++        return SPERR_ALREADY_INITIALIZED;
++
++    if (FAILED(hr = ISpObjectToken_GetStringValue(token, L"ModelPath", &value)))
++        return hr;
++
++    model_path_size = WideCharToMultiByte(CP_UTF8, 0, value, -1, NULL, 0, NULL, NULL);
++    if (!(model_path = malloc(model_path_size)))
++    {
++        CoTaskMemFree(value);
++        return E_OUTOFMEMORY;
++    }
++    WideCharToMultiByte(CP_UTF8, 0, value, -1, model_path, model_path_size, NULL, NULL);
++
++    CoTaskMemFree(value);
++
++    hr = ISpObjectToken_GetStringValue(token, L"SpeakerID", &value);
++    if (FAILED(hr) && hr != SPERR_NOT_FOUND)
++        goto done;
++    else if (SUCCEEDED(hr))
++    {
++        ret = swscanf(value, L"%I64d", &This->speaker_id);
++        CoTaskMemFree(value);
++        if (ret != 1)
++        {
++            hr = E_INVALIDARG;
++            goto done;
++        }
++    }
++
++    hr = ISpObjectToken_GetStringValue(token, L"LengthScale", &value);
++    if (FAILED(hr) && hr != SPERR_NOT_FOUND)
++        goto done;
++    else if (SUCCEEDED(hr))
++    {
++        ret = swscanf(value, L"%f", &This->base_length_scale);
++        CoTaskMemFree(value);
++        if (ret != 1)
++        {
++            hr = E_INVALIDARG;
++            goto done;
++        }
++    }
++
++    This->voice = tts_voice_load(tts, model_path, This->speaker_id);
++    if (!This->voice)
++    {
++        hr = E_FAIL;
++        goto done;
++    }
++
++    ISpObjectToken_AddRef(token);
++    This->token = token;
++
++done:
++    free(model_path);
++    return hr;
++}
++
++static HRESULT WINAPI objwithtoken_GetObjectToken(ISpObjectWithToken *iface, ISpObjectToken **token)
++{
++    struct ttsengine *This = impl_from_ISpObjectWithToken(iface);
++
++    TRACE("(%p, %p).\n", iface, token);
++
++    if (!token)
++        return E_POINTER;
++
++    *token = This->token;
++    if (*token)
++    {
++        ISpObjectToken_AddRef(*token);
++        return S_OK;
++    }
++    else
++        return S_FALSE;
++}
++
++static const ISpObjectWithTokenVtbl objwithtoken_vtbl =
++{
++    objwithtoken_QueryInterface,
++    objwithtoken_AddRef,
++    objwithtoken_Release,
++    objwithtoken_SetObjectToken,
++    objwithtoken_GetObjectToken
++};
++
++HRESULT ttsengine_create(REFIID iid, void **obj)
++{
++    struct ttsengine *This;
++    HRESULT hr;
++
++    if (!InitOnceExecuteOnce(&init_once, init_tts, NULL, NULL) || !tts)
++        return E_FAIL;
++
++    if (!(This = malloc(sizeof(*This))))
++        return E_OUTOFMEMORY;
++
++    This->ISpTTSEngine_iface.lpVtbl = &ttsengine_vtbl;
++    This->ISpObjectWithToken_iface.lpVtbl = &objwithtoken_vtbl;
++    This->ref = 1;
++
++    This->token = NULL;
++    This->speaker_id = 0;
++    This->base_length_scale = 1.0f;
++    This->voice = 0;
++
++    hr = ISpTTSEngine_QueryInterface(&This->ISpTTSEngine_iface, iid, obj);
++    ISpTTSEngine_Release(&This->ISpTTSEngine_iface);
++    return hr;
++}
+diff --git a/dlls/protontts/unixlib.c b/dlls/protontts/unixlib.c
+new file mode 100644
+index 00000000000..74c9df4bf58
+--- /dev/null
++++ b/dlls/protontts/unixlib.c
+@@ -0,0 +1,391 @@
++/*
++ * protontts unixlib.
++ *
++ * Copyright 2023 Shaun Ren for CodeWeavers
++ *
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation; either
++ * version 2.1 of the License, or (at your option) any later version.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with this library; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
++ */
++
++#if 0
++#pragma makedep unix
++#endif
++
++#include <stdarg.h>
++#include <stdlib.h>
++#include <unistd.h>
++#include <pthread.h>
++
++#include <piper/piper_c.h>
++
++#include "ntstatus.h"
++#define WIN32_NO_STATUS
++#include "winternl.h"
++
++#include "wine/debug.h"
++
++#include "protontts_private.h"
++
++WINE_DEFAULT_DEBUG_CHANNEL(protontts);
++
++struct tts_audio_buf
++{
++    pthread_mutex_t mutex;
++    pthread_cond_t empty_cond;
++    void *buf;
++    UINT32 size;
++    bool done;
++};
++
++struct tts_voice
++{
++    Piper *piper;
++    PiperVoice *voice;
++
++    struct tts_audio_buf audio;
++};
++
++static ULONG_PTR zero_bits = 0;
++
++static inline Piper *get_piper(tts_t tts)
++{
++    return (Piper *)(ULONG_PTR)tts;
++}
++
++static inline struct tts_voice *get_voice(tts_voice_t voice)
++{
++    return (struct tts_voice *)(ULONG_PTR)voice;
++}
++
++static NTSTATUS process_attach(void *args)
++{
++#ifdef _WIN64
++    if (NtCurrentTeb()->WowTebOffset)
++    {
++        SYSTEM_BASIC_INFORMATION info;
++
++        NtQuerySystemInformation(SystemEmulationBasicInformation, &info, sizeof(info), NULL);
++        zero_bits = (ULONG_PTR)info.HighestUserAddress | 0x7fffffff;
++    }
++#endif
++    return STATUS_SUCCESS;
++}
++
++static NTSTATUS tts_create(void *args)
++{
++    Piper *piper = piperInitialize(NULL);
++
++    *(tts_t *)args = (tts_t)(ULONG_PTR)piper;
++    return piper ? STATUS_SUCCESS : STATUS_UNSUCCESSFUL;
++}
++
++static NTSTATUS tts_destroy(void *args)
++{
++    Piper *piper = get_piper(*(tts_t *)args);
++
++    piperTerminate(piper);
++    return STATUS_SUCCESS;
++}
++
++static NTSTATUS tts_voice_load(void *args)
++{
++    struct tts_voice_load_params *params = args;
++    const char *voice_files_dir = getenv("PROTON_VOICE_FILES");
++    char *model_path;
++    struct tts_voice *voice;
++
++    TRACE("(%p).\n", args);
++
++    if (!voice_files_dir)
++    {
++        ERR("Proton voice files not found.\n");
++        return STATUS_UNSUCCESSFUL;
++    }
++    if (!(model_path = malloc(strlen(voice_files_dir) + 1 + strlen(params->model_path) + 1)))
++        return STATUS_NO_MEMORY;
++    sprintf(model_path, "%s/%s", voice_files_dir, params->model_path);
++
++    if (!(voice = calloc(1, sizeof(*voice))))
++    {
++        free(model_path);
++        return STATUS_NO_MEMORY;
++    }
++
++    voice->piper = get_piper(params->tts);
++    voice->voice = piperLoadVoice(voice->piper, model_path, NULL, params->speaker_id, FALSE);
++    free(model_path);
++    if (!voice->voice)
++    {
++        free(voice);
++        return STATUS_UNSUCCESSFUL;
++    }
++
++    pthread_mutex_init(&voice->audio.mutex, NULL);
++    pthread_cond_init(&voice->audio.empty_cond, NULL);
++
++    params->voice = (tts_voice_t)(ULONG_PTR)voice;
++
++    TRACE("OK.\n");
++    return STATUS_SUCCESS;
++}
++
++static NTSTATUS tts_voice_destroy(void *args)
++{
++    struct tts_voice *voice = get_voice(*(tts_voice_t *)args);
++
++    piperFreeVoice(voice->voice);
++
++    pthread_mutex_destroy(&voice->audio.mutex);
++    pthread_cond_destroy(&voice->audio.empty_cond);
++
++    free(voice);
++
++    return STATUS_SUCCESS;
++}
++
++static NTSTATUS tts_voice_get_config(void *args)
++{
++    struct tts_voice_get_config_params *params = args;
++    struct tts_voice *voice = get_voice(params->voice);
++    PiperSynthesisConfig config;
++
++    piperGetVoiceSynthesisConfig(voice->voice, &config);
++
++    params->length_scale = config.lengthScale;
++    params->sample_rate  = config.sampleRate;
++    params->sample_width = config.sampleWidth;
++    params->channels     = config.channels;
++
++    return STATUS_SUCCESS;
++}
++
++static NTSTATUS tts_voice_set_config(void *args)
++{
++    struct tts_voice_set_config_params *params = args;
++    struct tts_voice *voice = get_voice(params->voice);
++
++    piperSetVoiceSynthesisConfig(voice->voice, NULL, params->length_scale, NULL, NULL, NULL);
++
++    return STATUS_SUCCESS;
++}
++
++struct tts_to_audio_cb_params
++{
++    struct tts_audio_buf *audio;
++    HANDLE abort_event;
++};
++
++static bool tts_to_audio_cb(const int16_t *data, size_t length, void *user_data)
++{
++    struct tts_to_audio_cb_params *params = user_data;
++    const UINT32 size = sizeof(*data) * length;
++    SIZE_T region_size = size;
++    LARGE_INTEGER timeout = { .QuadPart = 0 };
++
++    TRACE("(%p, %lu, %p).\n", data, length, user_data);
++
++    pthread_mutex_lock(&params->audio->mutex);
++
++    while (params->audio->buf)
++        pthread_cond_wait(&params->audio->empty_cond, &params->audio->mutex);
++
++    if (NtAllocateVirtualMemory(NtCurrentProcess(), &params->audio->buf, zero_bits, &region_size, MEM_COMMIT, PAGE_READWRITE))
++    {
++        pthread_mutex_unlock(&params->audio->mutex);
++        ERR("failed to allocate audio buffer\n");
++        return false;
++    }
++    memcpy(params->audio->buf, data, size);
++    params->audio->size = size;
++
++    pthread_mutex_unlock(&params->audio->mutex);
++
++    return NtWaitForSingleObject(params->abort_event, FALSE, &timeout) == STATUS_TIMEOUT;
++}
++
++static NTSTATUS tts_voice_synthesize(void *args)
++{
++    struct tts_voice_synthesize_params *params = args;
++    struct tts_voice *voice = get_voice(params->voice);
++    struct tts_to_audio_cb_params cb_params =
++    {
++        .audio = &voice->audio,
++        .abort_event = params->abort_event,
++    };
++    PiperSynthesisResult result;
++    bool success;
++
++    TRACE("(%p).\n", args);
++
++    voice->audio.done = false;
++    success = piperTextToAudio(voice->piper, voice->voice, params->text, &result, &cb_params, tts_to_audio_cb);
++    voice->audio.done = true;
++
++    return success ? STATUS_SUCCESS : STATUS_UNSUCCESSFUL;
++}
++
++static NTSTATUS tts_voice_audio_lock(void *args)
++{
++    struct tts_voice_audio_lock_params *params = args;
++    struct tts_voice *voice = get_voice(params->voice);
++
++    TRACE("(%p).\n", args);
++
++    pthread_mutex_lock(&voice->audio.mutex);
++
++    params->buf  = voice->audio.buf;
++    params->size = voice->audio.size;
++    params->done = voice->audio.done;
++
++    return STATUS_SUCCESS;
++}
++
++static NTSTATUS tts_voice_audio_release(void *args)
++{
++    struct tts_voice *voice = get_voice(*(tts_voice_t *)args);
++    SIZE_T size = 0;
++
++    TRACE("(%p).\n", args);
++
++    if (voice->audio.buf)
++        NtFreeVirtualMemory(NtCurrentProcess(), &voice->audio.buf, &size, MEM_RELEASE);
++    voice->audio.buf = NULL;
++    voice->audio.size = 0;
++
++    pthread_cond_signal(&voice->audio.empty_cond);
++    pthread_mutex_unlock(&voice->audio.mutex);
++
++    return STATUS_SUCCESS;
++}
++
++const unixlib_entry_t __wine_unix_call_funcs[] =
++{
++    process_attach,
++
++    tts_create,
++    tts_destroy,
++
++    tts_voice_load,
++    tts_voice_destroy,
++    tts_voice_get_config,
++    tts_voice_set_config,
++    tts_voice_synthesize,
++
++    tts_voice_audio_lock,
++    tts_voice_audio_release,
++};
++
++#ifdef _WIN64
++
++typedef ULONG PTR32;
++
++static NTSTATUS wow64_tts_voice_load(void *args)
++{
++    struct
++    {
++        tts_t tts;
++        PTR32 model_path;
++        INT64 speaker_id;
++        tts_voice_t voice;
++    } *params32 = args;
++    struct tts_voice_load_params params =
++    {
++        .tts = params32->tts,
++        .model_path = ULongToPtr(params32->model_path),
++        .speaker_id = params32->speaker_id,
++    };
++    NTSTATUS ret;
++
++    ret = tts_voice_load(&params);
++    params32->voice = params.voice;
++    return ret;
++}
++
++static NTSTATUS wow64_tts_voice_set_config(void *args)
++{
++    struct
++    {
++        tts_voice_t voice;
++        PTR32 length_scale;
++    } *params32 = args;
++    struct tts_voice_set_config_params params =
++    {
++        .voice = params32->voice,
++        .length_scale = ULongToPtr(params32->length_scale),
++    };
++
++    return tts_voice_set_config(&params);
++}
++
++
++static NTSTATUS wow64_tts_voice_synthesize(void *args)
++{
++    struct
++    {
++        tts_voice_t voice;
++        PTR32 text;
++        UINT32 size;
++        PTR32 abort_event;
++    } *params32 = args;
++    struct tts_voice_synthesize_params params =
++    {
++        .voice = params32->voice,
++        .text = ULongToPtr(params32->text),
++        .size = params32->size,
++        .abort_event = ULongToHandle(params32->abort_event),
++    };
++
++    return tts_voice_synthesize(&params);
++}
++
++static NTSTATUS wow64_tts_voice_audio_lock(void *args)
++{
++    struct
++    {
++        tts_voice_t voice;
++        PTR32 buf;
++        UINT32 size;
++        UINT8 done;
++    } *params32 = args;
++    struct tts_voice_audio_lock_params params =
++    {
++        .voice = params32->voice,
++    };
++    NTSTATUS ret;
++
++    ret = tts_voice_audio_lock(&params);
++    params32->buf = PtrToUlong(params.buf);
++    params32->size = params.size;
++    params32->done = params.done;
++    return ret;
++}
++
++const unixlib_entry_t __wine_unix_call_wow64_funcs[] =
++{
++    process_attach,
++
++    tts_create,
++    tts_destroy,
++
++    wow64_tts_voice_load,
++    tts_voice_destroy,
++    tts_voice_get_config,
++    wow64_tts_voice_set_config,
++    wow64_tts_voice_synthesize,
++
++    wow64_tts_voice_audio_lock,
++    tts_voice_audio_release,
++};
++
++#endif /* _WIN64 */

@@ -1,0 +1,40 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Tue, 1 Apr 2025 11:51:55 -0600
+Subject: [PATCH] amd_ags_x64: Add
+ agsDriverExtensionsDX11_SetMaxAsyncCompileThreadCount() stub.
+
+CW-Bug-Id: #25138
+(cherry picked from commit a86ef1f080e287033f11ae43754d79e98365b89b)
+---
+ dlls/amd_ags_x64/amd_ags_x64.spec   | 2 +-
+ dlls/amd_ags_x64/amd_ags_x64_main.c | 6 ++++++
+ 2 files changed, 7 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/amd_ags_x64/amd_ags_x64.spec b/dlls/amd_ags_x64/amd_ags_x64.spec
+index 0768fd9a085..6bf73258776 100644
+--- a/dlls/amd_ags_x64/amd_ags_x64.spec
++++ b/dlls/amd_ags_x64/amd_ags_x64.spec
+@@ -31,7 +31,7 @@
+ @ stdcall -norelay -arch=x86_64,arm64ec agsDriverExtensions_SetDepthBounds() DX11_SetDepthBounds_impl
+ @ stdcall -norelay -arch=x86_64,arm64ec agsDriverExtensionsDX11_SetDepthBounds() DX11_SetDepthBounds_impl
+ @ stdcall agsDriverExtensionsDX11_SetDiskShaderCacheEnabled(ptr long)
+-@ stub agsDriverExtensionsDX11_SetMaxAsyncCompileThreadCount
++@ stdcall agsDriverExtensionsDX11_SetMaxAsyncCompileThreadCount(ptr long)
+ @ stub agsDriverExtensionsDX11_SetViewBroadcastMasks
+ @ stub agsDriverExtensionsDX11_WriteBreadcrumb
+ @ stdcall agsDriverExtensionsDX12_CreateDevice(ptr ptr ptr ptr)
+diff --git a/dlls/amd_ags_x64/amd_ags_x64_main.c b/dlls/amd_ags_x64/amd_ags_x64_main.c
+index 59da62807b1..6fdadfb7ed7 100644
+--- a/dlls/amd_ags_x64/amd_ags_x64_main.c
++++ b/dlls/amd_ags_x64/amd_ags_x64_main.c
+@@ -1684,3 +1684,9 @@ AGSReturnCode WINAPI agsDriverExtensionsDX11_SetDiskShaderCacheEnabled(AGSContex
+     FIXME("context %p, enable %d stub.\n", context, enable);
+     return AGS_SUCCESS;
+ }
++
++AGSReturnCode WINAPI agsDriverExtensionsDX11_SetMaxAsyncCompileThreadCount(AGSContext *context, unsigned int thread_count)
++{
++    FIXME("context %p, thread_count %u.\n", context, thread_count);
++    return AGS_SUCCESS;
++}

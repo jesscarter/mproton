@@ -1,0 +1,48 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Thu, 23 Nov 2023 00:45:19 +0100
+Subject: [PATCH] HACK: mfplat: Stub out MFCreateDXGIDeviceManager, to avoid
+ the d3d path.
+
+Squashed with:
+
+HACK: mfplat: Return E_NOTIMPL from MFCreateDXGIDeviceManager for TOHU.
+
+Without this the game renders the videos as garbage.
+
+CW-Bug-Id: #20194
+
+HACK: mfplat: Move MFDXGIDeviceManager hack appid list to proton script
+
+mfplat: Remove comment about games requiring MFCreateDXGIDeviceManager() hack.
+
+It is not outdated and partially incorrect.
+
+CW-Bug-Id: #19126
+CW-Bug-Id: #20985
+(cherry picked from commit 415086a42b16451a91226579690d3e47e1a56953)
+---
+ dlls/mfplat/main.c | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/dlls/mfplat/main.c b/dlls/mfplat/main.c
+index c739e27cf01..e60063f7577 100644
+--- a/dlls/mfplat/main.c
++++ b/dlls/mfplat/main.c
+@@ -9677,9 +9677,16 @@ static const IMFDXGIDeviceManagerVtbl dxgi_device_manager_vtbl =
+ HRESULT WINAPI MFCreateDXGIDeviceManager(UINT *token, IMFDXGIDeviceManager **manager)
+ {
+     struct dxgi_device_manager *object;
++    const char *do_not_create = getenv("WINE_DO_NOT_CREATE_DXGI_DEVICE_MANAGER");
+ 
+     TRACE("%p, %p.\n", token, manager);
+ 
++    if (do_not_create && do_not_create[0] != '\0')
++    {
++        FIXME("stubbing out\n");
++        return E_NOTIMPL;
++    }
++
+     if (!token || !manager)
+         return E_POINTER;
+ 

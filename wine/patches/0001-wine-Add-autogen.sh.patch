@@ -1,0 +1,26 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arkadiusz Hiler <ahiler@codeweavers.com>
+Date: Thu, 18 Jan 2024 18:18:23 +0200
+Subject: [PATCH] wine: Add autogen.sh.
+
+(cherry picked from commit e0cbdbf0201808caa5de26a54b3828e40890748a)
+---
+ autogen.sh | 9 +++++++++
+ 1 file changed, 9 insertions(+)
+ create mode 100755 autogen.sh
+
+diff --git a/autogen.sh b/autogen.sh
+new file mode 100755
+index 00000000000..0e3ca52c178
+--- /dev/null
++++ b/autogen.sh
+@@ -0,0 +1,9 @@
++#!/bin/sh
++set -e
++tools/make_requests
++tools/make_specfiles
++dlls/winevulkan/make_vulkan -x vk.xml -X video.xml
++autoreconf -ifv
++rm -rf autom4te.cache
++
++echo "Now run ./configure"

@@ -1,0 +1,42 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Fri, 16 Apr 2021 20:30:22 +0300
+Subject: [PATCH] amd_ags_x64: Add partial stub for agsCheckDriverVersion().
+
+For Forza Horizon 4.
+
+(cherry picked from commit 931e3b951bbe0086f89d689bbfe96e7a3f554c58)
+---
+ dlls/amd_ags_x64/amd_ags_x64.spec   | 2 +-
+ dlls/amd_ags_x64/amd_ags_x64_main.c | 7 +++++++
+ 2 files changed, 8 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/amd_ags_x64/amd_ags_x64.spec b/dlls/amd_ags_x64/amd_ags_x64.spec
+index f483cc6380b..6806b145751 100644
+--- a/dlls/amd_ags_x64/amd_ags_x64.spec
++++ b/dlls/amd_ags_x64/amd_ags_x64.spec
+@@ -1,5 +1,5 @@
+ @ stdcall agsDeInit(ptr)
+-@ stub agsCheckDriverVersion
++@ stdcall agsCheckDriverVersion(ptr long)
+ @ stub agsDriverExtensionsDX11_BeginUAVOverlap
+ @ stub agsDriverExtensionsDX11_CreateBuffer
+ @ stub agsDriverExtensionsDX11_CreateDevice
+diff --git a/dlls/amd_ags_x64/amd_ags_x64_main.c b/dlls/amd_ags_x64/amd_ags_x64_main.c
+index b3dec2751a5..e5dbc102500 100644
+--- a/dlls/amd_ags_x64/amd_ags_x64_main.c
++++ b/dlls/amd_ags_x64/amd_ags_x64_main.c
+@@ -360,6 +360,13 @@ AGSReturnCode WINAPI agsGetCrossfireGPUCount(AGSContext *context, int *gpu_count
+     return AGS_SUCCESS;
+ }
+ 
++AGSDriverVersionResult WINAPI agsCheckDriverVersion(const char* version_reported, unsigned int version_required)
++{
++    FIXME("version_reported %s, version_required %d semi-stub.\n", debugstr_a(version_reported), version_required);
++
++    return AGS_SOFTWAREVERSIONCHECK_OK;
++}
++
+ BOOL WINAPI DllMain(HINSTANCE instance, DWORD reason, void *reserved)
+ {
+     TRACE("%p, %u, %p.\n", instance, reason, reserved);

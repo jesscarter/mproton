@@ -1,0 +1,29 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Thu, 1 Sep 2022 21:04:37 +0200
+Subject: [PATCH] qasf: Set user provided clock and time to prevent waits in
+ WMReader.
+
+CW-Bug-Id: #21147
+(cherry picked from commit b77879f271fc2e9cb5e578bf016b408ae4797adb)
+---
+ dlls/qasf/asfreader.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/dlls/qasf/asfreader.c b/dlls/qasf/asfreader.c
+index d3a7e08fadb..740affd50c0 100644
+--- a/dlls/qasf/asfreader.c
++++ b/dlls/qasf/asfreader.c
+@@ -556,6 +556,12 @@ static HRESULT asf_reader_init_stream(struct strmbase_filter *iface)
+             filter->stream_count, stream_numbers, selections)))
+         WARN("Failed to set reader %p stream selection, hr %#lx\n", filter->reader, hr);
+ 
++    if (SUCCEEDED(hr) && FAILED(hr = IWMReaderAdvanced2_SetUserProvidedClock(reader_advanced, TRUE)))
++        WARN("Failed to set user provided clock, hr %#lx\n", hr);
++
++    if (SUCCEEDED(hr) && FAILED(hr = IWMReaderAdvanced2_DeliverTime(reader_advanced, -1)))
++        WARN("Failed to set user time, hr %#lx\n", hr);
++
+     IWMReaderAdvanced2_Release(reader_advanced);
+ 
+     if (FAILED(hr))

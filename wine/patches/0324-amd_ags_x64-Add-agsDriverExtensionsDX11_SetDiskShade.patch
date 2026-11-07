@@ -1,0 +1,40 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Wed, 28 Feb 2024 14:43:55 -0600
+Subject: [PATCH] amd_ags_x64: Add
+ agsDriverExtensionsDX11_SetDiskShaderCacheEnabled() stub.
+
+CW-Bug-Id: #23474
+(cherry picked from commit 8f91b38578b89074337b529e34e50d219e5c8eb3)
+---
+ dlls/amd_ags_x64/amd_ags_x64.spec   | 2 +-
+ dlls/amd_ags_x64/amd_ags_x64_main.c | 6 ++++++
+ 2 files changed, 7 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/amd_ags_x64/amd_ags_x64.spec b/dlls/amd_ags_x64/amd_ags_x64.spec
+index 670d6cec13e..22543cd9479 100644
+--- a/dlls/amd_ags_x64/amd_ags_x64.spec
++++ b/dlls/amd_ags_x64/amd_ags_x64.spec
+@@ -25,7 +25,7 @@
+ @ stub agsDriverExtensionsDX11_NumPendingAsyncCompileJobs
+ @ stub agsDriverExtensionsDX11_SetClipRects
+ @ stdcall -norelay -arch=x86_64,arm64ec agsDriverExtensionsDX11_SetDepthBounds() DX11_SetDepthBounds_impl
+-@ stub agsDriverExtensionsDX11_SetDiskShaderCacheEnabled
++@ stdcall agsDriverExtensionsDX11_SetDiskShaderCacheEnabled(ptr long)
+ @ stub agsDriverExtensionsDX11_SetMaxAsyncCompileThreadCount
+ @ stub agsDriverExtensionsDX11_SetViewBroadcastMasks
+ @ stub agsDriverExtensionsDX11_WriteBreadcrumb
+diff --git a/dlls/amd_ags_x64/amd_ags_x64_main.c b/dlls/amd_ags_x64/amd_ags_x64_main.c
+index a56ea769b36..f4ddf00bf2e 100644
+--- a/dlls/amd_ags_x64/amd_ags_x64_main.c
++++ b/dlls/amd_ags_x64/amd_ags_x64_main.c
+@@ -1651,3 +1651,9 @@ __ASM_GLOBAL_FUNC( agsDriverExtensionsDX11_DestroyDevice,
+                    "jmp "     __ASM_NAME("agsDriverExtensionsDX11_DestroyDevice_511") "\n\t"
+                    "1:\tjmp " __ASM_NAME("agsDriverExtensionsDX11_DestroyDevice_520") )
+ #endif
++
++AGSReturnCode WINAPI agsDriverExtensionsDX11_SetDiskShaderCacheEnabled(AGSContext *context, int enable)
++{
++    FIXME("context %p, enable %d stub.\n", context, enable);
++    return AGS_SUCCESS;
++}

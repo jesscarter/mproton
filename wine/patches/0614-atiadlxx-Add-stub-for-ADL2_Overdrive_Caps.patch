@@ -1,0 +1,44 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Fri, 10 Jul 2026 12:06:56 -0600
+Subject: [PATCH] atiadlxx: Add stub for ADL2_Overdrive_Caps().
+
+CW-Bug-Id: #27348
+(cherry picked from commit 7ace859333f525524ed923e7281dbd03392c55f6)
+---
+ dlls/atiadlxx/atiadlxx.spec   |  2 +-
+ dlls/atiadlxx/atiadlxx_main.c | 11 +++++++++++
+ 2 files changed, 12 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/atiadlxx/atiadlxx.spec b/dlls/atiadlxx/atiadlxx.spec
+index d18bfc0eb5d..974bcde1289 100644
+--- a/dlls/atiadlxx/atiadlxx.spec
++++ b/dlls/atiadlxx/atiadlxx.spec
+@@ -553,7 +553,7 @@
+ @ stub ADL2_OverdriveN_ThrottleNotification_Get
+ @ stub ADL2_OverdriveN_ZeroRPMFan_Get
+ @ stub ADL2_OverdriveN_ZeroRPMFan_Set
+-@ stub ADL2_Overdrive_Caps
++@ cdecl ADL2_Overdrive_Caps(ptr long ptr ptr ptr)
+ @ stub ADL2_PPLogSettings_Get
+ @ stub ADL2_PPLogSettings_Set
+ @ stub ADL2_PPW_Caps
+diff --git a/dlls/atiadlxx/atiadlxx_main.c b/dlls/atiadlxx/atiadlxx_main.c
+index c1080869754..abc1a9fdec7 100644
+--- a/dlls/atiadlxx/atiadlxx_main.c
++++ b/dlls/atiadlxx/atiadlxx_main.c
+@@ -1159,3 +1159,14 @@ int CDECL ADL2_Device_PMLog_Device_Create(ADL_CONTEXT_HANDLE ctx, int adapter_in
+ 
+     return ADL_ERR_NOT_SUPPORTED;
+ }
++
++int CDECL ADL2_Overdrive_Caps(ADL_CONTEXT_HANDLE ctx, int adapter_index, int *supported, int *enabled, int *version)
++{
++    FIXME("ctx %p, adapter_index %d, supported %p, enabled %p, version %p stub.\n",
++            ctx, adapter_index, supported, enabled, version);
++
++    *supported = 0;
++    *enabled = 0;
++    *version = 0;
++    return ADL_ERR_NOT_SUPPORTED;
++}

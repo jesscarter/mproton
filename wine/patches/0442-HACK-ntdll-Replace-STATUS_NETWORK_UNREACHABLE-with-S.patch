@@ -1,0 +1,72 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Zhiyi Zhang <zzhang@codeweavers.com>
+Date: Fri, 25 Feb 2022 11:03:00 +0800
+Subject: [PATCH] HACK: ntdll: Replace STATUS_NETWORK_UNREACHABLE with
+ STATUS_SUCCESS in sock_send() for VRChat UDP sockets.
+
+On Windows, when resuming from sleep and network is temporarily unavailable but network adapters are
+still up, send() for UDP sockets sliently drop UDP packets and report STATUS_SUCCESS. On Linux,
+sendmsg() reports ENETUNREACH, which eventually translated to winsock error WSAENETUNREACH and make
+VRChat show an internal error message and hang.
+
+CW-Bug-Id: #20008
+Signed-off-by: Zhiyi Zhang <zzhang@codeweavers.com>
+(cherry picked from commit 9da9aec617ce0bc0adb8f3466afcb7c2d7fb320a)
+
+mproton-resolved: 11.20's async_fileio has no io member: use async->handle
+---
+ dlls/ntdll/unix/socket.c | 20 ++++++++++++++++++++
+ 1 file changed, 20 insertions(+)
+
+diff --git a/dlls/ntdll/unix/socket.c b/dlls/ntdll/unix/socket.c
+index 9674d0f1238..b02501a9167 100644
+--- a/dlls/ntdll/unix/socket.c
++++ b/dlls/ntdll/unix/socket.c
+@@ -157,6 +157,8 @@ struct async_transmit_ioctl
+     LARGE_INTEGER offset;
+ };
+ 
++static int get_sock_type( HANDLE handle );
++
+ static NTSTATUS sock_errno_to_status( int err )
+ {
+     switch (err)
+@@ -1131,6 +1133,21 @@ static NTSTATUS try_send( int fd, struct async_send_ioctl *async )
+     return STATUS_SUCCESS;
+ }
+ 
++static void hack_update_status( HANDLE handle, unsigned int *status )
++{
++    /* HACK: VRChat relies on send() reporting STATUS_SUCCESS for dropped UDP sockets when the
++     * network is actually lost but network adapters are still up on Windows. Fix VRChat internal
++     * error bug when resuming from sleep */
++    const char *appid;
++
++    if (*status == STATUS_NETWORK_UNREACHABLE && get_sock_type( handle ) == SOCK_DGRAM
++        && (appid = getenv( "SteamAppId" )) && !strcmp( appid, "438100" ))
++    {
++        WARN( "Replacing STATUS_NETWORK_UNREACHABLE with STATUS_SUCCESS for VRChat.\n" );
++        *status = STATUS_SUCCESS;
++    }
++}
++
+ static BOOL async_send_proc( void *user, ULONG_PTR *info, unsigned int *status )
+ {
+     struct async_send_ioctl *async = user;
+@@ -1146,6 +1163,7 @@ static BOOL async_send_proc( void *user, ULONG_PTR *info, unsigned int *status )
+ 
+         *status = try_send( fd, async );
+         TRACE( "got status %#x\n", *status );
++        hack_update_status( async->handle, status );
+ 
+         if (needs_close) close( fd );
+ 
+@@ -1211,6 +1229,8 @@ static NTSTATUS sock_send( HANDLE handle, HANDLE event, PIO_APC_ROUTINE apc, voi
+     if (status == STATUS_ALERTED)
+     {
+         status = try_send( fd, async );
++        hack_update_status( handle, &status );
++
+         if (status == STATUS_DEVICE_NOT_READY && ((server_flags & SERVER_SOCKET_IO_FORCE_ASYNC) || !nonblocking))
+             status = STATUS_PENDING;
+ 

@@ -1,0 +1,44 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Wed, 19 Jun 2024 14:23:20 +0200
+Subject: [PATCH] winegstreamer/audio_decoder: Fill output block align and
+ bytes per second if not set.
+
+Fixes audio in Halo Infinite as well, as we're propagating upstream
+block align from the AAC media type, which isn't right for the decoded
+media type.
+
+This breaks a couple of aacdec tests, though in a harmless way: no
+additional information should be added to the output media type when it
+is read back. We could just do that internally or flag the tests todo.
+
+CW-Bug-Id: #20833
+CW-Bug-Id: #24641
+(cherry picked from commit 84e9586a8073e7cc76b721a9f163df91566af365)
+---
+ dlls/winegstreamer/aac_decoder.c | 11 ++++++++---
+ 1 file changed, 8 insertions(+), 3 deletions(-)
+
+diff --git a/dlls/winegstreamer/aac_decoder.c b/dlls/winegstreamer/aac_decoder.c
+index 559492e9277..061393f2f25 100644
+--- a/dlls/winegstreamer/aac_decoder.c
++++ b/dlls/winegstreamer/aac_decoder.c
+@@ -426,10 +426,15 @@ static HRESULT WINAPI transform_SetOutputType(IMFTransform *iface, DWORD id, IMF
+     if (flags & MFT_SET_TYPE_TEST_ONLY)
+         return S_OK;
+ 
+-    if (!decoder->output_type && FAILED(hr = MFCreateMediaType(&decoder->output_type)))
+-        return hr;
++    wfx.Format.nBlockAlign = wfx.Format.wBitsPerSample * wfx.Format.nChannels / 8;
++    wfx.Format.nAvgBytesPerSec = wfx.Format.nBlockAlign * wfx.Format.nSamplesPerSec;
+ 
+-    if (FAILED(hr = IMFMediaType_CopyAllItems(type, (IMFAttributes *)decoder->output_type)))
++    if (decoder->output_type)
++    {
++        IMFMediaType_Release(decoder->output_type);
++        decoder->output_type = NULL;
++    }
++    if (FAILED(hr = MFCreateAudioMediaType(&wfx.Format, (IMFAudioMediaType **)&decoder->output_type)))
+         return hr;
+ 
+     if (FAILED(hr = try_create_wg_transform(decoder)))

@@ -1,0 +1,25 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Wed, 21 May 2025 13:48:56 -0600
+Subject: [PATCH] win32u: Ignore software Vulkan devices in get_vulkan_gpus().
+
+CW-Bug-Id: #25442
+(cherry picked from commit 826debc29fec7ef3469ac1fd9eecccb8bbb280fd)
+---
+ dlls/win32u/d3dkmt.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/dlls/win32u/d3dkmt.c b/dlls/win32u/d3dkmt.c
+index 48017459ea8..bfba9661991 100644
+--- a/dlls/win32u/d3dkmt.c
++++ b/dlls/win32u/d3dkmt.c
+@@ -1096,6 +1096,9 @@ BOOL get_vulkan_gpus( struct list *gpus )
+     {
+         struct gpu_info *gpu;
+ 
++        /* Ignore Khronos vendor IDs */
++        if (devinfo[i].properties2.properties.vendorID >= 0x10000) continue;
++
+         if (!(gpu = calloc( 1, sizeof(*gpu) ))) break;
+         memcpy( &gpu->uuid, devinfo[i].id.deviceUUID, sizeof(gpu->uuid) );
+         gpu->name = strdup( devinfo[i].properties2.properties.deviceName );

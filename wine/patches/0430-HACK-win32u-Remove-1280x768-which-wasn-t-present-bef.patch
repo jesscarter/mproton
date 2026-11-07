@@ -1,0 +1,24 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Wed, 5 Mar 2025 10:24:24 +0100
+Subject: [PATCH] HACK: win32u: Remove 1280x768 which wasn't present before.
+
+CW-Bug-Id: #24970
+(cherry picked from commit 1fe697829f00ec391c4fac9eba0cdbc2740d1b2b)
+---
+ dlls/win32u/sysparams.c | 2 --
+ 1 file changed, 2 deletions(-)
+
+diff --git a/dlls/win32u/sysparams.c b/dlls/win32u/sysparams.c
+index 0cdcd159e2a..d88e5ff3555 100644
+--- a/dlls/win32u/sysparams.c
++++ b/dlls/win32u/sysparams.c
+@@ -2123,8 +2123,6 @@ static SIZE *get_screen_sizes( const DEVMODEW *maximum, const DEVMODEW *modes, U
+         {3840, 1600},
+         /* 5:4 */
+         {1280, 1024},
+-        /* 5:3 */
+-        {1280,  768},
+     };
+     UINT max_width = devmode_get( maximum, DM_PELSWIDTH ), max_height = devmode_get( maximum, DM_PELSHEIGHT );
+     SIZE *sizes, max_size = {.cx = max( max_width, max_height ), .cy = min( max_width, max_height )};

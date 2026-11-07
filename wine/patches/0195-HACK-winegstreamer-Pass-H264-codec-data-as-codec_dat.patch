@@ -1,0 +1,59 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Wed, 11 Sep 2024 19:01:42 +0200
+Subject: [PATCH] HACK: winegstreamer: Pass H264 codec data as "codec_data" for
+ avc bitstreams.
+
+Actually needed since we don't have FFmpeg h264_mp4toannexb BSF yet.
+
+CW-Bug-Id: #20833
+(cherry picked from commit 09490da36e02489748f5718a150501168c6c51b5)
+---
+ dlls/winegstreamer/wg_media_type.c | 17 ++++++++++++++---
+ 1 file changed, 14 insertions(+), 3 deletions(-)
+
+diff --git a/dlls/winegstreamer/wg_media_type.c b/dlls/winegstreamer/wg_media_type.c
+index 2817b11ec82..e4348975b49 100644
+--- a/dlls/winegstreamer/wg_media_type.c
++++ b/dlls/winegstreamer/wg_media_type.c
+@@ -64,18 +64,23 @@ DEFINE_MEDIATYPE_GUID(MFVideoFormat_VC1S,MAKEFOURCC('V','C','1','S'));
+ DEFINE_MEDIATYPE_GUID(MFVideoFormat_ABGR32,D3DFMT_A8B8G8R8);
+ DEFINE_MEDIATYPE_GUID(MFVideoFormat_theora,MAKEFOURCC('t','h','e','o'));
+ 
+-static void init_caps_codec_data(GstCaps *caps, const void *codec_data, int codec_data_size)
++static void init_caps_codec_data_name(GstCaps *caps, const void *codec_data, int codec_data_size, const char *name)
+ {
+     GstBuffer *buffer;
+ 
+     if (codec_data_size > 0 && (buffer = gst_buffer_new_and_alloc(codec_data_size)))
+     {
+         gst_buffer_fill(buffer, 0, codec_data, codec_data_size);
+-        gst_caps_set_simple(caps, "codec_data", GST_TYPE_BUFFER, buffer, NULL);
++        gst_caps_set_simple(caps, name, GST_TYPE_BUFFER, buffer, NULL);
+         gst_buffer_unref(buffer);
+     }
+ }
+ 
++static void init_caps_codec_data(GstCaps *caps, const void *codec_data, int codec_data_size)
++{
++    init_caps_codec_data_name(caps, codec_data, codec_data_size, "codec_data");
++}
++
+ static void init_caps_from_wave_format_mpeg1(GstCaps *caps, const MPEG1WAVEFORMAT *format, UINT32 format_size)
+ {
+     init_caps_codec_data(caps, &format->wfx + 1, format->wfx.cbSize);
+@@ -313,7 +318,13 @@ static void init_caps_from_video_h264(GstCaps *caps, const MFVIDEOFORMAT *format
+     if (format_size > sizeof(*format) && (buffer = gst_buffer_new_and_alloc(format_size - sizeof(*format))))
+     {
+         gst_buffer_fill(buffer, 0, format + 1, format_size - sizeof(*format));
+-        gst_caps_set_simple(caps, "streamheader", GST_TYPE_BUFFER, buffer, NULL);
++        if (format_size - sizeof(*format) >= sizeof(UINT32) && *(UINT32 *)(format + 1) == 0x01000000)
++            gst_caps_set_simple(caps, "streamheader", GST_TYPE_BUFFER, buffer, NULL);
++        else
++        {
++            gst_caps_set_simple(caps, "codec_data", GST_TYPE_BUFFER, buffer, NULL);
++            gst_caps_set_simple(caps, "stream-format", G_TYPE_STRING, "avc", NULL);
++        }
+         gst_buffer_unref(buffer);
+     }
+ }

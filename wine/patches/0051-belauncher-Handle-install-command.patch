@@ -1,0 +1,27 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Tue, 5 Aug 2025 16:22:40 -0600
+Subject: [PATCH] belauncher: Handle install command.
+
+CW-Bug-Id: #25758
+(cherry picked from commit df1729ca8e6d3b2428a158f1143fc0872527e6b7)
+---
+ programs/belauncher/main.c | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/programs/belauncher/main.c b/programs/belauncher/main.c
+index 850c69f7613..d48169cbe6c 100644
+--- a/programs/belauncher/main.c
++++ b/programs/belauncher/main.c
+@@ -94,6 +94,11 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrevInst, LPWSTR cmdline, int cm
+             WINE_TRACE("uninstall cmd, exiting.\n");
+             return 0;
+         }
++        if (argc && iswdigit(argvW[0][0]) && _wtoi(argvW[0]) == 1)
++        {
++            WINE_ERR("install cmd, exiting.\n");
++            return 0;
++        }
+ 
+         for (i = 0; i < argc; ++i)
+         {

@@ -1,0 +1,23 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Tue, 4 Nov 2025 18:37:58 -0600
+Subject: [PATCH] wine.inf: Substitute Times New Roman for Segoe UI Semibold.
+
+CW-Bug-Id: #23626
+(cherry picked from commit 1b7fa82542bf0d506b8cbe1d0df12b9bafd38026)
+---
+ loader/wine.inf.in | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/loader/wine.inf.in b/loader/wine.inf.in
+index ad930f7bbd8..2ed2aec8276 100644
+--- a/loader/wine.inf.in
++++ b/loader/wine.inf.in
+@@ -567,6 +567,7 @@ HKLM,%FontsNT%,"Webdings (TrueType)",,"webdings.ttf"
+ HKLM,%FontsNT%,"Wingdings (TrueType)",,"wingdings.ttf"
+ HKCU,Software\Wine\Fonts\Replacements,"Palatino Linotype",,"Times New Roman"
+ HKCU,Software\Wine\Fonts\Replacements,"Verdana",,"Times New Roman"
++HKCU,Software\Wine\Fonts\Replacements,"Segoe UI Semibold",,"Times New Roman"
+ 
+ [MCI]
+ HKLM,%Mci32Str%,"AVIVideo",,"mciavi32.dll"

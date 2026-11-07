@@ -1,0 +1,33 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Wed, 22 Mar 2023 14:31:03 -0600
+Subject: [PATCH] crypt32: Add WINE_ADDITIONAL_CERTS_DIR option.
+
+CW-Bug-Id: #22063
+(cherry picked from commit 4d445b53924335bc6b549228cc24975c737e856d)
+---
+ dlls/crypt32/unixlib.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/dlls/crypt32/unixlib.c b/dlls/crypt32/unixlib.c
+index 4b9f0da0d21..2b2076bb44e 100644
+--- a/dlls/crypt32/unixlib.c
++++ b/dlls/crypt32/unixlib.c
+@@ -956,6 +956,7 @@ static const char * const CRYPT_knownLocations[] = {
+ 
+ static void load_root_certs(void)
+ {
++    const char *additional_dir;
+     unsigned int i;
+ 
+ #ifdef __APPLE__
+@@ -993,6 +994,9 @@ static void load_root_certs(void)
+ 
+     for (i = 0; i < ARRAY_SIZE(CRYPT_knownLocations) && list_empty(&root_cert_list); i++)
+         import_certs_from_path( CRYPT_knownLocations[i], TRUE );
++
++    if ((additional_dir = getenv( "WINE_ADDITIONAL_CERTS_DIR" )))
++        import_certs_from_path( additional_dir, TRUE );
+ }
+ 
+ static NTSTATUS enum_root_certs( void *args )

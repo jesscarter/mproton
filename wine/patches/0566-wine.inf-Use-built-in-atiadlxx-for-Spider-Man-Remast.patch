@@ -1,0 +1,20 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Tue, 11 Oct 2022 20:51:30 -0500
+Subject: [PATCH] wine.inf: Use built-in atiadlxx for Spider-Man Remastered.
+
+CW-Bug-Id: #21397
+(cherry picked from commit 42899f1cdbf6baa6b41033fa97e5cb6a2a02945e)
+---
+ loader/wine.inf.in | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/loader/wine.inf.in b/loader/wine.inf.in
+index cf1183bc221..bcc10beeaee 100644
+--- a/loader/wine.inf.in
++++ b/loader/wine.inf.in
+@@ -1447,3 +1447,4 @@ HKCU,Software\Wine\AppDefaults\RelicCardinal.exe\DllOverrides,"atiadlxx",,"built
+ HKCU,Software\Wine\AppDefaults\Avengers.exe\DllOverrides,"atiadlxx",,"builtin"
+ HKCU,Software\Wine\AppDefaults\starwarssquadrons.exe\DllOverrides,"atiadlxx",,"builtin"
+ HKCU,Software\Wine\AppDefaults\GW2.Main_Win64_Retail.exe\DllOverrides,"atiadlxx",,"builtin"
++HKCU,Software\Wine\AppDefaults\Spider-Man.exe\DllOverrides,"atiadlxx",,"builtin"

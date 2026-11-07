@@ -1,0 +1,24 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Billy Laws <blaws05@gmail.com>
+Date: Mon, 28 Jul 2025 21:36:01 +0100
+Subject: [PATCH] services: Pass through FEX config environment variables.
+
+(cherry picked from commit 1b8936d2834b99f62fd53efbbc03964aee78093c)
+---
+ programs/services/services.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/programs/services/services.c b/programs/services/services.c
+index 2075567f244..c6ceadb3753 100644
+--- a/programs/services/services.c
++++ b/programs/services/services.c
+@@ -1043,6 +1043,9 @@ found:
+             L"WINEBOOTSTRAPMODE",
+             L"PROTON_DISABLE_HIDRAW",
+             L"PROTON_ENABLE_HIDRAW",
++            L"FEX_APP_DATA_LOCATION",
++            L"FEX_APP_CONFIG_LOCATION",
++            L"FEX_APP_CONFIG",
+         };
+         WCHAR buffer[1024];
+ 

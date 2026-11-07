@@ -1,0 +1,35 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Sat, 22 May 2021 01:23:33 +0300
+Subject: [PATCH] server: Update system regs from set_thread_context handler
+ only.
+
+CW-Bug-Id: #18957
+(cherry picked from commit 2105dac8b57e4abc67ee6cd55fa4ec1f504f96c6)
+---
+ server/thread.c | 4 +---
+ 1 file changed, 1 insertion(+), 3 deletions(-)
+
+diff --git a/server/thread.c b/server/thread.c
+index a158f4518b0..19349abd858 100644
+--- a/server/thread.c
++++ b/server/thread.c
+@@ -2032,9 +2032,7 @@ DECL_HANDLER(select)
+         {
+             union apc_call *data;
+             data_size_t size = sizeof(*data) + (ctx->regs[CTX_WOW].flags ? 2 : 1) * sizeof(struct context_data);
+-            unsigned int flags = system_flags & ctx->regs[CTX_NATIVE].flags;
+ 
+-            if (flags) set_thread_context( current, &ctx->regs[CTX_NATIVE], flags );
+             size = min( size, get_reply_max_size() );
+             if ((data = set_reply_data_size( size )))
+             {
+@@ -2306,7 +2304,7 @@ DECL_HANDLER(set_thread_context)
+         unsigned int flags = system_flags & contexts[CTX_NATIVE].flags;
+ 
+         if (thread != current) stop_thread( thread );
+-        else if (flags) set_thread_context( thread, &contexts[CTX_NATIVE], flags );
++        if (flags) set_thread_context( thread, &contexts[CTX_NATIVE], flags );
+ 
+         if (thread->context && !get_error())
+         {

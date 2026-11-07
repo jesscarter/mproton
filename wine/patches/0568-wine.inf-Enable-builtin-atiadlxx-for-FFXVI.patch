@@ -1,0 +1,21 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Sat, 28 Sep 2024 21:29:11 -0600
+Subject: [PATCH] wine.inf: Enable builtin atiadlxx for FFXVI.
+
+CW-Bug-Id: #24315
+(cherry picked from commit 68fe6b8ed5b2b73e54da361b86ad1caef0529b33)
+---
+ loader/wine.inf.in | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/loader/wine.inf.in b/loader/wine.inf.in
+index 70a2ce8a10a..23fb241edc8 100644
+--- a/loader/wine.inf.in
++++ b/loader/wine.inf.in
+@@ -1449,3 +1449,5 @@ HKCU,Software\Wine\AppDefaults\starwarssquadrons.exe\DllOverrides,"atiadlxx",,"b
+ HKCU,Software\Wine\AppDefaults\GW2.Main_Win64_Retail.exe\DllOverrides,"atiadlxx",,"builtin"
+ HKCU,Software\Wine\AppDefaults\Spider-Man.exe\DllOverrides,"atiadlxx",,"builtin"
+ HKCU,Software\Wine\AppDefaults\RiftApart.exe\DllOverrides,"atiadlxx",,"builtin"
++HKCU,Software\Wine\AppDefaults\ffxvi.exe\DllOverrides,"atiadlxx",,"builtin"
++HKCU,Software\Wine\AppDefaults\ffxvi_demo.exe\DllOverrides,"atiadlxx",,"builtin"

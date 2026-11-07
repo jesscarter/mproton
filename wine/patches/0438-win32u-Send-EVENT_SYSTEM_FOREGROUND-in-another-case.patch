@@ -1,0 +1,41 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Esme Povirk <esme@codeweavers.com>
+Date: Fri, 24 May 2024 18:20:18 +0000
+Subject: [PATCH] win32u: Send EVENT_SYSTEM_FOREGROUND in another case.
+
+CW-Bug-Id: #23779
+
+EVENT_SYSTEM_FOREGROUND is sent by set_active_window, but in some
+cases the active window is set before the foreground window,
+meaning the foreground window hasn't changed yet at the time of
+the event.
+
+This is most likely wrong, as it leads to duplicate
+EVENT_SYSTEM_FOREGROUND events, but solving it correctly is a
+thorny problem that will require tests.
+
+(cherry picked from commit 74d09cfe3844d3a9916056282f5ea36316a2345b)
+---
+ dlls/win32u/input.c | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/dlls/win32u/input.c b/dlls/win32u/input.c
+index c24bbab1d4a..c5f9223dcfe 100644
+--- a/dlls/win32u/input.c
++++ b/dlls/win32u/input.c
+@@ -2367,7 +2367,15 @@ BOOL set_foreground_window( HWND hwnd, BOOL mouse, BOOL internal )
+             NtUserMessageCall( hwnd, WM_WINE_SETACTIVEWINDOW, (WPARAM)hwnd, 0,
+                                0, NtUserSendNotifyMessage, FALSE );
+         else  /* new window belongs to us */
++        {
++            BOOL already_active = (hwnd == get_active_window());
++
+             ret = set_active_window( hwnd, NULL, mouse, TRUE, 0 );
++
++            if (already_active)
++                /* set_active_window will do no nothing */
++                NtUserNotifyWinEvent( EVENT_SYSTEM_FOREGROUND, hwnd, 0, 0 );
++        }
+     }
+     return ret;
+ }

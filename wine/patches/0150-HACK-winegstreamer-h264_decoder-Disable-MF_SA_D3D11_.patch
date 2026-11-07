@@ -1,0 +1,29 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Sun, 17 Nov 2024 20:53:02 +0100
+Subject: [PATCH] HACK: winegstreamer/h264_decoder: Disable MF_SA_D3D11_AWARE
+ for some games.
+
+CW-Bug-Id: #22581
+(cherry picked from commit b109a685551e7c9b461a73df814af19e4743672f)
+---
+ dlls/winegstreamer/video_decoder.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/dlls/winegstreamer/video_decoder.c b/dlls/winegstreamer/video_decoder.c
+index 0df1a0acff8..0d7224c80f2 100644
+--- a/dlls/winegstreamer/video_decoder.c
++++ b/dlls/winegstreamer/video_decoder.c
+@@ -1664,6 +1664,12 @@ static HRESULT video_decoder_create_with_types(const GUID *const *input_types, U
+                     &MFT_DECODER_EXPOSE_OUTPUT_TYPES_IN_NATIVE_ORDER, FALSE)))
+         goto failed;
+ 
++    {
++        const char *sgi;
++        if ((sgi = getenv("SteamGameId")) && ((!strcmp(sgi, "2009100")) || (!strcmp(sgi, "2555360"))))
++            IMFAttributes_SetUINT32(decoder->attributes, &MF_SA_D3D11_AWARE, FALSE);
++    }
++
+     if (FAILED(hr = MFCreateAttributes(&decoder->output_attributes, 0)))
+         goto failed;
+     if (FAILED(hr = wg_sample_queue_create(&decoder->wg_sample_queue)))

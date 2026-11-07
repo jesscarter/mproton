@@ -1,0 +1,34 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Zebediah Figura <zfigura@codeweavers.com>
+Date: Fri, 4 Feb 2022 16:44:54 -0600
+Subject: [PATCH] HACK: winegstreamer/wm_reader: Report BGRx for Persona 4
+ Golden.
+
+(cherry picked from commit 358b3a7787dee51ddbeadf3cc775eaa8a0bd3fe6)
+---
+ dlls/winegstreamer/wm_reader.c | 12 ++++++++++++
+ 1 file changed, 12 insertions(+)
+
+diff --git a/dlls/winegstreamer/wm_reader.c b/dlls/winegstreamer/wm_reader.c
+index 8fc5ff6f707..493e562aa1f 100644
+--- a/dlls/winegstreamer/wm_reader.c
++++ b/dlls/winegstreamer/wm_reader.c
+@@ -1558,6 +1558,18 @@ static HRESULT init_stream(struct wm_reader *reader)
+             /* API consumers expect RGB video to be bottom-up. */
+             if (stream->format.u.video.height > 0)
+                 stream->format.u.video.height = -stream->format.u.video.height;
++
++            {
++                /* HACK: Persona 4 Golden tries to read compressed samples, and
++                 * then autoplug them via quartz to a filter that only accepts
++                 * BGRx. This is not trivial to implement. Return BGRx from the
++                 * wmvcore reader for now. */
++
++                const char *id = getenv("SteamGameId");
++
++                if (id && !strcmp(id, "1113000"))
++                    stream->format.u.video.format = WG_VIDEO_FORMAT_BGRx;
++            }
+         }
+         wg_parser_stream_enable(stream->wg_stream, &stream->format);
+     }

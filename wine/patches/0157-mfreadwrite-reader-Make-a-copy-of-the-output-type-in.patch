@@ -1,0 +1,52 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Tue, 21 May 2024 13:37:08 +0200
+Subject: [PATCH] mfreadwrite/reader: Make a copy of the output type in
+ SetCurrentMediaType.
+
+CW-Bug-Id: #20833
+(cherry picked from commit fe4bdc00423a507148655f7e3520944671bc682e)
+---
+ dlls/mfreadwrite/reader.c | 14 ++++++++++++--
+ 1 file changed, 12 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/mfreadwrite/reader.c b/dlls/mfreadwrite/reader.c
+index 69169cd751f..b5310f5131a 100644
+--- a/dlls/mfreadwrite/reader.c
++++ b/dlls/mfreadwrite/reader.c
+@@ -2228,6 +2228,7 @@ static HRESULT WINAPI src_reader_SetCurrentMediaType(IMFSourceReaderEx *iface, D
+         IMFMediaType *type)
+ {
+     struct source_reader *reader = impl_from_IMFSourceReaderEx(iface);
++    IMFMediaType *output_type;
+     HRESULT hr;
+ 
+     TRACE("%p, %#lx, %p, %p.\n", iface, index, reserved, type);
+@@ -2247,16 +2248,25 @@ static HRESULT WINAPI src_reader_SetCurrentMediaType(IMFSourceReaderEx *iface, D
+     if (index >= reader->stream_count)
+         return MF_E_INVALIDSTREAMNUMBER;
+ 
++    if (FAILED(hr = MFCreateMediaType(&output_type)))
++        return hr;
++    if (FAILED(IMFMediaType_CopyAllItems(type, (IMFAttributes *)output_type)))
++    {
++        IMFMediaType_Release(output_type);
++        return hr;
++    }
++
+     /* FIXME: setting the output type while streaming should trigger a flush */
+ 
+     EnterCriticalSection(&reader->cs);
+ 
+-    hr = source_reader_set_compatible_media_type(reader, index, type);
++    hr = source_reader_set_compatible_media_type(reader, index, output_type);
+     if (hr == S_FALSE)
+-        hr = source_reader_create_decoder_for_stream(reader, index, type);
++        hr = source_reader_create_decoder_for_stream(reader, index, output_type);
+ 
+     LeaveCriticalSection(&reader->cs);
+ 
++    IMFMediaType_Release(output_type);
+     return hr;
+ }
+ 

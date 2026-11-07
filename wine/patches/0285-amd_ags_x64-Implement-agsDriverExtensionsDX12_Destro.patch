@@ -1,0 +1,58 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Joshua Ashton <joshua@froggi.es>
+Date: Sat, 8 May 2021 04:39:30 +0100
+Subject: [PATCH] amd_ags_x64: Implement agsDriverExtensionsDX12_DestroyDevice
+
+Signed-off-by: Joshua Ashton <joshua@froggi.es>
+(cherry picked from commit 4d2cd351f4245272e1a1354dedff0f478c126f92)
+---
+ dlls/amd_ags_x64/amd_ags_x64.spec   |  2 +-
+ dlls/amd_ags_x64/amd_ags_x64_main.c | 15 +++++++++++++++
+ 2 files changed, 16 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/amd_ags_x64/amd_ags_x64.spec b/dlls/amd_ags_x64/amd_ags_x64.spec
+index 7551a9346d8..ae825462f28 100644
+--- a/dlls/amd_ags_x64/amd_ags_x64.spec
++++ b/dlls/amd_ags_x64/amd_ags_x64.spec
+@@ -32,7 +32,7 @@
+ @ stub agsDriverExtensionsDX12_CreateFromDevice
+ @ stub agsDriverExtensionsDX12_DeInit
+ @ stub agsDriverExtensionsDX12_Destroy
+-@ stub agsDriverExtensionsDX12_DestroyDevice
++@ stdcall agsDriverExtensionsDX12_DestroyDevice(ptr ptr ptr)
+ @ stub agsDriverExtensionsDX12_Init
+ @ stub agsDriverExtensionsDX12_PopMarker
+ @ stub agsDriverExtensionsDX12_PushMarker
+diff --git a/dlls/amd_ags_x64/amd_ags_x64_main.c b/dlls/amd_ags_x64/amd_ags_x64_main.c
+index 3fb52de1751..9223fa00296 100644
+--- a/dlls/amd_ags_x64/amd_ags_x64_main.c
++++ b/dlls/amd_ags_x64/amd_ags_x64_main.c
+@@ -8,6 +8,7 @@
+ 
+ #include "wine/vulkan.h"
+ 
++#define COBJMACROS
+ #include "d3d11.h"
+ #include "d3d12.h"
+ 
+@@ -541,6 +542,20 @@ AGSReturnCode WINAPI agsDriverExtensionsDX12_CreateDevice(AGSContext *context,
+     return AGS_SUCCESS;
+ }
+ 
++AGSReturnCode WINAPI agsDriverExtensionsDX12_DestroyDevice(AGSContext* context, ID3D12Device* device, unsigned int* device_refs)
++{
++    ULONG ref_count;
++
++    if (!device)
++        return AGS_SUCCESS;
++
++    ref_count = ID3D12Device_Release(device);
++    if (device_refs)
++        *device_refs = (unsigned int)ref_count;
++
++    return AGS_SUCCESS;
++}
++
+ AGSDriverVersionResult WINAPI agsCheckDriverVersion(const char* version_reported, unsigned int version_required)
+ {
+     FIXME("version_reported %s, version_required %d semi-stub.\n", debugstr_a(version_reported), version_required);

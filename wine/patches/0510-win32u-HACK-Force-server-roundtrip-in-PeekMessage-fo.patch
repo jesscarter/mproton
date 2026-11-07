@@ -1,0 +1,35 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Tue, 3 Mar 2026 11:42:35 -0600
+Subject: [PATCH] win32u: HACK: Force server roundtrip in PeekMessage() for
+ SWKOTOR.
+
+CW-Bug-Id: #26571
+(cherry picked from commit 978b932940fa5ae9b05bdc1d66a41b8ec694653b)
+---
+ dlls/win32u/message.c | 12 ++++++++++++
+ 1 file changed, 12 insertions(+)
+
+diff --git a/dlls/win32u/message.c b/dlls/win32u/message.c
+index 4e1c0902a59..7906c6911e6 100644
+--- a/dlls/win32u/message.c
++++ b/dlls/win32u/message.c
+@@ -2944,6 +2944,18 @@ static BOOL check_queue_bits( UINT wake_mask, UINT changed_mask, UINT signal_bit
+     BOOL skip = FALSE;
+     UINT status;
+ 
++    {
++        static int force_server_request = -1;
++        const char *sgi;
++
++        if (force_server_request == -1)
++            force_server_request = (sgi = getenv( "SteamGameId" )) &&
++                                   (
++                                    !strcmp( sgi, "32370" )
++                                   );
++        if (force_server_request) return FALSE;
++    }
++
+     while ((status = get_shared_queue( &lock, &queue_shm )) == STATUS_PENDING)
+     {
+         if (internal) skip = !(queue_shm->internal_bits & QS_HARDWARE);

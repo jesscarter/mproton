@@ -1,0 +1,61 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Bernhard=20K=C3=B6lbl?= <besentv@gmail.com>
+Date: Tue, 28 Feb 2023 22:06:23 +0100
+Subject: [PATCH] WIP: windows.media.speech/tests: Add tests for manual
+ recognition testing.
+
+Speak during the delay, to test the code.
+
+CW-Bug-Id: #20134
+(cherry picked from commit da9dbe3abcbd1adac99307c104200a7179c3368d)
+---
+ dlls/windows.media.speech/tests/speech.c | 22 ++++++++++++++++++++--
+ 1 file changed, 20 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/windows.media.speech/tests/speech.c b/dlls/windows.media.speech/tests/speech.c
+index c70a98a8644..80d3599ad74 100644
+--- a/dlls/windows.media.speech/tests/speech.c
++++ b/dlls/windows.media.speech/tests/speech.c
+@@ -200,7 +200,23 @@ HRESULT WINAPI recognition_result_handler_Invoke( IHandler_RecognitionResult *if
+                                                   ISpeechContinuousRecognitionSession *sender,
+                                                   ISpeechContinuousRecognitionResultGeneratedEventArgs *args )
+ {
+-    trace("iface %p, sender %p, args %p.\n", iface, sender, args);
++    ISpeechRecognitionResult *result;
++    HSTRING hstring;
++    HRESULT hr;
++
++    if (!args) return S_OK;
++
++    hr = ISpeechContinuousRecognitionResultGeneratedEventArgs_get_Result(args, &result);
++    ok(hr == S_OK, "Got unexpected hr %#lx.\n", hr);
++
++    hr = ISpeechRecognitionResult_get_Text(result, &hstring);
++    ok(hr == S_OK, "Got unexpected hr %#lx.\n", hr);
++
++    trace("iface %p, sender %p, args %p, text %s.\n", iface, sender, args, debugstr_w(WindowsGetStringRawBuffer(hstring, NULL)));
++
++    WindowsDeleteString(hstring);
++    ISpeechRecognitionResult_Release(result);
++
+     return S_OK;
+ }
+ 
+@@ -1802,7 +1818,7 @@ static void test_Recognition(void)
+     static const WCHAR *list_constraint_name = L"Windows.Media.SpeechRecognition.SpeechRecognitionListConstraint";
+     static const WCHAR *recognizer_name = L"Windows.Media.SpeechRecognition.SpeechRecognizer";
+     static const WCHAR *speech_constraint_tag = L"test_message";
+-    static const WCHAR *speech_constraints[] = { L"This is a test.", L"Number 5!", L"What time is it?" };
++    static const WCHAR *speech_constraints[] = { L"This is a test", L"Number 5", L"What time is it" };
+     ISpeechRecognitionListConstraintFactory *listconstraint_factory = NULL;
+     IAsyncOperation_SpeechRecognitionCompilationResult *operation = NULL;
+     IVector_ISpeechRecognitionConstraint *constraints = NULL;
+@@ -1973,6 +1989,8 @@ static void test_Recognition(void)
+     ok(hr == S_OK, "ISpeechRecognizer2_get_State failed, hr %#lx.\n", hr);
+     ok(recog_state == SpeechRecognizerState_Capturing || broken(recog_state == SpeechRecognizerState_Idle), "recog_state was %u.\n", recog_state);
+ 
++
++    Sleep(10000);
+     /*
+      * TODO: Use a loopback device together with prerecorded audio files to test the recognizer's functionality.
+      */

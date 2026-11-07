@@ -1,0 +1,52 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Tue, 14 Apr 2026 10:05:20 -0600
+Subject: [PATCH] atiadlxx: Add ADL2_Graphics_Versions_Get().
+
+CW-Bug-Id: #26918
+(cherry picked from commit 9ff6468598f34a57cb6ccaf3431c178a6a058989)
+---
+ dlls/atiadlxx/atiadlxx.spec   | 2 +-
+ dlls/atiadlxx/atiadlxx_main.c | 9 ++++++++-
+ 2 files changed, 9 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/atiadlxx/atiadlxx.spec b/dlls/atiadlxx/atiadlxx.spec
+index 81559eca3c9..fd9ad816fe5 100644
+--- a/dlls/atiadlxx/atiadlxx.spec
++++ b/dlls/atiadlxx/atiadlxx.spec
+@@ -433,7 +433,7 @@
+ @ stub ADL2_Graphics_MantleVersion_Get
+ @ cdecl ADL2_Graphics_Platform_Get(ptr ptr)
+ @ cdecl ADL2_Graphics_VersionsX2_Get(ptr ptr)
+-@ stub ADL2_Graphics_Versions_Get
++@ cdecl ADL2_Graphics_Versions_Get(ptr ptr)
+ @ stub ADL2_Graphics_VulkanVersion_Get
+ @ stub ADL2_HybridGraphicsGPU_Set
+ @ stub ADL2_MGPUSLS_Status_Set
+diff --git a/dlls/atiadlxx/atiadlxx_main.c b/dlls/atiadlxx/atiadlxx_main.c
+index 23ff101e71b..9014407bc81 100644
+--- a/dlls/atiadlxx/atiadlxx_main.c
++++ b/dlls/atiadlxx/atiadlxx_main.c
+@@ -705,6 +705,13 @@ int CDECL ADL2_Graphics_VersionsX2_Get(ADL_CONTEXT_HANDLE ptr, ADLVersionsInfoX2
+     return ADL_OK;
+ }
+ 
++int CDECL ADL2_Graphics_Versions_Get(ADL_CONTEXT_HANDLE ctx, ADLVersionsInfo *ver)
++{
++    TRACE("ctx %p, ver %p.\n", ctx, ver);
++    memcpy(ver, &version, sizeof(version));
++    return ADL_OK;
++}
++
+ int CDECL ADL_Graphics_Versions_Get(ADLVersionsInfo *ver)
+ {
+     TRACE("ver %p.\n", ver);
+@@ -764,7 +771,7 @@ static int adapter_info_get(ADL_CONTEXT_HANDLE ctx, ADLAdapterInfo *adapters, in
+ 
+ int CDECL ADL2_Adapter_AdapterInfo_Get(ADL_CONTEXT_HANDLE ctx, ADLAdapterInfo *adapters, int input_size)
+ {
+-    TRACE("adapters %p, input_size %d.\n", adapters, input_size);
++    TRACE("ctx %p, adapters %p, input_size %d.\n", ctx, adapters, input_size);
+ 
+     if (!adapters) return ADL_ERR_INVALID_PARAM;
+     if (input_size != default_ctx->adapter_count * sizeof(ADLAdapterInfo)) return ADL_ERR_INVALID_PARAM;

@@ -1,0 +1,34 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Wed, 8 Jan 2025 12:04:07 +0100
+Subject: [PATCH] HACK: winedmo: Avoid setting negative sample times.
+
+Otherwise it ends up being translated to a very high positive time in
+the audio decoder, as GStreamer time seems to always be positive, and
+it makes Halo Infinite campain intro video play run very quickly, or
+stutter if we cannot keep up.
+
+This is probably a hack and needs to be better checked to confirm
+how these samples should be reported.
+
+CW-Bug-Id: #24641
+(cherry picked from commit e453c9926bd23788cfa1fe036444436bfcbbd011)
+---
+ dlls/winedmo/main.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/winedmo/main.c b/dlls/winedmo/main.c
+index 671e632b16d..70479e3c15b 100644
+--- a/dlls/winedmo/main.c
++++ b/dlls/winedmo/main.c
+@@ -145,8 +145,8 @@ static void buffer_unlock( DMO_OUTPUT_DATA_BUFFER *buffer, struct sample *sample
+     if (SUCCEEDED(hr = IMediaBuffer_QueryInterface( buffer->pBuffer, &IID_IMFSample, (void **)&object )))
+     {
+         if (sample->dts != INT64_MIN) IMFSample_SetUINT64( object, &MFSampleExtension_DecodeTimestamp, sample->dts );
+-        if (sample->pts != INT64_MIN) IMFSample_SetSampleTime( object, sample->pts );
+-        else if (sample->dts != INT64_MIN) IMFSample_SetSampleTime( object, sample->dts );
++        if (sample->pts != INT64_MIN) IMFSample_SetSampleTime( object, sample->pts < 0 ? 0 : sample->pts );
++        else if (sample->dts != INT64_MIN) IMFSample_SetSampleTime( object, sample->dts < 0 ? 0 : sample->dts );
+         if (sample->duration != INT64_MIN) IMFSample_SetSampleDuration( object, sample->duration );
+         if (sample->flags & SAMPLE_FLAG_SYNC_POINT) IMFSample_SetUINT32( object, &MFSampleExtension_CleanPoint, 1 );
+         IMFSample_Release( object );

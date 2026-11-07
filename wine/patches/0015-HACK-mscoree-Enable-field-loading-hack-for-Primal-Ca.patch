@@ -1,0 +1,28 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Esme Povirk <esme@codeweavers.com>
+Date: Tue, 6 Sep 2022 13:40:05 -0500
+Subject: [PATCH] HACK: mscoree: Enable field-loading hack for Primal Carnage:
+ Extinction.
+
+(cherry picked from commit d532d58e46cb8978c57e8971d5089239bfc05a28)
+---
+ dlls/mscoree/metahost.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/dlls/mscoree/metahost.c b/dlls/mscoree/metahost.c
+index 096a892016e..9d853e20ffe 100644
+--- a/dlls/mscoree/metahost.c
++++ b/dlls/mscoree/metahost.c
+@@ -1913,6 +1913,12 @@ static MonoAssembly* CDECL wine_mono_assembly_preload_hook_v2_fn(MonoAssemblyNam
+                 "317940", /* Karmaflow */
+                 "namespace ContentBrowser { class IContentBrowserBackendInterface {} class Package {} } "
+             },
++            {
++                "UnrealEdCSharp",
++                "UnrealEdCSharp.dll",
++                "321360", /* Primal Carnage: Extinction */
++                "namespace ContentBrowser { class IContentBrowserBackendInterface {} class Package {} } "
++            },
+         };
+ 
+         for (i = 0; i < ARRAY_SIZE(assembly_hacks); ++i)

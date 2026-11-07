@@ -1,0 +1,33 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Thu, 21 Aug 2025 19:00:18 -0600
+Subject: [PATCH] windows.media.speech: Set OPENBLAS_NUM_THREADS to 1.
+
+CW-Bug-Id: #25825
+(cherry picked from commit 22a8c5adcd5d767b0c0b29d9f9ec5be0fb2b4574)
+---
+ dlls/windows.media.speech/unixlib.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/windows.media.speech/unixlib.c b/dlls/windows.media.speech/unixlib.c
+index 8a5e28164c5..190f3364d10 100644
+--- a/dlls/windows.media.speech/unixlib.c
++++ b/dlls/windows.media.speech/unixlib.c
+@@ -67,6 +67,9 @@ MAKE_FUNCPTR(vosk_recognizer_reset);
+ 
+ static NTSTATUS process_attach( void *args )
+ {
++    TRACE("setting OPENBLAS_NUM_THREADS to 1.\n");
++    setenv("OPENBLAS_NUM_THREADS", "1", 1);
++
+     if (!(vosk_handle = dlopen(SONAME_LIBVOSK, RTLD_NOW)))
+     {
+         ERR_(winediag)("Wine is unable to load the Unix side dependencies for speech recognition. "
+@@ -232,7 +235,6 @@ static NTSTATUS find_model_by_locale_and_path( const char *path, const char *loc
+     sprintf(model_path, "%s/%s", path, best_match);
+ 
+     TRACE("trying to load Vosk model %s.\n", debugstr_a(model_path));
+-
+     if ((*model = p_vosk_model_new(model_path)) != NULL)
+         status = STATUS_SUCCESS;
+ 

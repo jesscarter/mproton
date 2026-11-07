@@ -1,0 +1,63 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Wed, 19 Apr 2023 14:41:04 -0600
+Subject: [PATCH] amd_ags_x64: Add agsDriverExtensionsDX11_EndUAVOverlap()
+ stub.
+
+CW-Bug-Id: #22146
+(cherry picked from commit 721ed32c81364e88272286c2e5b7862b07c864c2)
+---
+ dlls/amd_ags_x64/amd_ags_x64.spec   |  2 +-
+ dlls/amd_ags_x64/amd_ags_x64_main.c | 26 ++++++++++++++++++++++++++
+ 2 files changed, 27 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/amd_ags_x64/amd_ags_x64.spec b/dlls/amd_ags_x64/amd_ags_x64.spec
+index 699e5e83acf..316eec6bf23 100644
+--- a/dlls/amd_ags_x64/amd_ags_x64.spec
++++ b/dlls/amd_ags_x64/amd_ags_x64.spec
+@@ -11,7 +11,7 @@
+ @ stub agsDriverExtensionsDX11_DeInit
+ @ stub agsDriverExtensionsDX11_Destroy
+ @ stdcall -norelay -arch=x86_64,arm64ec agsDriverExtensionsDX11_DestroyDevice()
+-@ stub agsDriverExtensionsDX11_EndUAVOverlap
++@ stdcall -norelay -arch=x86_64,arm64ec agsDriverExtensionsDX11_EndUAVOverlap() DX11_EndUAVOverlap_impl
+ @ stub agsDriverExtensionsDX11_GetMaxClipRects
+ @ stub agsDriverExtensionsDX11_IASetPrimitiveTopology
+ @ stdcall agsDriverExtensionsDX11_Init(ptr ptr long ptr)
+diff --git a/dlls/amd_ags_x64/amd_ags_x64_main.c b/dlls/amd_ags_x64/amd_ags_x64_main.c
+index a93e1b13540..a8e0a572237 100644
+--- a/dlls/amd_ags_x64/amd_ags_x64_main.c
++++ b/dlls/amd_ags_x64/amd_ags_x64_main.c
+@@ -867,6 +867,32 @@ __ASM_GLOBAL_FUNC( DX11_BeginUAVOverlap_impl,
+                    "jmp " __ASM_NAME("agsDriverExtensionsDX11_BeginUAVOverlap_520") "\n\t"
+                    "1:\tjmp " __ASM_NAME("agsDriverExtensionsDX11_BeginUAVOverlap") )
+ 
++AGSReturnCode WINAPI agsDriverExtensionsDX11_EndUAVOverlap_520(AGSContext *context)
++{
++    static int once;
++
++    if (!once++)
++        FIXME("context %p stub.\n", context);
++    return AGS_EXTENSION_NOT_SUPPORTED;
++}
++
++AGSReturnCode WINAPI agsDriverExtensionsDX11_EndUAVOverlap(AGSContext *context, ID3D11DeviceContext *dx_context)
++{
++    static int once;
++
++    if (!once++)
++        FIXME("context %p, dx_context %p stub.\n", context, dx_context);
++
++    return AGS_EXTENSION_NOT_SUPPORTED;
++}
++
++__ASM_GLOBAL_FUNC( DX11_EndUAVOverlap_impl,
++                   "mov (%rcx),%eax\n\t" /* version */
++                   "cmp $3,%eax\n\t"
++                   "jge 1f\n\t"
++                   "jmp " __ASM_NAME("agsDriverExtensionsDX11_EndUAVOverlap_520") "\n\t"
++                   "1:\tjmp " __ASM_NAME("agsDriverExtensionsDX11_EndUAVOverlap") )
++
+ AGSReturnCode WINAPI agsDriverExtensionsDX11_DestroyDevice_520(AGSContext *context, ID3D11Device* device,
+         unsigned int *device_ref, ID3D11DeviceContext *device_context,
+         unsigned int *context_ref)

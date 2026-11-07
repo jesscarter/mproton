@@ -1,0 +1,104 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Esme Povirk <esme@codeweavers.com>
+Date: Sat, 19 Aug 2023 15:06:50 -0500
+Subject: [PATCH] win32u: Implement cross-process GetScrollInfo.
+
+(cherry picked from commit 114f47760d60722035dbeaca7a925e806bbbd33d)
+---
+ dlls/win32u/message.c | 8 ++++++++
+ dlls/win32u/scroll.c  | 8 +++++++-
+ include/ntuser.h      | 1 +
+ 3 files changed, 16 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/win32u/message.c b/dlls/win32u/message.c
+index 70e03361459..3c7d5665de7 100644
+--- a/dlls/win32u/message.c
++++ b/dlls/win32u/message.c
+@@ -774,6 +774,7 @@ static BOOL unpack_message( HWND hwnd, UINT message, WPARAM *wparam, LPARAM *lpa
+         minsize = sizeof(SCROLLINFO);
+         break;
+     case SBM_GETSCROLLINFO:
++    case WM_WINE_GETSCROLLINFO:
+         if (!get_buffer_space( buffer, sizeof(SCROLLINFO), buffer_size )) return FALSE;
+         break;
+     case SBM_GETSCROLLBARINFO:
+@@ -1173,6 +1174,7 @@ static size_t pack_message( HWND hwnd, UINT message, WPARAM wparam, LPARAM lpara
+         push_data( data, (SCROLLINFO *)lparam, sizeof(SCROLLINFO) );
+         return 0;
+     case SBM_GETSCROLLINFO:
++    case WM_WINE_GETSCROLLINFO:
+         push_data( data, (SCROLLINFO *)lparam, sizeof(SCROLLINFO) );
+         return sizeof(SCROLLINFO);
+     case SBM_GETSCROLLBARINFO:
+@@ -1411,6 +1413,7 @@ static void pack_reply( HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam,
+         break;
+     }
+     case SBM_GETSCROLLINFO:
++    case WM_WINE_GETSCROLLINFO:
+         push_data( data, (SCROLLINFO *)lparam, sizeof(SCROLLINFO) );
+         break;
+     case SBM_GETSCROLLBARINFO:
+@@ -1555,6 +1558,7 @@ static void unpack_reply( HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam,
+         }
+         break;
+     case SBM_GETSCROLLINFO:
++    case WM_WINE_GETSCROLLINFO:
+         memcpy( (SCROLLINFO *)lparam, buffer, min( sizeof(SCROLLINFO), size ));
+         break;
+     case SBM_GETSCROLLBARINFO:
+@@ -1764,6 +1768,7 @@ size_t user_message_size( HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam,
+         break;
+     case SBM_SETSCROLLINFO:
+     case SBM_GETSCROLLINFO:
++    case WM_WINE_GETSCROLLINFO:
+         size = sizeof(SCROLLINFO);
+         break;
+     case SBM_GETSCROLLBARINFO:
+@@ -2050,6 +2055,7 @@ static void copy_user_result( void *buffer, size_t size, LRESULT result, UINT me
+         break;
+     case SBM_SETSCROLLINFO:
+     case SBM_GETSCROLLINFO:
++    case WM_WINE_GETSCROLLINFO:
+         copy_size = sizeof(SCROLLINFO);
+         break;
+     case SBM_GETSCROLLBARINFO:
+@@ -2289,6 +2295,8 @@ static LRESULT handle_internal_message( HWND hwnd, UINT msg, WPARAM wparam, LPAR
+     }
+     case WM_WINE_GETSCROLLBARINFO:
+         return get_scroll_bar_info( hwnd, (LONG)wparam, (SCROLLBARINFO *)lparam );
++    case WM_WINE_GETSCROLLINFO:
++        return get_scroll_info( hwnd, (int)wparam, (SCROLLINFO *)lparam );
+     default:
+         if (msg >= WM_WINE_FIRST_DRIVER_MSG && msg <= WM_WINE_LAST_DRIVER_MSG)
+             return user_driver->pWindowMessage( hwnd, msg, wparam, lparam );
+diff --git a/dlls/win32u/scroll.c b/dlls/win32u/scroll.c
+index f1ca4256e4a..958de64b9ea 100644
+--- a/dlls/win32u/scroll.c
++++ b/dlls/win32u/scroll.c
+@@ -871,7 +871,13 @@ BOOL get_scroll_info( HWND hwnd, int bar, SCROLLINFO *info )
+     struct scroll_info *scroll;
+ 
+     /* handle invalid data structure */
+-    if (!validate_scroll_info( info ) || !(scroll = get_scroll_info_ptr( hwnd, bar, FALSE )))
++    if (!validate_scroll_info( info ))
++        return FALSE;
++
++    if (bar != SB_CTL && !is_current_thread_window( hwnd ))
++        return send_message( hwnd, WM_WINE_GETSCROLLINFO, (WPARAM)bar, (LPARAM)info );
++
++    if (!(scroll = get_scroll_info_ptr( hwnd, bar, FALSE )))
+         return FALSE;
+ 
+     /* fill in the desired scroll info structure */
+diff --git a/include/ntuser.h b/include/ntuser.h
+index fbf9bb1935b..27588c438c0 100644
+--- a/include/ntuser.h
++++ b/include/ntuser.h
+@@ -641,6 +641,7 @@ enum wine_internal_message
+     WM_WINE_TRACKMOUSEEVENT,
+     WM_WINE_SETPIXELFORMAT,
+     WM_WINE_GETSCROLLBARINFO,
++    WM_WINE_GETSCROLLINFO,
+     WM_WINE_FIRST_DRIVER_MSG = 0x80001000,  /* range of messages reserved for the USER driver */
+     WM_WINE_CLIPCURSOR = 0x80001ff0, /* internal driver notification messages */
+     WM_WINE_SETCURSOR,

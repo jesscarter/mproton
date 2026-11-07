@@ -1,0 +1,27 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Jactry Zeng <jzeng@codeweavers.com>
+Date: Sun, 26 Sep 2021 14:58:45 +0800
+Subject: [PATCH] loader/wine.inf: Add registry entries for Microsoft Sans
+ Serif (micross.ttf) and Nirmala UI (nirmala.ttf).
+
+CW-Bug-Id: #17132
+(cherry picked from commit 4db2aa3035511e6b3720d5f66b8bf0abe648c29c)
+---
+ loader/wine.inf.in | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/loader/wine.inf.in b/loader/wine.inf.in
+index a034f83703d..3d26420b515 100644
+--- a/loader/wine.inf.in
++++ b/loader/wine.inf.in
+@@ -545,8 +545,10 @@ HKLM,%FontsNT%,"Arial Bold (TrueType)",,"arialbd.ttf"
+ HKLM,%FontsNT%,"Times New Roman (TrueType)",,"times.ttf"
+ HKLM,%FontsNT%,"Courier New (TrueType)",,"cour.ttf"
+ HKLM,%FontsNT%,"Malgun Gothic (TrueType)",,"malgun.ttf"
++HKLM,%FontsNT%,"Microsoft Sans Serif (TrueType)",,"micross.ttf"
+ HKLM,%FontsNT%,"Microsoft YaHei (TrueType)",,"msyh.ttf"
+ HKLM,%FontsNT%,"MS Gothic (TrueType)",,"msgothic.ttc"
++HKLM,%FontsNT%,"Nirmala UI (TrueType)",,"nirmala.ttf"
+ HKLM,%FontsNT%,"SimSun (TrueType)",,"simsun.ttc"
+ HKCU,Software\Wine\Fonts\Replacements,"Palatino Linotype",,"Times New Roman"
+ 

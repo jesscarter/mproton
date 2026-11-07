@@ -1,0 +1,22 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Tue, 24 Dec 2024 10:48:22 +0100
+Subject: [PATCH] mf/sar: Only allow the output audio media subtype as input.
+
+(cherry picked from commit ad268b2082d5880e6d2e58eb5f435f3870cc1744)
+---
+ dlls/mf/sar.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/dlls/mf/sar.c b/dlls/mf/sar.c
+index e2fab61d66f..e75698971be 100644
+--- a/dlls/mf/sar.c
++++ b/dlls/mf/sar.c
+@@ -1721,6 +1721,7 @@ static HRESULT check_media_type(IMFMediaType *type, IMFMediaType *current)
+ {
+     static const GUID *required_attrs[] =
+     {
++        &MF_MT_SUBTYPE,
+         &MF_MT_AUDIO_SAMPLES_PER_SECOND,
+         &MF_MT_AUDIO_NUM_CHANNELS,
+         &MF_MT_AUDIO_BITS_PER_SAMPLE,

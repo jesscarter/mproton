@@ -3,6 +3,7 @@
 Status: analysis done on Linux (2026-11-07). No Mac was used. Read "What this could not verify" before trusting any macOS claim.
 
 This is the input for milestone 3 in [macos-port-plan.md](macos-port-plan.md) ("Proton's Wine fork + macOS patches builds"). It covers option A: keep Proton's Wine fork and rebase a macOS ARM64 patch stack onto it.
+The tree this leads to is in [wine-tree.md](wine-tree.md): athei's 11.20 stack plus the Proton commits that carry over, as a patch series in `wine/`.
 
 ## TL;DR
 

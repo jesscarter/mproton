@@ -1,0 +1,35 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Giovanni Mascellani <gmascellani@codeweavers.com>
+Date: Thu, 27 May 2021 19:40:45 +0200
+Subject: [PATCH] HACK: mfreadwrite: Ignore source reader flushes for The
+ Medium.
+
+(cherry picked from commit 217fab44e34f7f1dc7bff15477131e30f1605006)
+---
+ dlls/mfreadwrite/reader.c | 11 +++++++++++
+ 1 file changed, 11 insertions(+)
+
+diff --git a/dlls/mfreadwrite/reader.c b/dlls/mfreadwrite/reader.c
+index a8a065de86b..56f91fb0ccd 100644
+--- a/dlls/mfreadwrite/reader.c
++++ b/dlls/mfreadwrite/reader.c
+@@ -2618,8 +2618,19 @@ static HRESULT WINAPI src_reader_Flush(IMFSourceReaderEx *iface, DWORD index)
+     struct source_reader *reader = impl_from_IMFSourceReaderEx(iface);
+     HRESULT hr;
+ 
++    const char *sgi;
++
+     TRACE("%p, %#lx.\n", iface, index);
+ 
++    sgi = getenv("SteamGameId");
++    if (sgi && strcmp(sgi, "1293160") == 0)
++    {
++        /* In The Medium flushes sometimes lead to the callback
++           calling objects that have already been destroyed. */
++        WARN("ignoring flush\n");
++        return S_OK;
++    }
++
+     EnterCriticalSection(&reader->cs);
+ 
+     if (reader->async_callback)
