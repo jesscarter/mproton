@@ -676,7 +676,7 @@ do_check() {
             "--check would leave config.h unpatched; run the full build: build/mproton-build.sh --from wine"
     fi
     restore_generated_mtimes
-    path="$MINGW_DIR/bin:$PATH"
+    path="$PATH:$MINGW_DIR/bin"   # appended, as build-wine.sh does: clang must stay Apple's
     [ ! -d "$WINE_BUILD/ccache-bin" ] || [ -z "${WINE_BUILD_CCACHE:-}" ] || path="$WINE_BUILD/ccache-bin:$path"
     n=$(sysctl -n hw.ncpu)
     if PATH="$path" make -C "$WINE_BUILD" -k -j"$n" >"$STATE/check.log" 2>&1; then
