@@ -3,3 +3,5 @@ ref/
 prefixes/
 bench/out/
 .DS_Store
+__pycache__/
+.pytest_cache/
