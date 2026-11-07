@@ -1,0 +1,62 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Alexander=20Thei=C3=9Fen?= <alex@theissen.io>
+Date: Fri, 23 Oct 2026 12:51:22 +0800
+Subject: [PATCH 06/15] server: Return STATUS_PARTIAL_COPY for writes to
+ read-only memory on macOS.
+
+Windows writes up to the first page that cannot be written and returns
+STATUS_PARTIAL_COPY with the number of bytes written. The non-Rosetta
+path of write_process_memory() returned KERN_PROTECTION_FAILURE, which
+mach_set_error() reports as STATUS_ACCESS_DENIED. Report
+STATUS_PARTIAL_COPY instead, with *written set to the bytes written
+before the failure, as the ptrace path does.
+
+(cherry picked from commit 8a96f5d38d781fb6e65b6939907e17a5f86ccf40)
+---
+ server/mach.c | 12 +++++++-----
+ 1 file changed, 7 insertions(+), 5 deletions(-)
+
+diff --git a/server/mach.c b/server/mach.c
+index 0f75d892816..5acbdf8ed97 100644
+--- a/server/mach.c
++++ b/server/mach.c
+@@ -421,6 +421,7 @@ int write_process_memory( struct process *process, client_ptr_t ptr, data_size_t
+     kern_return_t ret;
+     mach_port_t process_port = get_process_port( process );
+     mach_vm_offset_t data;
++    int partial = 0;
+ 
+     if (written) *written = 0;
+ 
+@@ -484,7 +485,7 @@ int write_process_memory( struct process *process, client_ptr_t ptr, data_size_t
+          */
+         if (!is_rosetta() && !(info.protection & VM_PROT_WRITE))
+         {
+-            ret = KERN_PROTECTION_FAILURE;
++            partial = 1;
+             goto out;
+         }
+ 
+@@ -512,7 +513,7 @@ int write_process_memory( struct process *process, client_ptr_t ptr, data_size_t
+             /* FIXME: See the above Rosetta remark. */
+             if (!is_rosetta() && !(info.protection & VM_PROT_WRITE))
+             {
+-                ret = KERN_PROTECTION_FAILURE;
++                partial = 1;
+                 break;
+             }
+ 
+@@ -541,9 +542,10 @@ int write_process_memory( struct process *process, client_ptr_t ptr, data_size_t
+ 
+ out:
+     free( (void *)data );
+-    mach_set_error( ret );
+-    if (ret == KERN_SUCCESS && written) *written = size;
+-    return (ret == KERN_SUCCESS);
++    if (partial) set_error( STATUS_PARTIAL_COPY );
++    else mach_set_error( ret );
++    if (!partial && ret == KERN_SUCCESS && written) *written = size;
++    return (ret == KERN_SUCCESS && !partial);
+ }
+ 
+ #endif  /* USE_MACH */

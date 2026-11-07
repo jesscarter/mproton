@@ -1,0 +1,36 @@
+1	39d1ebc226a	clean		configure, loader, ntdll: Support the arm64 macOS address space and app bundles.
+2	f0cc31b28fd	clean		makedep: Link the resources of modules built only for the hybrid arch.
+3	7d58e47b74c	conflict	dlls/ntdll/unix/virtual.c 	ntdll: Skip reserved areas that the alignment rounds past.
+4	e8e8cc4ec15	conflict	dlls/ntdll/unix/server.c dlls/ntdll/unix/signal_arm64.c dlls/ntdll/unix/sync.c dlls/ntdll/unix/unix_private.h dlls/ntdll/unix/virtual.c 	ntdll: Run x86 code through FEX on arm64 macOS.
+5	5638e0abf2a	clean		ntdll: Load compatdb.so before the first PE code runs.
+6	2245b854023	conflict	dlls/ntdll/unix/loader.c dlls/ntdll/unix/unix_private.h dlls/ntdll/unix/virtual.c dlls/win32u/vulkan.c 	ntdll, win32u: Build and run as a self-contained bundle.
+7	f1fe4a27b66	clean		ntdll: Let compatdb keep no-exec permanently on.
+8	acb10298dce	conflict	dlls/winemac.drv/cocoa_window.m dlls/winemac.drv/macdrv.h dlls/winemac.drv/macdrv_cocoa.h dlls/winemac.drv/surface.c dlls/winemac.drv/window.c 	winemac.drv: Export macdrv_functions for DXMT and mtld3d.
+9	5a1a2fca403	conflict	dlls/win32u/opengl.c dlls/winemac.drv/cocoa_app.h dlls/winemac.drv/cocoa_clipboard.m dlls/winemac.drv/cocoa_event.m dlls/winemac.drv/cocoa_status_item.m dlls/winemac.drv/cocoa_window.m dlls/winemac.drv/display.c dlls/winemac.drv/ime.c dlls/winemac.drv/keyboard.c dlls/winemac.drv/macdrv.h dlls/winemac.drv/macdrv_cocoa.h dlls/winemac.drv/macdrv_main.c dlls/winemac.drv/mouse.c dlls/winemac.drv/surface.c include/wine/opengl_driver.h 	winemac.drv: Fix window and input problems under games, add OpenGL on EGL.
+10	17c10440450	conflict	dlls/win32u/opengl.c dlls/win32u/sysparams.c 	win32u: Fix a window handle race, glyph metrics and painting problems.
+11	713c1db7e5f	conflict	dlls/ntdll/unix/system.c dlls/winevulkan/make_vulkan dlls/winevulkan/vulkan_thunks.c 	kernelbase, winebus.sys, ntdll, loader, winevulkan, winegstreamer: Assorted game fixes.
+12	324cd7ba694	conflict	dlls/winecoreaudio.drv/Makefile.in 	winecoreaudio.drv, winemac.drv: Request microphone access.
+13	7134955a4b4	conflict	dlls/ntdll/unix/loader.c dlls/ntdll/unix/thread.c include/wine/server_protocol.h 	server, ntdll: Add msync.
+14	158b218383d	clean		wined3d: Fix table fog with equal start and end and an Apple GL buffer texture crash.
+15	553ac1b5fd1	conflict	dlls/wined3d/texture_vk.c 	wined3d: Fix Vulkan renderer spec violations.
+16	9eb7893b27e	conflict	dlls/wined3d/swapchain.c dlls/wined3d/utils.c 	wined3d: Add Vulkan fallbacks for P8, windowless swapchains and X8D24.
+17	4156c721335	conflict	libs/vkd3d/libs/vkd3d-shader/d3dbc.c 	vkd3d-shader/d3dbc: Synthesize inputs for vs_1_x without dcl.
+18	6aff7fb3b54	clean		ddraw/tests: Skip test_map_synchronisation() when the draw time can't be estimated.
+19	23f38ac0f4c	conflict	dlls/winemac.drv/window.c 	winemac.drv: Order child client views by window z-order.
+20	1114ea6a2ae	conflict	dlls/winemac.drv/cocoa_window.m dlls/winemac.drv/macdrv.h dlls/winemac.drv/macdrv_cocoa.h dlls/winemac.drv/surface.c dlls/winemac.drv/window.c 	winemac.drv: Show child windows above DXMT and mtld3d client views.
+21	8a96f5d38d7	clean		server: Return STATUS_PARTIAL_COPY for writes to read-only memory on macOS.
+22	8d91fb602f4	clean		ntdll: Return FALSE from RtlIsEcCode() above the highest user address.
+23	36c5c8ceef3	clean		kernel32/tests: Don't walk the section name if the query fails in test_Wow64Transition.
+24	0564227b2ba	clean		ntdll: Support QUEUE_USER_APC_CALLBACK_DATA_CONTEXT on ARM64.
+25	a61eb7243e1	clean		ntdll/tests: Skip tests that an x86 emulator on ARM64 can't run.
+26	941b2ebe157	conflict	dlls/winemac.drv/cocoa_main.m 	winemac.drv: Don't use freed startup state when the Cocoa app starts.
+27	083e30b71cd	conflict	dlls/win32u/opengl.c 	win32u: Don't free the display device when it has no context.
+28	ad4cac3b01a	conflict	dlls/win32u/opengl.c 	win32u: Skip EGL devices without a name in get_opengl_gpus().
+29	2e2225137bb	clean		win32u: Fall back to eglGetPlatformDisplayEXT() without eglGetPlatformDisplay().
+30	2831776a30d	conflict	dlls/win32u/opengl.c include/wine/opengl_driver.h 	win32u: Only report sRGB pixel formats for EGL configs that have an sRGB variant.
+31	17a261554c3	conflict	dlls/win32u/opengl.c 	win32u: Give a client surface back once when a framebuffer surface with a target is released.
+32	df5ee727e99	conflict	dlls/ntdll/unix/thread.c dlls/ntdll/unix/unix_private.h 	ntdll: Back up Rip of x64 breakpoints after the debugger saw them on ARM64EC.
+33	d31cfb7706b	clean		win32u: List the virtual modes at the display's own frequency below 60Hz.
+34	b6ef6d11cd7	clean		server: Complete pending polls when a connect fails under kqueue.
+35	2b0bd0fd7b0	conflict	dlls/wininet/utility.c 	wininet: Connect in non-blocking mode in try_create_connect_socket().
+36	5959a04b1af	conflict	dlls/dnsapi/libresolv.c 	dnsapi: Don't resolve a .local hostname when the DLL loads.
