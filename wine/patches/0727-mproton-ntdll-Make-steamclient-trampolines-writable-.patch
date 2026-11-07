@@ -1,0 +1,45 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: jess <jessica.welsh.carter@gmail.com>
+Date: Sat, 7 Nov 2026 17:06:48 -0500
+Subject: [PATCH] mproton: ntdll: Make steamclient trampolines writable without
+ PROT_EXEC on arm64 hosts.
+
+steamclient_setup_trampolines() made steamclient's .text RWX with
+mprotect() and ignored the result. macOS on Apple Silicon refuses
+PROT_WRITE|PROT_EXEC outside MAP_JIT mappings, so the pages stayed
+read-only, writing the first jump faulted inside the unix call, and the
+redirect to lsteamclient was silently dropped: games got Valve's
+steamclient code. On an arm64 host steamclient is always x86 code run by
+the emulator, so the host never executes those pages: ask for RW only.
+Also report a failed mprotect instead of faulting.
+
+Found with steam/tests/redirect (fake steamclient(64).dll): x86_64 and
+i686 both faulted writing CreateInterface's trampoline.
+---
+ dlls/ntdll/unix/loader.c | 13 ++++++++++++-
+ 1 file changed, 12 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/ntdll/unix/loader.c b/dlls/ntdll/unix/loader.c
+index f8a55adb096..86c9c14d3da 100644
+--- a/dlls/ntdll/unix/loader.c
++++ b/dlls/ntdll/unix/loader.c
+@@ -1357,7 +1357,18 @@ static NTSTATUS steamclient_setup_trampolines( void *args )
+         addr = (void *)(((UINT_PTR)src_mod + src_sec[i].VirtualAddress) & ~page_mask);
+         size = (src_sec[i].Misc.VirtualSize + page_mask) & ~page_mask;
+         if (noexec_cached) mprotect(addr, size, PROT_READ);
+-        else mprotect(addr, size, PROT_READ|PROT_WRITE|PROT_EXEC);
++#ifdef __aarch64__
++        /* steamclient is x86 code, run by the emulator: the host never executes these
++         * pages, and macOS refuses PROT_WRITE|PROT_EXEC outside MAP_JIT mappings. */
++        else if (mprotect(addr, size, PROT_READ|PROT_WRITE))
++#else
++        else if (mprotect(addr, size, PROT_READ|PROT_WRITE|PROT_EXEC))
++#endif
++        {
++            ERR( "mprotect %p-%p failed (%s), not redirecting steamclient to lsteamclient\n",
++                 addr, (char *)addr + size, strerror(errno) );
++            return STATUS_ACCESS_DENIED;
++        }
+     }
+ 
+     src_exp = get_module_data_dir( src_mod, IMAGE_FILE_EXPORT_DIRECTORY, NULL );

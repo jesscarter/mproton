@@ -101,12 +101,12 @@ The game loads `steamclient.dll`/`steamclient64.dll` (Valve's), and the Wine loa
 
 The recommended Wine base (Proton Wine + athei's patches) carries these commits, and the mproton Wine series hand-merges `c177a34d784` onto athei 11.20. Plain athei `arm64-patched` does not have them. The modules build against either, because they use no Proton-only Wine API: every ntdll export the unix side imports and every PE import resolves against athei's tree.
 
-**Open blocker on arm64 (not fixed here).** The redirect works through execute page faults on the trampolines. Proton only hooks `steamclient_handle_fault()` into `signal_x86_64.c` and `signal_i386.c`. On an arm64 host:
+**On arm64 (fixed 2026-11-07, mproton Wine patch "Make steamclient trampolines writable without PROT_EXEC on arm64 hosts").** The redirect has two modes:
 
-- `signal_arm64.c` has no such hook.
-- The game's x86 code runs under FEX (ARM64EC, or the WoW64 BTCpu for 32-bit games), and that fault path doesn't reach the hook either.
+- **Default:** at load, Wine writes x86 jump stubs over every export of steamclient(64).dll pointing at lsteamclient. FEX runs those stubs like any x86 code, and x86_64 code jumping into ARM64EC lsteamclient works. The bug was that Proton made the pages RWX with `mprotect()` and ignored the result; macOS refuses W+X outside MAP_JIT, so the first stub write faulted inside the unix call and the redirect was silently dropped. On arm64 hosts the pages are now made RW (the host never executes x86 code).
+- **`WINESTEAMNOEXEC=1`** (set by `hacks_init()` for a few games: Mafia II, CoD BO2, Sniper Elite NZA, Madballs): no stubs, redirect through execute faults. Proton only hooks `steamclient_handle_fault()` into `signal_x86_64.c`/`signal_i386.c`, so **this mode still doesn't work on arm64**: it needs a hook in the ARM64EC/FEX fault path.
 
-So until the hook is ported, the redirect won't fire on macOS arm64. The port means either a hook in the arm64/ARM64EC fault path, or having FEX call it. Until then, games never reach lsteamclient.
+Test: `steam/tests/redirect` (fake steamclient(64).dll whose exports return a sentinel, plus a caller). `./build.sh`, then run `out/<arch>/redirect_test.exe` under the bundle with `WINEDEBUG=+steamclient`. With the fix, both x86_64 and i686 reach lsteamclient (`CreateInterface` starts with Wine's jump stub, lsteamclient's `steamclient_init` runs). Without Steam it then aborts in `steamclient_init` with "unable to load Steam_IsKnownInterface": that's Steam check 2 below, not yet done (seen even with `STEAM_COMPAT_CLIENT_INSTALL_PATH="$HOME/Library/Application Support/Steam"` and Steam not running).
 
 ## Linux-isms in the unix side (audit)
 
@@ -179,7 +179,7 @@ The launcher runs `wine c:\windows\system32\steam.exe <game> <args>` with `WINED
 
 ## Must verify on a Mac
 
-Prerequisite: the steamclient trampoline redirect must be ported to the arm64/FEX fault path (see "Wine-side requirements"). Until then only items 1–3 can be tested; items 2–3 use the standalone probe and need no Wine.
+The default-mode redirect works on arm64 (see "Wine-side requirements"); only `WINESTEAMNOEXEC` games still need the fault-path port. Items 2–3 can use the standalone probe, which needs no Wine.
 
 Nothing here has run on macOS yet. Everything above was built and checked on Linux:
 
