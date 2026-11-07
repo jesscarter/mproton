@@ -1,0 +1,51 @@
+{
+ "bench": "mpbench",
+ "version": 2,
+ "pe_arch": "i386",
+ "wine": "10.0",
+ "host": "Darwin 27.2.0",
+ "cpus": 8,
+ "frames": 600,
+ "width": 1280,
+ "height": 720,
+ "d3d12_shaders": "dxil",
+ "present_mode": "default",
+ "note": "m1 matrix: Rosetta Wine (/Applications/Wine Stable.app/Contents/Resources/wine/bin/wine); wine-10.0; part cpu",
+ "args": "--no-gpu",
+ "results": [
+  {
+   "name": "cpu.scalar",
+   "value": 157.4885,
+   "unit": "Miter/s"
+  },
+  {
+   "name": "cpu.vector",
+   "value": 7.2737,
+   "unit": "GFLOP/s(x2)"
+  },
+  {
+   "name": "cpu.memcpy",
+   "value": 20.9222,
+   "unit": "GB/s"
+  },
+  {
+   "name": "cpu.atomic",
+   "value": 58.3688,
+   "unit": "Mops/s"
+  },
+  {
+   "name": "cpu.pingpong",
+   "value": 12141.0793,
+   "unit": "Krt/s",
+   "ordering_errors": 0
+  }
+ ],
+ "run": {
+  "status": "ok",
+  "exit_code": 0,
+  "seconds": 2,
+  "runtime": "rosetta",
+  "part": "cpu",
+  "log": "logs/rosetta-i686-cpu.log"
+ }
+}

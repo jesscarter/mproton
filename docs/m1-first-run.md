@@ -80,3 +80,15 @@ Xvfb has no vsync, so `sync1` doesn't cap there. The cap itself has to be measur
 2. Rebuild with `build/mproton-build.sh`, which adds our Proton Wine series, DXVK as an ARM64X backend, and `lsteamclient`. Then re-run the matrix with the DXVK column.
 3. Find the source of the 119.6 fps D3D11 cap: re-run the DXMT column with the `--present-mode` variants above (`MATRIX_ARGS="--present-mode sync1"` etc.).
 4. Re-enable SIP: the paid profile works, so SIP is no longer needed.
+
+## Second run: full mproton bundle (2026-11-07, afternoon)
+
+Built with `build/mproton-build.sh`: athei base, our Proton Wine series (batch 1), DXVK v3.1.1 ARM64X + i386, and `lsteamclient`, signed with the same profile. Results are in `results/m1-2026-11-07-mproton/summary.md`. mpbench now loads its graphics DLLs dynamically.
+
+- **DXVK works on KosmicKrisp.** It's the fastest D3D11 path on x86_64 under FEX: about 210–230 fps on draw calls and 226–286 fps on fill, vs 131–184 / 148 for DXMT. D3D12 through vkd3d-proton is unchanged (GS/SO/tessellation pass).
+- **wined3d now runs** (FL 11_0 through Zink, reported as a GTX 470): 57–66 fps on draw calls, about 390 fps on fill. D3D12 is correctly reported as n/a on that tree.
+- **The 119.6 fps cap is gone.**
+  - What the present data shows: `display_hz` is 60, sync interval 0, and DXMT's `Present` takes about 0.01 ms, so current D3D11 numbers are real throughput.
+  - What's unexplained: why the morning run sat at 119.6 fps.
+- **New bug: i686 under DXVK.** Every scene passes, then the process aborts at exit with `unimplemented function wow64.dll.Wow64SuspendLocalThread`. Not yet checked whether athei's Wine lacks it or our series broke it.
+- **New bug: WMA decoding regression.** athei's wmadec smoke test fails because Proton's media-converter (series #114–135) claims `audio/x-wma` and needs the GStreamer elements `opusdec` and `capssetter`, which the bundle lacks. Diagnosis and fix options are in #mproton.

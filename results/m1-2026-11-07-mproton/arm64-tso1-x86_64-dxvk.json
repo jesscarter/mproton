@@ -1,0 +1,305 @@
+{
+ "bench": "mpbench",
+ "version": 2,
+ "pe_arch": "x86_64",
+ "wine": "11.20",
+ "host": "Darwin 27.2.0",
+ "cpus": 8,
+ "frames": 600,
+ "width": 1280,
+ "height": 720,
+ "d3d12_shaders": "dxil",
+ "present_mode": "default",
+ "note": "m1 matrix: ARM64 Wine + FEX, FEX_HARDWARE_TSO=1 (/Users/jess/mproton/work/mach9/dist/wine); wine-11.20-722-g61715efdec0; part dxvk; WINE_COMPATDB=exe=mpbench-x86_64.exe;dxgi=dxvk",
+ "args": "--no-cpu --api all --frames 600 --width 1280 --height 720",
+ "results": [
+  {
+   "name": "gpu11.device",
+   "value": 1.0,
+   "unit": "ok",
+   "adapter": "Apple M2",
+   "feature_level": "0xb000",
+   "dlls": {
+    "d3d11.dll": "C:\\windows\\system32\\d3d11.dll",
+    "d3dcompiler_47.dll": "C:\\windows\\system32\\d3dcompiler_47.dll",
+    "dxgi.dll": "C:\\windows\\system32\\dxgi.dll"
+   }
+  },
+  {
+   "name": "gpu11.drawcalls",
+   "value": 229.8751,
+   "unit": "fps",
+   "p50_ms": 3.899,
+   "p99_ms": 11.473,
+   "max_ms": 12.317,
+   "present": {
+    "api": "dxgi",
+    "mode": "default",
+    "sync_interval": 0,
+    "flags": "0",
+    "swap_effect": "flip_discard",
+    "buffers": 2,
+    "tearing_supported": true,
+    "display_hz": 60,
+    "call_ms": {
+     "mean": 3.9,
+     "p50": 3.492,
+     "p99": 11.148,
+     "min": 0.003,
+     "max": 11.972
+    },
+    "interval_ms": {
+     "mean": 4.35,
+     "p50": 3.794,
+     "p99": 11.672,
+     "min": 0.249,
+     "max": 12.35
+    },
+    "rate_hz": 229.89,
+    "dxgi_frame_statistics": "unavailable (0x887a000b)"
+   }
+  },
+  {
+   "name": "gpu11.fill",
+   "value": 226.2331,
+   "unit": "fps",
+   "p50_ms": 4.364,
+   "p99_ms": 14.346,
+   "max_ms": 16.843,
+   "present": {
+    "api": "dxgi",
+    "mode": "default",
+    "sync_interval": 0,
+    "flags": "0",
+    "swap_effect": "flip_discard",
+    "buffers": 2,
+    "tearing_supported": true,
+    "display_hz": 60,
+    "call_ms": {
+     "mean": 4.285,
+     "p50": 4.354,
+     "p99": 14.335,
+     "min": 0.014,
+     "max": 16.835
+    },
+    "interval_ms": {
+     "mean": 4.425,
+     "p50": 4.469,
+     "p99": 14.405,
+     "min": 0.023,
+     "max": 17.132
+    },
+    "rate_hz": 226.01,
+    "dxgi_frame_statistics": {
+     "presents": 601,
+     "present_refreshes": 159,
+     "sync_refreshes": 159
+    }
+   }
+  },
+  {
+   "name": "gpu12.device",
+   "value": 1.0,
+   "unit": "ok",
+   "adapter": "Apple M2",
+   "feature_level": "0xc000",
+   "shader_model": "6.6",
+   "shaders": "dxil",
+   "dlls": {
+    "d3dcompiler_47.dll": "C:\\windows\\system32\\d3dcompiler_47.dll",
+    "dxgi.dll": "C:\\windows\\system32\\dxgi.dll",
+    "d3d12.dll": "C:\\windows\\system32\\d3d12.dll"
+   }
+  },
+  {
+   "name": "gpu12.drawcalls",
+   "value": 239.0218,
+   "unit": "fps",
+   "p50_ms": 4.008,
+   "p99_ms": 5.33,
+   "max_ms": 7.256,
+   "present": {
+    "api": "dxgi",
+    "mode": "default",
+    "sync_interval": 0,
+    "flags": "0",
+    "swap_effect": "flip_discard",
+    "buffers": 2,
+    "tearing_supported": true,
+    "display_hz": 60,
+    "call_ms": {
+     "mean": 0.005,
+     "p50": 0.005,
+     "p99": 0.019,
+     "min": 0.002,
+     "max": 0.069
+    },
+    "interval_ms": {
+     "mean": 4.174,
+     "p50": 4.012,
+     "p99": 5.318,
+     "min": 3.541,
+     "max": 7.256
+    },
+    "rate_hz": 239.57,
+    "dxgi_frame_statistics": "unavailable (0x887a000b)"
+   }
+  },
+  {
+   "name": "gpu12.fill",
+   "value": 377.321,
+   "unit": "fps",
+   "p50_ms": 2.281,
+   "p99_ms": 6.926,
+   "max_ms": 7.682,
+   "present": {
+    "api": "dxgi",
+    "mode": "default",
+    "sync_interval": 0,
+    "flags": "0",
+    "swap_effect": "flip_discard",
+    "buffers": 2,
+    "tearing_supported": true,
+    "display_hz": 60,
+    "call_ms": {
+     "mean": 0.617,
+     "p50": 0.31,
+     "p99": 2.469,
+     "min": 0.008,
+     "max": 3.237
+    },
+    "interval_ms": {
+     "mean": 2.643,
+     "p50": 2.292,
+     "p99": 7.546,
+     "min": 0.467,
+     "max": 8.602
+    },
+    "rate_hz": 378.35,
+    "dxgi_frame_statistics": {
+     "presents": 601,
+     "present_refreshes": 0,
+     "sync_refreshes": 0
+    }
+   }
+  },
+  {
+   "name": "gpu12.features.gs",
+   "value": 1171.502,
+   "unit": "passes/s",
+   "ok": true,
+   "ms_per_pass": 0.8536,
+   "check": "0/128 probe pixels wrong; timed: 65536 points -> quads"
+  },
+  {
+   "name": "gpu12.features.so",
+   "value": 127.4577,
+   "unit": "passes/s",
+   "ok": true,
+   "ms_per_pass": 7.8457,
+   "check": "filled_size 65536 (want 65536), 0/4096 vertices wrong; timed: 1048576 vertices"
+  },
+  {
+   "name": "gpu12.features.tess",
+   "value": 679.3792,
+   "unit": "passes/s",
+   "ok": true,
+   "ms_per_pass": 1.4719,
+   "check": "0/12 probe pixels wrong; timed: 4 draws x 64 patches x factor 16 = 131072 triangles"
+  },
+  {
+   "name": "vk.device",
+   "value": 1.0,
+   "unit": "ok",
+   "adapter": "Apple M2",
+   "api_version": "1.4.363",
+   "driver_version": "0x6863063",
+   "vendor_id": "0x106b",
+   "present_mode": "immediate",
+   "swapchain_images": 3,
+   "dlls": {
+    "vulkan-1.dll": "C:\\windows\\system32\\vulkan-1.dll"
+   }
+  },
+  {
+   "name": "vk.drawcalls",
+   "value": 179.2884,
+   "unit": "fps",
+   "p50_ms": 5.06,
+   "p99_ms": 7.681,
+   "max_ms": 12.009,
+   "present": {
+    "api": "vulkan",
+    "present_mode": "immediate",
+    "surface_present_modes": [
+     0,
+     2
+    ],
+    "swapchain_images": 3,
+    "display_hz": 60,
+    "call_ms": {
+     "mean": 0.062,
+     "p50": 0.039,
+     "p99": 0.2,
+     "min": 0.029,
+     "max": 0.224
+    },
+    "interval_ms": {
+     "mean": 5.575,
+     "p50": 5.056,
+     "p99": 7.683,
+     "min": 4.51,
+     "max": 11.991
+    },
+    "rate_hz": 179.38
+   }
+  },
+  {
+   "name": "vk.fill",
+   "value": 271.4143,
+   "unit": "fps",
+   "p50_ms": 3.697,
+   "p99_ms": 11.216,
+   "max_ms": 12.548,
+   "present": {
+    "api": "vulkan",
+    "present_mode": "immediate",
+    "surface_present_modes": [
+     0,
+     2
+    ],
+    "swapchain_images": 3,
+    "display_hz": 60,
+    "call_ms": {
+     "mean": 0.137,
+     "p50": 0.098,
+     "p99": 0.818,
+     "min": 0.023,
+     "max": 1.584
+    },
+    "interval_ms": {
+     "mean": 3.681,
+     "p50": 3.677,
+     "p99": 11.208,
+     "min": 0.125,
+     "max": 12.505
+    },
+    "rate_hz": 271.66
+   }
+  }
+ ],
+ "run": {
+  "status": "ok",
+  "exit_code": 0,
+  "seconds": 26,
+  "runtime": "arm64-tso1",
+  "part": "dxvk",
+  "log": "logs/arm64-tso1-x86_64-dxvk.log",
+  "backend": {
+   "want": "dxvk",
+   "got": "dxvk",
+   "check": "confirmed",
+   "compatdb_arch": "x86_64 (arm64ec)"
+  }
+ }
+}

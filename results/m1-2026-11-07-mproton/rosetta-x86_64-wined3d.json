@@ -1,0 +1,160 @@
+{
+ "bench": "mpbench",
+ "version": 2,
+ "pe_arch": "x86_64",
+ "wine": "10.0",
+ "host": "Darwin 27.2.0",
+ "cpus": 8,
+ "frames": 600,
+ "width": 1280,
+ "height": 720,
+ "d3d12_shaders": "dxil",
+ "present_mode": "default",
+ "note": "m1 matrix: Rosetta Wine (/Applications/Wine Stable.app/Contents/Resources/wine/bin/wine); wine-10.0; part wined3d",
+ "args": "--no-cpu --api all --frames 600 --width 1280 --height 720",
+ "results": [
+  {
+   "name": "gpu11.device",
+   "value": 0.0,
+   "unit": "fl<11_0",
+   "adapter": "NVIDIA GeForce 6800",
+   "feature_level": "0x9300",
+   "dlls": {
+    "d3d11.dll": "C:\\windows\\system32\\d3d11.dll",
+    "d3dcompiler_47.dll": "C:\\windows\\system32\\d3dcompiler_47.dll",
+    "dxgi.dll": "C:\\windows\\system32\\dxgi.dll"
+   }
+  },
+  {
+   "name": "gpu12.device",
+   "value": 1.0,
+   "unit": "ok",
+   "adapter": "NVIDIA GeForce 6800",
+   "feature_level": "0xb000",
+   "shader_model": "5.1",
+   "shaders": "dxil",
+   "hint": "device reports SM < 6.0, DXIL pipelines will likely fail; try --d3d12-shaders dxbc",
+   "dlls": {
+    "d3dcompiler_47.dll": "C:\\windows\\system32\\d3dcompiler_47.dll",
+    "dxgi.dll": "C:\\windows\\system32\\dxgi.dll",
+    "d3d12.dll": "C:\\windows\\system32\\d3d12.dll"
+   }
+  },
+  {
+   "name": "gpu12.present",
+   "value": 0.0,
+   "unit": "error",
+   "ok": false,
+   "error": "CreateGraphicsPipelineState(vs_quad): 0x80004005"
+  },
+  {
+   "name": "gpu12.features.gs",
+   "value": 0.0,
+   "unit": "passes/s",
+   "ok": false,
+   "error": "CreateGraphicsPipelineState(vs_point+gs): 0x80004005"
+  },
+  {
+   "name": "gpu12.features.so",
+   "value": 0.0,
+   "unit": "passes/s",
+   "ok": false,
+   "error": "CreateGraphicsPipelineState(vs_so+so): 0x80004001"
+  },
+  {
+   "name": "gpu12.features.tess",
+   "value": 0.0,
+   "unit": "passes/s",
+   "ok": false,
+   "error": "CreateGraphicsPipelineState(vs_patch+hs+ds): 0x80004005"
+  },
+  {
+   "name": "vk.device",
+   "value": 1.0,
+   "unit": "ok",
+   "adapter": "Apple M2",
+   "api_version": "1.0.0",
+   "driver_version": "0x283c",
+   "vendor_id": "0x106b",
+   "present_mode": "immediate",
+   "swapchain_images": 2,
+   "dlls": {
+    "vulkan-1.dll": "C:\\windows\\system32\\vulkan-1.dll"
+   }
+  },
+  {
+   "name": "vk.drawcalls",
+   "value": 138.4738,
+   "unit": "fps",
+   "p50_ms": 7.45,
+   "p99_ms": 12.224,
+   "max_ms": 18.525,
+   "present": {
+    "api": "vulkan",
+    "present_mode": "immediate",
+    "surface_present_modes": [
+     2,
+     0
+    ],
+    "swapchain_images": 2,
+    "display_hz": 60,
+    "call_ms": {
+     "mean": 0.012,
+     "p50": 0.011,
+     "p99": 0.024,
+     "min": 0.006,
+     "max": 0.094
+    },
+    "interval_ms": {
+     "mean": 7.221,
+     "p50": 7.481,
+     "p99": 12.519,
+     "min": 3.66,
+     "max": 18.534
+    },
+    "rate_hz": 138.49
+   }
+  },
+  {
+   "name": "vk.fill",
+   "value": 105.0143,
+   "unit": "fps",
+   "p50_ms": 1.776,
+   "p99_ms": 12.691,
+   "max_ms": 16.961,
+   "present": {
+    "api": "vulkan",
+    "present_mode": "immediate",
+    "surface_present_modes": [
+     2,
+     0
+    ],
+    "swapchain_images": 2,
+    "display_hz": 60,
+    "call_ms": {
+     "mean": 0.035,
+     "p50": 0.034,
+     "p99": 0.094,
+     "min": 0.006,
+     "max": 0.134
+    },
+    "interval_ms": {
+     "mean": 9.52,
+     "p50": 10.436,
+     "p99": 21.0,
+     "min": 1.242,
+     "max": 22.026
+    },
+    "rate_hz": 105.04
+   }
+  }
+ ],
+ "run": {
+  "status": "crash",
+  "exit_code": 1,
+  "seconds": 15,
+  "runtime": "rosetta",
+  "part": "wined3d",
+  "log": "logs/rosetta-x86_64-wined3d.log"
+ }
+}

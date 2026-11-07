@@ -1,0 +1,124 @@
+{
+ "bench": "mpbench",
+ "version": 2,
+ "pe_arch": "i386",
+ "wine": "10.0",
+ "host": "Darwin 27.2.0",
+ "cpus": 8,
+ "frames": 600,
+ "width": 1280,
+ "height": 720,
+ "d3d12_shaders": "dxil",
+ "present_mode": "default",
+ "note": "m1 matrix: Rosetta Wine (/Applications/Wine Stable.app/Contents/Resources/wine/bin/wine); wine-10.0; part wined3d",
+ "args": "--no-cpu --api all --frames 600 --width 1280 --height 720",
+ "results": [
+  {
+   "name": "gpu11.device",
+   "value": 0.0,
+   "unit": "fl<11_0",
+   "adapter": "NVIDIA GeForce 6800",
+   "feature_level": "0x9300",
+   "dlls": {
+    "d3d11.dll": "C:\\windows\\system32\\d3d11.dll",
+    "d3dcompiler_47.dll": "C:\\windows\\system32\\d3dcompiler_47.dll",
+    "dxgi.dll": "C:\\windows\\system32\\dxgi.dll"
+   }
+  },
+  {
+   "name": "gpu12.device",
+   "value": 0.0,
+   "unit": "error",
+   "ok": false,
+   "error": "p_D3D12CreateDevice(nullptr, D3D_FEATURE_LEVEL_11_0, __uuidof(ID3D12Device), (void **)&d.dev): 0x80004005"
+  },
+  {
+   "name": "vk.device",
+   "value": 1.0,
+   "unit": "ok",
+   "adapter": "Apple M2",
+   "api_version": "1.0.0",
+   "driver_version": "0x283c",
+   "vendor_id": "0x106b",
+   "present_mode": "immediate",
+   "swapchain_images": 2,
+   "dlls": {
+    "vulkan-1.dll": "C:\\windows\\system32\\vulkan-1.dll"
+   }
+  },
+  {
+   "name": "vk.drawcalls",
+   "value": 135.0586,
+   "unit": "fps",
+   "p50_ms": 7.718,
+   "p99_ms": 9.994,
+   "max_ms": 32.469,
+   "present": {
+    "api": "vulkan",
+    "present_mode": "immediate",
+    "surface_present_modes": [
+     2,
+     0
+    ],
+    "swapchain_images": 2,
+    "display_hz": 60,
+    "call_ms": {
+     "mean": 0.012,
+     "p50": 0.01,
+     "p99": 0.026,
+     "min": 0.006,
+     "max": 0.072
+    },
+    "interval_ms": {
+     "mean": 7.403,
+     "p50": 7.741,
+     "p99": 11.024,
+     "min": 3.88,
+     "max": 32.451
+    },
+    "rate_hz": 135.08
+   }
+  },
+  {
+   "name": "vk.fill",
+   "value": 124.2727,
+   "unit": "fps",
+   "p50_ms": 6.473,
+   "p99_ms": 11.579,
+   "max_ms": 13.459,
+   "present": {
+    "api": "vulkan",
+    "present_mode": "immediate",
+    "surface_present_modes": [
+     2,
+     0
+    ],
+    "swapchain_images": 2,
+    "display_hz": 60,
+    "call_ms": {
+     "mean": 0.03,
+     "p50": 0.021,
+     "p99": 0.093,
+     "min": 0.007,
+     "max": 0.202
+    },
+    "interval_ms": {
+     "mean": 8.043,
+     "p50": 8.251,
+     "p99": 21.316,
+     "min": 1.327,
+     "max": 22.249
+    },
+    "rate_hz": 124.33
+   }
+  }
+ ],
+ "run": {
+  "status": "crash",
+  "exit_code": 1,
+  "seconds": 14,
+  "runtime": "rosetta",
+  "part": "wined3d",
+  "log": "logs/rosetta-i686-wined3d.log"
+ }
+}

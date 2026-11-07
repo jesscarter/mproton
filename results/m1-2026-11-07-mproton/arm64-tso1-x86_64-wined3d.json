@@ -1,0 +1,230 @@
+{
+ "bench": "mpbench",
+ "version": 2,
+ "pe_arch": "x86_64",
+ "wine": "11.20",
+ "host": "Darwin 27.2.0",
+ "cpus": 8,
+ "frames": 600,
+ "width": 1280,
+ "height": 720,
+ "d3d12_shaders": "dxil",
+ "present_mode": "default",
+ "note": "m1 matrix: ARM64 Wine + FEX, FEX_HARDWARE_TSO=1 (/Users/jess/mproton/work/mach9/dist/wine); wine-11.20-722-g61715efdec0; part wined3d; WINE_COMPATDB=exe=mpbench-x86_64.exe;dxgi=wined3d",
+ "args": "--no-cpu --api all --frames 600 --width 1280 --height 720",
+ "results": [
+  {
+   "name": "gpu11.device",
+   "value": 1.0,
+   "unit": "ok",
+   "adapter": "NVIDIA GeForce GTX 470",
+   "feature_level": "0xb000",
+   "dlls": {
+    "d3d11.dll": "C:\\windows\\system32\\d3d11.dll",
+    "d3dcompiler_47.dll": "C:\\windows\\system32\\d3dcompiler_47.dll",
+    "dxgi.dll": "C:\\windows\\system32\\dxgi.dll"
+   }
+  },
+  {
+   "name": "gpu11.drawcalls",
+   "value": 65.6985,
+   "unit": "fps",
+   "p50_ms": 15.216,
+   "p99_ms": 17.14,
+   "max_ms": 23.163,
+   "present": {
+    "api": "dxgi",
+    "mode": "default",
+    "sync_interval": 0,
+    "flags": "0",
+    "swap_effect": "flip_discard",
+    "buffers": 2,
+    "tearing_supported": true,
+    "display_hz": 60,
+    "call_ms": {
+     "mean": 0.004,
+     "p50": 0.004,
+     "p99": 0.008,
+     "min": 0.002,
+     "max": 0.014
+    },
+    "interval_ms": {
+     "mean": 15.17,
+     "p50": 15.211,
+     "p99": 17.142,
+     "min": 12.593,
+     "max": 23.158
+    },
+    "rate_hz": 65.92,
+    "dxgi_frame_statistics": "unavailable (0x80004001)"
+   }
+  },
+  {
+   "name": "gpu11.fill",
+   "value": 392.9446,
+   "unit": "fps",
+   "p50_ms": 0.028,
+   "p99_ms": 8.336,
+   "max_ms": 10.565,
+   "present": {
+    "api": "dxgi",
+    "mode": "default",
+    "sync_interval": 0,
+    "flags": "0",
+    "swap_effect": "flip_discard",
+    "buffers": 2,
+    "tearing_supported": true,
+    "display_hz": 60,
+    "call_ms": {
+     "mean": 0.002,
+     "p50": 0.002,
+     "p99": 0.019,
+     "min": 0.001,
+     "max": 0.049
+    },
+    "interval_ms": {
+     "mean": 2.533,
+     "p50": 0.029,
+     "p99": 8.342,
+     "min": 0.003,
+     "max": 10.577
+    },
+    "rate_hz": 394.85,
+    "dxgi_frame_statistics": "unavailable (0x80004001)"
+   }
+  },
+  {
+   "name": "gpu12.device",
+   "value": 0.0,
+   "unit": "skipped",
+   "skipped": "d3d12.dll not available"
+  },
+  {
+   "name": "gpu12.drawcalls",
+   "value": 0.0,
+   "unit": "skipped",
+   "skipped": "d3d12.dll not available"
+  },
+  {
+   "name": "gpu12.fill",
+   "value": 0.0,
+   "unit": "skipped",
+   "skipped": "d3d12.dll not available"
+  },
+  {
+   "name": "gpu12.features.gs",
+   "value": 0.0,
+   "unit": "skipped",
+   "skipped": "d3d12.dll not available"
+  },
+  {
+   "name": "gpu12.features.so",
+   "value": 0.0,
+   "unit": "skipped",
+   "skipped": "d3d12.dll not available"
+  },
+  {
+   "name": "gpu12.features.tess",
+   "value": 0.0,
+   "unit": "skipped",
+   "skipped": "d3d12.dll not available"
+  },
+  {
+   "name": "vk.device",
+   "value": 1.0,
+   "unit": "ok",
+   "adapter": "Apple M2",
+   "api_version": "1.4.363",
+   "driver_version": "0x6863063",
+   "vendor_id": "0x106b",
+   "present_mode": "immediate",
+   "swapchain_images": 3,
+   "dlls": {
+    "vulkan-1.dll": "C:\\windows\\system32\\vulkan-1.dll"
+   }
+  },
+  {
+   "name": "vk.drawcalls",
+   "value": 180.3393,
+   "unit": "fps",
+   "p50_ms": 4.98,
+   "p99_ms": 7.769,
+   "max_ms": 15.541,
+   "present": {
+    "api": "vulkan",
+    "present_mode": "immediate",
+    "surface_present_modes": [
+     0,
+     2
+    ],
+    "swapchain_images": 3,
+    "display_hz": 60,
+    "call_ms": {
+     "mean": 0.066,
+     "p50": 0.042,
+     "p99": 0.165,
+     "min": 0.027,
+     "max": 0.19
+    },
+    "interval_ms": {
+     "mean": 5.544,
+     "p50": 4.959,
+     "p99": 7.787,
+     "min": 4.561,
+     "max": 15.604
+    },
+    "rate_hz": 180.38
+   }
+  },
+  {
+   "name": "vk.fill",
+   "value": 271.1829,
+   "unit": "fps",
+   "p50_ms": 3.549,
+   "p99_ms": 11.748,
+   "max_ms": 18.201,
+   "present": {
+    "api": "vulkan",
+    "present_mode": "immediate",
+    "surface_present_modes": [
+     0,
+     2
+    ],
+    "swapchain_images": 3,
+    "display_hz": 60,
+    "call_ms": {
+     "mean": 0.131,
+     "p50": 0.093,
+     "p99": 0.581,
+     "min": 0.019,
+     "max": 0.694
+    },
+    "interval_ms": {
+     "mean": 3.683,
+     "p50": 3.545,
+     "p99": 11.722,
+     "min": 0.085,
+     "max": 18.184
+    },
+    "rate_hz": 271.51
+   }
+  }
+ ],
+ "run": {
+  "status": "ok",
+  "exit_code": 0,
+  "seconds": 23,
+  "runtime": "arm64-tso1",
+  "part": "wined3d",
+  "log": "logs/arm64-tso1-x86_64-wined3d.log",
+  "backend": {
+   "want": "wined3d",
+   "got": "wined3d",
+   "check": "confirmed",
+   "compatdb_arch": "x86_64 (arm64ec)"
+  },
+  "not_available": {
+   "gpu12": "d3d12.dll not available"
+  }
+ }
+}

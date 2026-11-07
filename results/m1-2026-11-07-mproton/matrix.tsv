@@ -1,0 +1,33 @@
+file	runtime	arch	part	status	exit	seconds	results	ordering_errors	backend	not_available
+rosetta-x86_64-cpu.json	rosetta	x86_64	cpu	ok	0	2	5	0		
+rosetta-x86_64-wined3d.json	rosetta	x86_64	wined3d	crash	1	15	9			
+rosetta-i686-cpu.json	rosetta	i686	cpu	ok	0	2	5	0		
+rosetta-i686-wined3d.json	rosetta	i686	wined3d	crash	1	14	5			
+-	rosetta	aarch64	all	skipped: aarch64 not run on rosetta						
+-	rosetta	arm64ec	all	skipped: arm64ec not run on rosetta						
+arm64-tso1-x86_64-cpu.json	arm64-tso1	x86_64	cpu	ok	0	1	5	0		
+arm64-tso1-x86_64-wined3d.json	arm64-tso1	x86_64	wined3d	ok	0	23	12		confirmed	gpu12: d3d12.dll not available
+arm64-tso1-x86_64-dxmt.json	arm64-tso1	x86_64	dxmt	ok	0	24	12		confirmed	
+arm64-tso1-x86_64-dxvk.json	arm64-tso1	x86_64	dxvk	ok	0	26	12		confirmed	
+arm64-tso1-i686-cpu.json	arm64-tso1	i686	cpu	ok	0	2	5	0		
+arm64-tso1-i686-wined3d.json	arm64-tso1	i686	wined3d	ok	0	59	12		confirmed	gpu12: d3d12.dll not available
+arm64-tso1-i686-dxmt.json	arm64-tso1	i686	dxmt	ok	0	30	12		confirmed	
+arm64-tso1-i686-dxvk.json	arm64-tso1	i686	dxvk	crash	1	26	12		confirmed	
+arm64-tso1-aarch64-cpu.json	arm64-tso1	aarch64	cpu	ok	0	1	5	0		
+arm64-tso1-aarch64-wined3d.json	arm64-tso1	aarch64	wined3d	ok	0	20	12		confirmed	gpu12: d3d12.dll not available
+arm64-tso1-aarch64-dxmt.json	arm64-tso1	aarch64	dxmt	ok	0	25	12		confirmed	
+arm64-tso1-aarch64-dxvk.json	arm64-tso1	aarch64	dxvk	ok	0	19	12		confirmed	
+arm64-tso1-arm64ec-cpu.json	arm64-tso1	arm64ec	cpu	ok	0	1	5	0		
+arm64-tso1-arm64ec-wined3d.json	arm64-tso1	arm64ec	wined3d	ok	0	21	12		confirmed	gpu12: d3d12.dll not available
+arm64-tso1-arm64ec-dxmt.json	arm64-tso1	arm64ec	dxmt	ok	0	23	12		confirmed	
+arm64-tso1-arm64ec-dxvk.json	arm64-tso1	arm64ec	dxvk	ok	0	18	12		confirmed	
+arm64-tso0-x86_64-cpu.json	arm64-tso0	x86_64	cpu	ok	0	3	5	0		
+arm64-tso0-x86_64-wined3d.json	arm64-tso0	x86_64	wined3d	ok	0	22	12		confirmed	gpu12: d3d12.dll not available
+arm64-tso0-x86_64-dxmt.json	arm64-tso0	x86_64	dxmt	ok	0	22	12		confirmed	
+arm64-tso0-x86_64-dxvk.json	arm64-tso0	x86_64	dxvk	ok	0	20	12		confirmed	
+arm64-tso0-i686-cpu.json	arm64-tso0	i686	cpu	ok	0	3	5	0		
+arm64-tso0-i686-wined3d.json	arm64-tso0	i686	wined3d	ok	0	46	12		confirmed	gpu12: d3d12.dll not available
+arm64-tso0-i686-dxmt.json	arm64-tso0	i686	dxmt	ok	0	24	12		confirmed	
+arm64-tso0-i686-dxvk.json	arm64-tso0	i686	dxvk	crash	1	24	12		confirmed	
+-	arm64-tso0	aarch64	all	skipped: aarch64 not run on arm64-tso0						
+-	arm64-tso0	arm64ec	all	skipped: arm64ec not run on arm64-tso0						
