@@ -13,6 +13,12 @@ Backends (chosen per game via env var or STEAM_COMPAT_CONFIG flag):
             Nothing from GPTK is shipped or copied by mproton; Wine is
             pointed at the user's install through WINEDLLPATH.
 
+  mach9     the default on a mach9 bundle: no tree chosen by the launcher, so
+            compatdb's built-in rules decide (DXMT + vkd3d-proton for
+            D3D10/11/12, mtld3d for D3D9).  On a mach9 bundle the other
+            backends become compatdb rules, not DLL copies; see
+            mproton_compatdb.py.
+
 Precedence when several are requested: wined3d > d3dmetal > dxmt > dxvk.
 (wined3d is the debugging "safe mode", as upstream lets it override all.)
 """
@@ -23,13 +29,18 @@ DXVK = "dxvk"
 DXMT = "dxmt"
 WINED3D = "wined3d"
 D3DMETAL = "d3dmetal"
+MACH9 = "mach9"
 
-BACKENDS = (DXVK, DXMT, WINED3D, D3DMETAL)
+BACKENDS = (DXVK, DXMT, WINED3D, D3DMETAL, MACH9)
 
 # env var -> compat_config flag, in the style of PROTON_USE_WINED3D
 BACKEND_ENV_VARS = [
     ("PROTON_USE_DXMT", DXMT),
     ("PROTON_USE_D3DMETAL", D3DMETAL),
+    ("PROTON_USE_DXVK", DXVK),
+    # per-family / per-API switches (mach9 bundle only)
+    ("PROTON_USE_MTLD3D", "mtld3d"),
+    ("PROTON_NO_D3D12", "nod3d12"),
 ]
 
 D3DMETAL_DLLS = ["d3d12", "d3d11", "d3d10", "dxgi"]
@@ -98,21 +109,29 @@ def find_d3dmetal(path, host_pe_arch):
     return wine_dir, None
 
 
-def select_backend(compat_config, env, host_pe_arch, log=lambda msg: None):
-    """Pick the backend from compat_config flags; returns (backend, d3dmetal_dir)."""
-    wanted = [b for b in (WINED3D, D3DMETAL, DXMT) if b in compat_config]
+def select_backend(compat_config, env, host_pe_arch, log=lambda msg: None,
+                   default=DXVK, d3dmetal_finder=None):
+    """Pick the backend from compat_config flags; returns (backend, d3dmetal_dir).
+
+    ``default`` is DXVK on a Proton dist and MACH9 on a mach9 bundle.
+    ``d3dmetal_finder(env, host_pe_arch)`` returns (location, reason); it
+    defaults to validating PROTON_D3DMETAL_PATH (Proton dist).
+    """
+    if d3dmetal_finder is None:
+        d3dmetal_finder = lambda e, arch: find_d3dmetal(e.get("PROTON_D3DMETAL_PATH"), arch)
+    wanted = [b for b in (WINED3D, D3DMETAL, DXMT, DXVK) if b in compat_config]
     if len(wanted) > 1:
         log("Multiple graphics backends requested (%s), using %s" % (", ".join(wanted), wanted[0]))
 
     for backend in wanted:
         if backend == D3DMETAL:
-            wine_dir, reason = find_d3dmetal(env.get("PROTON_D3DMETAL_PATH"), host_pe_arch)
+            wine_dir, reason = d3dmetal_finder(env, host_pe_arch)
             if wine_dir is None:
                 log("D3DMetal requested but unavailable: " + reason + "; falling back")
                 continue
             return D3DMETAL, wine_dir
         return backend, None
-    return DXVK, None
+    return default, None
 
 
 def plan_graphics(backend, use_dxvk_dxgi=True, use_dxvk_d3d8=False, d3dmetal_dir=None):

@@ -53,13 +53,13 @@ def test_darwin_uses_msync(darwin, monkeypatch):
 
 def test_darwin_no_msync_env(darwin):
     s = darwin.start(PROTON_NO_MSYNC="1")
-    assert "WINEMSYNC" not in s.env
+    assert s.env["WINEMSYNC"] == "0"  # msync is on when unset
 
 
 def test_darwin_nofsync_game_disables_msync(darwin):
     s = darwin.start(SteamAppId="2630", SteamGameId="2630")  # Call of Duty 2: nofsync in compat table
     assert "nofsync" in s.compat_config
-    assert "WINEMSYNC" not in s.env
+    assert s.env["WINEMSYNC"] == "0"  # msync is on when unset
 
 
 def test_darwin_fex_config(darwin):

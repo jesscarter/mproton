@@ -117,6 +117,33 @@ def make_gptk(base, pe_arch="aarch64-windows", unix_arch="aarch64-unix"):
     return base
 
 
+def make_mach9_bundle(root, dxgi=("dxmt", "wined3d"), d3d9=("mtld3d", "wined3d"), steam=True):
+    """A fake mach9 dist/wine: bin/wine -> wine.app loader, compatdb.so, trees.
+
+    The layout follows mach9's docs/building.md "Bundle layout".
+    """
+    unix = os.path.join(root, "lib/wine/aarch64-unix")
+    write(os.path.join(unix, "compatdb.so"))
+    write(os.path.join(unix, "wine.app/Contents/MacOS/wine"))
+    os.makedirs(os.path.join(root, "bin"), exist_ok=True)
+    os.symlink("../lib/wine/aarch64-unix/wine.app/Contents/MacOS/wine", os.path.join(root, "bin/wine"))
+    write(os.path.join(root, "bin/wineserver"))
+    write(os.path.join(root, "share/wine/wine.inf"), b";inf\n")
+    write(os.path.join(root, "share/wine/fonts/tahoma.ttf"))
+    write(os.path.join(root, "share/vulkan/icd.d/kosmickrisp_mesa_icd.aarch64.json"), b"{}")
+    for arch in ("aarch64-windows", "i386-windows"):
+        for dll in GFX_DLLS + ["kernel32", "ntdll"]:
+            builtin_dll(os.path.join(root, "lib/wine", arch, dll + ".dll"))  # markers
+        if steam:
+            builtin_dll(os.path.join(root, "lib/wine", arch, "steam.exe"))
+            builtin_dll(os.path.join(root, "lib/wine", arch, "lsteamclient.dll"))
+    for family, impls in (("dxgi", dxgi), ("d3d9", d3d9)):
+        for impl in impls:
+            for arch in ("aarch64-windows", "i386-windows"):
+                native_dll(os.path.join(root, "lib/wine", family, impl, arch, family + ".dll"), impl)
+    return root
+
+
 HOSTS = {
     "darwin-arm64": ("Darwin", "arm64"),
     "linux-x86_64": ("Linux", "x86_64"),
@@ -140,7 +167,7 @@ class LauncherEnv:
         os.makedirs(self.home)
         for var in list(os.environ):
             if var.startswith(("PROTON_", "WINE", "STEAM_", "Steam", "DXVK", "VKD3D", "FEX_", "MPROTON_",
-                               "LD_LIBRARY_PATH", "DYLD_", "ORIG_")):
+                               "LD_LIBRARY_PATH", "DYLD_", "ORIG_", "VK_")):
                 monkeypatch.delenv(var, raising=False)
         monkeypatch.setenv("HOME", self.home)
         monkeypatch.setenv("STEAM_COMPAT_DATA_PATH", self.compat)
@@ -191,6 +218,61 @@ def launcher(mp, tmp_path, monkeypatch):
 def darwin(launcher):
     launcher.set_host("Darwin", "arm64")
     return launcher
+
+
+class Mach9Env(LauncherEnv):
+    """A Darwin launch against a fake mach9 bundle; Wine is never executed.
+
+    ``procs`` records every run_proc argv.  ``wineboot -i`` is simulated by
+    creating system32/syswow64 with placeholders for the bundle's builtins
+    (unless ``wineboot_rc`` is non-zero).
+    """
+
+    def __init__(self, mp, tmp_path, monkeypatch, **bundle_kw):
+        super().__init__(mp, tmp_path, monkeypatch)
+        self.bundle = make_mach9_bundle(str(tmp_path / "mach9" / "wine"), **bundle_kw)
+        self.procs = []
+        self.envs = []
+        self.wineboot_rc = 0
+        self.wineboot_placeholders = True
+        monkeypatch.setenv("MPROTON_WINE_DIR", self.bundle)
+        self.set_host("Darwin", "arm64")
+        env = self
+
+        def run_proc(session, args, local_env=None):
+            env.procs.append(list(args))
+            env.envs.append(dict(local_env if local_env is not None else session.env))
+            if args[1:3] == ["wineboot", "-i"]:
+                if env.wineboot_rc:
+                    return env.wineboot_rc
+                pfx = (local_env or session.env)["WINEPREFIX"]
+                for sysdir, arch in (("system32", "aarch64-windows"), ("syswow64", "i386-windows")):
+                    d = os.path.join(pfx, "drive_c/windows", sysdir)
+                    os.makedirs(d, exist_ok=True)
+                    if not env.wineboot_placeholders:
+                        continue
+                    for f in os.listdir(os.path.join(env.bundle, "lib/wine", arch)):
+                        builtin_dll(os.path.join(d, f))
+                os.makedirs(os.path.join(pfx, "dosdevices"), exist_ok=True)
+            return 0
+        monkeypatch.setattr(mp.Session, "run_proc", run_proc)
+
+    def rules(self):
+        with open(os.path.join(self.compat, "compatdb.rules")) as f:
+            return f.read()
+
+    def rule_lines(self):
+        return self.rules().split("\n")
+
+
+@pytest.fixture
+def mach9(mp, tmp_path, monkeypatch):
+    return Mach9Env(mp, tmp_path, monkeypatch)
+
+
+@pytest.fixture
+def mach9_factory(mp, tmp_path, monkeypatch):
+    return lambda **kw: Mach9Env(mp, tmp_path, monkeypatch, **kw)
 
 
 @pytest.fixture
