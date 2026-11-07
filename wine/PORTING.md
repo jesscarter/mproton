@@ -4,17 +4,17 @@ For the next session that continues [docs/wine-tree.md](../docs/wine-tree.md). R
 
 ## Where things stand
 
-- `main` has the series: 686 patches in `wine/patches/` on athei `arm64-patched` `5959a04b1af` (`wine/base.ref`). That's 682 Proton commits plus 4 mproton patches, and the last patch is always `mproton: Regenerate generated files.`
-- `wine/series.tsv` has one row per Proton commit (`ValveSoftware/wine` `proton_11.0` @ `e60892cc239`, 1454 commits on wine-11.0). **200 have status `conflict`** (246 before batch 1). Those are the job.
+- `main` has the series: 724 patches in `wine/patches/` on athei `arm64-patched` `5959a04b1af` (`wine/base.ref`). That's 720 Proton commits plus 4 mproton patches, and the last patch is always `mproton: Regenerate generated files.`
+- `wine/series.tsv` has one row per Proton commit (`ValveSoftware/wine` `proton_11.0` @ `e60892cc239`, 1454 commits on wine-11.0). **159 have status `conflict`** (246 before batch 1, 200 before batch 2). Those are the job.
 - A clean aarch64-Linux build of the series has 0 errors. So does athei alone. Keep it at 0.
-- **Progress:** batch 1 (high-confidence groups except 10 d3dx commits) is done; see [Porting the conflicts](../docs/wine-tree.md#porting-the-conflicts). Next: the 10 d3dx commits left (d3dx10/d3dx11 save, d3dx11 load/filter), then multimedia. Hand-set statuses (superseded, Linux-only) go in `wine/scripts/manual-status.tsv`.
+- **Progress:** batch 1 (high-confidence groups) and batch 2 (d3dx, multimedia) are done; see [Porting the conflicts](../docs/wine-tree.md#porting-the-conflicts). Of those groups, only `347bd52e55f` (test-only) and `60c7e66a137` (needs the OpenGL commit `80eb9f6e2bd`) are left, both with a note. **Next: win32u + wineserver (36), then winebus/xinput (16), then ntdll (52).** Hand-set statuses (superseded, Linux-only, held) go in `wine/scripts/manual-status.tsv`.
 
 ## The task
 
 Port the `conflict` commits onto the series, group by group, a build-checked batch at a time. For each one, read Proton's change and the 11.20 code that replaced what it touched, then write the change against the new code. Don't resolve conflict markers blindly. Suggested order (counts are from `wine/series.tsv`, column `group`):
 
-1. **High confidence (~50):** d3dx/d3dcompiler (20), `wine.inf`/prefix (2), networking/winhttp (3), audio (3), Proton integration (1), other PE-side fixes (24: bcrypt, appx package APIs, jscript/mshtml, icu, xaudio prefer-native, …).
-2. **Multimedia (35):** mf session, the winegstreamer `aac_decoder` → `audio_decoder` rename (`94af7660fbb`, the root of a chain), the Vorbis/Opus decoders, the media-converter demuxer in winedmo, the D3D11 video processor. Media-converter is Proton's video path, so this group matters most.
+1. ~~**High confidence (~50):** d3dx/d3dcompiler (20), `wine.inf`/prefix (2), networking/winhttp (3), audio (3), Proton integration (1), other PE-side fixes (24: bcrypt, appx package APIs, jscript/mshtml, icu, xaudio prefer-native, …).~~ Done (batch 1).
+2. ~~**Multimedia (35):** mf session, the winegstreamer `aac_decoder` → `audio_decoder` rename (`94af7660fbb`, the root of a chain), the Vorbis/Opus decoders, the media-converter demuxer in winedmo, the D3D11 video processor. Media-converter is Proton's video path, so this group matters most.~~ Done (batch 2), along with the d3dx rest.
 3. **win32u + wineserver (35):** touch/pointer input, rawinput (`eb0c49cf1ed` adds `SEND_HWMSG_NO_RAW`; then re-add the removed `544a0817198`), layered-window hacks, NtFlushKey, file security xattrs, CPU topology.
 4. **winebus/xinput (15):** the xinput refactors (`64ca68c68d6`, …), then re-add the removed `965d4e24cdd`.
 5. **ntdll `virtual.c`/`loader.c` (52):** this is athei's W^X / 4K-page / FEX code. Port the simple ones (per-game env switches in `hacks_init()`, heap hacks in PE `loader.c`). For `WINE_SIMULATE_WRITECOPY`, the address-space limits and the GDB link map, port only if it's clearly safe, and otherwise write in the TSV note that it needs a Mac.
@@ -53,7 +53,8 @@ Toolchain for the build check (`wine/scripts/linux-build-check.sh` documents the
   2. Run `dpkg --add-architecture arm64 && apt-get update`.
   3. `apt-get install libc6-dev:arm64 libgcc-13-dev:arm64 linux-libc-dev:arm64 libfreetype-dev:arm64 libgnutls28-dev:arm64 libvulkan-dev:arm64 libudev-dev:arm64 libdbus-1-dev:arm64` works.
   4. For the rest (SDL2, PulseAudio, ALSA, X11 + extensions, EGL/GL, GStreamer, Wayland, libdrm, libusb, CUPS, krb5, pcap), run `apt-get download` on each package plus its `apt-cache depends --recurse` arm64 dependencies, then `dpkg-deb -x` everything into the sysroot.
-  5. Copy `/usr/include` and `/usr/lib/aarch64-linux-gnu` into the sysroot with `cp -an`, then `ln -s usr/lib lib` inside it.
+  5. Copy `/usr/include` and `/usr/lib/aarch64-linux-gnu` into the sysroot with `cp -an`, **and `/usr/lib/gcc/aarch64-linux-gnu`** (crtbeginS.o, libgcc; without it the cross configure fails with "C compiler cannot create executables"). Then make `lib` a symlink to `usr/lib`: some debs (cryptsetup) ship `/lib/...`, so `dpkg-deb -x` creates a real `lib` dir first; merge it into `usr/lib` with `cp -an lib/. usr/lib/` and replace it with the symlink, and check again after extracting more debs.
+  6. Since batch 2 the sysroot also has FFmpeg (`libavcodec-dev libavformat-dev libavutil-dev libswscale-dev libswresample-dev` plus recursive deps, same download-and-extract), so winedmo's unix side and the media-converter demuxer are compiled. Downloading ~640 debs one by one takes about 30 minutes.
 - **`/opt/xbin`**: symlinks `aarch64-linux-gnu-{ar,ranlib,strip,nm,objcopy,objdump}` → `/opt/llvm-mingw/bin/llvm-*`, and `aarch64-linux-gnu-ld` → `/opt/llvm-mingw/bin/ld.lld`. (`binutils-aarch64-linux-gnu` from apt was missing its libbfd here. Don't put `-fuse-ld=lld` in `CC`: it breaks configure's `-Werror` probes.)
 - Host packages: `bison flex autoconf pkg-config gettext`, plus host `libfreetype-dev`, which the tools build needs for `sfnt2fon`.
 
@@ -72,6 +73,12 @@ Toolchain for the build check (`wine/scripts/linux-build-check.sh` documents the
   4. Run `wine/scripts/darwin-only-hunks.py <series> 5959a04b1af` and list anything new in the doc.
 
 ## Lessons learned
+
+- **Batch 2:** 11.20 moved whole components, so "the file conflicts" often means "the file moved": winegstreamer's video processor is now `dlls/msvproc` (FFmpeg/swscale) and its resampler `dlls/resampledmo` (FFmpeg/swresample). Proton's `video_processor.c`/`resampler.c` changes have to be re-applied there. `git cherry-pick` follows the rename sometimes (it did for a9ee089454d) and not others (delete/modify conflict).
+- Rename detection can match the wrong file: qasf's deleted `version.rc` was matched to `dlls/tiptsf/tiptsf.idl`. Check what a conflict path really is before resolving it.
+- Several winegstreamer conflicts are context from `80eb9f6e2bd` (the OpenGL WMReader pipeline, OpenGL group): `use_opengl`, `enable_opengl` game lists. Leave those hunks out and say so; port them with that commit.
+- Check Proton's code for bugs while porting, not only the merge: the media-converter demuxer double-freed the format context on its default (no fozdb) path, and `wg_task_pool` passed an uninitialized `GError *`.
+- Probe a group with a throwaway branch first: cherry-pick each commit in order, abort on conflict, and list the conflicting files. It shows the moved files and the order dependencies before you start.
 
 - Most conflicts come from 11.20 rewriting the code, not from athei. `git show winehq/master:<file>` often shows how upstream later did the same thing. Many Proton commits are cherry-picks of upstream commits (`cherry picked from commit …`).
 - Commits that apply cleanly can still fail to build because they depend on a commit that wasn't carried (`get_env`, `window_surface_get`, `SEND_HWMSG_NO_RAW`, the `audio_decoder` rename) or on an 11.20 API change (`struct ratio` DPI, `get_d3dkmt_adapter()`, `create_key_recursive()` taking the name by value). Always build after a batch.
