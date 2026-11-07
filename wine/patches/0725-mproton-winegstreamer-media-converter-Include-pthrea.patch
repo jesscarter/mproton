@@ -1,0 +1,27 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: jess <jessica.welsh.carter@gmail.com>
+Date: Sat, 7 Nov 2026 16:18:29 -0500
+Subject: [PATCH 725/726] mproton: winegstreamer/media-converter: Include
+ pthread.h in media-converter.h.
+
+The header declares a pthread_mutex_t member. On Linux glibc makes it
+visible through the other system headers, but on darwin nothing does, so
+winedmo's build of the shared media-converter files (fossilize.c,
+murmur3.c, lib.c with _WINEDMO) fails with "unknown type name
+'pthread_mutex_t'".
+---
+ dlls/winegstreamer/media-converter/media-converter.h | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/dlls/winegstreamer/media-converter/media-converter.h b/dlls/winegstreamer/media-converter/media-converter.h
+index 3dd8864d54f..c401fd5aa98 100644
+--- a/dlls/winegstreamer/media-converter/media-converter.h
++++ b/dlls/winegstreamer/media-converter/media-converter.h
+@@ -29,6 +29,7 @@
+ #include <unistd.h>
+ #include <fcntl.h>
+ #include <sys/stat.h>
++#include <pthread.h>
+ 
+ #include "unix_private.h"
+ #include "wine/rbtree.h"
