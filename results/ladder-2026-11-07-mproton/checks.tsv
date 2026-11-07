@@ -1,0 +1,1555 @@
+phase	arch	prog	backend	tso	status	check	detail
+setup	-	prefix			PASS	prefix.server_exit	wineserver -w returned after 1s: the booted prefix leaves nothing running
+setup	-	prefix			PASS	prefix.wineboot	wineboot -u exit 0 in 13s; system.reg and drive_c/windows/system32 written
+serial	aarch64	threads			INFO	threads.env	build=aarch64 wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+serial	aarch64	threads			PASS	threads.tls.static_and_dynamic	32/32 threads kept their own static and TlsAlloc values (expansion slot 64)
+serial	aarch64	threads			PASS	threads.tls.expansion_slots	TlsAlloc beyond 64 slots gave index 64
+serial	aarch64	threads			PASS	threads.tls.fls_callback	FLS destructor ran 32 times for 32 exited threads
+serial	aarch64	threads			PASS	threads.tls.image_callback	TLS directory callback ran DLL_THREAD_ATTACH in 32 of 32 new threads
+serial	aarch64	threads			PASS	threads.locks.counters	critical section 800000, SRW 800000, Interlocked 800000 (want 800000 each)
+serial	aarch64	threads			PASS	threads.locks.condvar	consumed sum 200010000 (want 200010000), in order 1
+serial	aarch64	threads			PASS	threads.apc.sleepex	wait returned 192 (want WAIT_IO_COMPLETION=192), 1 APCs ran on the target thread in order 'a' (want 'a')
+serial	aarch64	threads			PASS	threads.apc.wait_ex	wait returned 192 (want WAIT_IO_COMPLETION=192), 1 APCs ran on the target thread in order 'a' (want 'a')
+serial	aarch64	threads			PASS	threads.apc.nonalertable	wait returned 192 (want WAIT_IO_COMPLETION=192), 5 APCs ran on the target thread in order 'abcde' (want 'abcde'), none during the non-alertable wait
+serial	aarch64	threads			PASS	threads.apc.self	ran before the alertable wait=0, SleepEx(0, TRUE)=192, ran=1
+serial	aarch64	threads			PASS	threads.apc.timer	periodic waitable-timer completion routine ran 3 times in 41 ms
+serial	aarch64	threads			PASS	threads.spawn	500 short threads, 0 wrong exit codes, 59 ms
+serial	aarch64	seh			INFO	seh.env	build=aarch64 wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+serial	aarch64	seh			PASS	seh.av_read	code=c0000005 info=[0, 0000000000900123] want [0, 0000000000900123], ExceptionAddress=000000014000289C context pc=000000014000289C sp=000000000011FDE0
+serial	aarch64	seh			PASS	seh.av_write	code=c0000005 info=[1, 0000000000900456] want [1, 0000000000900456], ExceptionAddress=00000001400028A4 context pc=00000001400028A4 sp=000000000011FDE0
+serial	aarch64	seh			PASS	seh.av_null_read	code=c0000005 info=[0, 0000000000000000] want [0, 0000000000000000], ExceptionAddress=000000014000289C context pc=000000014000289C sp=000000000011FDE0
+serial	aarch64	seh			PASS	seh.av_exec_noaccess	code=c0000005 info=[8, 0000000000900200] want [8, 0000000000900200], ExceptionAddress=0000000000900200 context pc=0000000000900200 sp=000000000011FDE0
+serial	aarch64	seh			FAIL	seh.run	crash (exit 9 after 1s); log tail: compatdb:   arguments = unset (upstream: the command line the process was started with) | compatdb:   debug_channels = unset (upstream: the WINEDEBUG the process was started with) | compatdb:   env FEX_X87REDUCEDPRECISION=1, built-in: set
+serial	aarch64	callbacks			INFO	callbacks.env	build=aarch64 wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+serial	aarch64	callbacks			PASS	callbacks.wndproc.create	CreateWindow ok, WM_CREATE seen 1 times
+serial	aarch64	callbacks			PASS	callbacks.wndproc.send	SendMessage returned 37 (want 37)
+serial	aarch64	callbacks			PASS	callbacks.wndproc.cross_thread	cross-thread SendMessage returned 17 (want 17), procedure ran on the window's thread
+serial	aarch64	callbacks			PASS	callbacks.wndproc.subclass	subclassed SendMessage returned 1040 (want 1040)
+serial	aarch64	callbacks			PASS	callbacks.enum_windows	EnumWindows returned 1 after 16 callbacks; our 4 windows seen 1/1/1/1 times
+serial	aarch64	callbacks			PASS	callbacks.enum_windows_stop	callback returning FALSE: EnumWindows returned 0 after 2 calls (want 0 after 2)
+serial	aarch64	callbacks			PASS	callbacks.enum_child_windows	EnumChildWindows saw 4 children, ours 1/1/1/1
+serial	aarch64	callbacks			PASS	callbacks.set_timer	TIMERPROC ran 6 times in 66 ms, 0 with wrong arguments
+serial	aarch64	callbacks			PASS	callbacks.hook	WH_CALLWNDPROC hook saw 3 of 3 messages
+serial	aarch64	callbacks			PASS	callbacks.timer_queue	timer-queue callback ran 5 times, 0 with wrong arguments
+serial	aarch64	callbacks			PASS	callbacks.threadpool_work	100 work items summed to 5050 (want 5050)
+serial	aarch64	callbacks			PASS	callbacks.registered_wait	RegisterWaitForSingleObject callback ran 3 of 3 times
+serial	aarch64	callbacks			PASS	callbacks.qsort	CRT qsort with a program comparator sorted correctly
+serial	aarch64	callbacks			PASS	callbacks.enum_fonts	EnumFontFamiliesEx callback ran 2300 times, 0 with bad arguments
+serial	aarch64	memory			INFO	memory.env	build=aarch64 wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+serial	aarch64	memory			PASS	memory.sysinfo	page size 4096, allocation granularity 65536
+serial	aarch64	memory			PASS	memory.alloc_granularity	0 of 20 reservations not 64K-aligned (or failed)
+serial	aarch64	memory			PASS	memory.commit_zeroed	fresh commit reads zero
+serial	aarch64	memory			PASS	memory.protect_4k.set	VirtualProtect on single 4K pages ok (0)
+serial	aarch64	memory			PASS	memory.protect_4k.access	each 4K page faults exactly per its own protection
+serial	aarch64	memory			PASS	memory.protect_4k.query	VirtualQuery reports 4K-granular regions
+serial	aarch64	memory			PASS	memory.protect_4k.contents	after protect/unprotect every page kept its data (0 bytes wrong)
+serial	aarch64	memory			PASS	memory.guard_page.read	neighbours 00000000/00000000, first touch 80000001 at +107b (want 80000001 at +107b), second touch 00000000, then unguarded
+serial	aarch64	memory			PASS	memory.guard_page.write	write: first 80000001, second 00000000
+serial	aarch64	memory			PASS	memory.reserve_commit.single_page	reserved c0000005, commit one 4K page ok, it 00000000, neighbours c0000005/c0000005, states 2000/1000(size 1000)/2000
+serial	aarch64	memory			PASS	memory.reserve_commit.decommit	decommitted page faults (c0000005) and recommits zeroed (00)
+serial	aarch64	memory			PASS	memory.write_watch	written pages 1,2,7,13,30,63; reported [1,2,7,13,30,63] at granularity 4096; after reset 0
+serial	aarch64	memory			PASS	memory.placeholder.reserve	VirtualAlloc2(MEM_RESERVE_PLACEHOLDER) ok (0)
+serial	aarch64	memory			PASS	memory.placeholder.split	VirtualFree(MEM_PRESERVE_PLACEHOLDER) split it (0)
+serial	aarch64	memory			PASS	memory.placeholder.replace_alloc	VirtualAlloc2(MEM_REPLACE_PLACEHOLDER) committed into the placeholder
+serial	aarch64	memory			PASS	memory.placeholder.map_view	MapViewOfFile3 into the placeholder aliases a second view
+serial	aarch64	memory			PASS	memory.placeholder.unmap_preserve	after UnmapViewOfFile2(MEM_PRESERVE_PLACEHOLDER) the range is a placeholder again
+serial	aarch64	memory			PASS	memory.section_alias	two views of one section see each other's writes (0 mismatches)
+serial	aarch64	memory			PASS	memory.smc.wx_cycle	2000 rewrites through RW -> RX + FlushInstructionCache, 0 stale results
+serial	aarch64	memory			PASS	memory.smc.rwx_flush	5000 in-place rewrites of RWX code with FlushInstructionCache, 0 stale results
+serial	aarch64	memory			SKIP	memory.smc.rwx_noflush	ARM64 code needs FlushInstructionCache by architecture
+serial	aarch64	memory			PASS	memory.smc.same_page_data	20000 data writes next to live code, 0 wrong results
+serial	aarch64	memory			PASS	memory.smc.realloc	200 release/reallocate cycles at one address (0 moved), 0 stale results
+serial	aarch64	memory			PASS	memory.smc.neighbor_page	RX code page next to a hot RW page: 0 wrong results, write to the RX page c0000005
+serial	aarch64	memory			PASS	memory.smc.cross_thread	500 rewrites on one thread, run on another: 0 stale results (last 71f3)
+serial	aarch64	memory			PASS	memory.big_alloc	reserve 1024 MB, commit and touch 256 MB at its end: ok, 0 bad pages
+serial	aarch64	ordering			INFO	ordering.env	build=aarch64 wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+serial	aarch64	ordering			INFO	ordering.config	iterations 500000, native ARM64 code, FEX_HARDWARE_TSO=(unset)
+serial	aarch64	ordering			INFO	ordering.mp	weak outcome 0/500000 times (120 ms); allowed for native ARM code
+serial	aarch64	ordering			PASS	ordering.mp_fenced	forbidden outcome 0/500000 times (170 ms)
+serial	aarch64	ordering			INFO	ordering.lb	weak outcome 0/500000 times (120 ms); allowed for native ARM code
+serial	aarch64	ordering			PASS	ordering.lb_fenced	forbidden outcome 0/500000 times (123 ms)
+serial	aarch64	ordering			INFO	ordering.iriw	weak outcome 0/500000 times (283 ms); allowed for native ARM code
+serial	aarch64	ordering			PASS	ordering.iriw_fenced	forbidden outcome 0/500000 times (294 ms)
+serial	aarch64	ordering			INFO	ordering.sb	weak outcome 5/500000 times (118 ms); allowed by TSO and by ARM (store buffering)
+serial	aarch64	ordering			PASS	ordering.sb_fenced	forbidden outcome 0/500000 times (151 ms)
+serial	aarch64	ordering			PASS	ordering.corr	forbidden outcome 0/500000 times (122 ms)
+serial	aarch64	ordering			INFO	ordering.mp_stream	weak outcome 3203/5000000 times (11 ms); allowed for native ARM code
+serial	aarch64	ordering			PASS	ordering.mp_stream_fenced	forbidden outcome 0/5000000 times (44 ms)
+serial	aarch64	ordering			INFO	ordering.lock	4364 of 2000000 increments lost (87 ms); a plain-store unlock is not a release on native ARM
+serial	aarch64	ordering			PASS	ordering.lock_fenced	0 of 2000000 increments lost (57 ms)
+serial	aarch64	ordering			PASS	ordering.atomic	0 of 2000000 increments lost (21 ms)
+serial	aarch64	ordering			INFO	ordering.calibration.overlap	sb store-buffering outcomes 5: threads do overlap
+serial	aarch64	ordering			INFO	ordering.calibration.arm	7567 weak outcomes in plain runs; this machine does reorder them, so clean x86 runs under FEX mean something
+serial	aarch64	d3d9	dxvk		INFO	d3d9.env	build=aarch64 wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+serial	aarch64	d3d9	dxvk		PASS	d3d9.create	Direct3DCreate9 ok
+serial	aarch64	d3d9	dxvk		PASS	d3d9.adapters	1 adapter(s)
+serial	aarch64	d3d9	dxvk		INFO	d3d9.adapter0	0: AMD Radeon RX 6700 XT (driver aticfx32.dll, vendor 1002 device 73df), 14 X8R8G8B8 modes, current 1470x956@60
+serial	aarch64	d3d9	dxvk		PASS	d3d9.display_modes	14 X8R8G8B8 modes, current 1470x956
+serial	aarch64	d3d9	dxvk		PASS	d3d9.caps	HAL: VS 3.0 PS 3.0, max texture 16384x16384, 8 texture stages, 16 streams, 4 RTs
+serial	aarch64	d3d9	dxvk		PASS	d3d9.formats	CheckDeviceFormat: all of A8R8G8B8 texture/RT, D24S8, DXT1, DXT5 supported
+serial	aarch64	d3d9	dxvk		PASS	d3d9.create_ex	Direct3DCreate9Ex 00000000
+serial	aarch64	d3d9	dxvk		PASS	d3d9.device	CreateDevice(HAL) 00000000
+serial	aarch64	d3d9	dxvk		PASS	d3d9.clear	64x64 pixels exact, Clear -> GetRenderTargetData
+serial	aarch64	d3d9	dxvk		PASS	d3d9.draw	64x64 pixels exact, fixed-function XYZRHW quad
+serial	aarch64	d3d9	dxvk		INFO	d3d9.device_release	final Release returned 0
+serial	aarch64	d3d9	dxvk		PASS	d3d9.backend	compatdb applied exe=d3d9-aarch64.exe;d3d9=dxvk
+serial	aarch64	d3d9	mtld3d		INFO	d3d9.env	build=aarch64 wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+serial	aarch64	d3d9	mtld3d		PASS	d3d9.create	Direct3DCreate9 ok
+serial	aarch64	d3d9	mtld3d		PASS	d3d9.adapters	1 adapter(s)
+serial	aarch64	d3d9	mtld3d		INFO	d3d9.adapter0	0: Apple M2 (driver mtld3d, vendor 106b device 047a), 7 X8R8G8B8 modes, current 1470x956@60
+serial	aarch64	d3d9	mtld3d		PASS	d3d9.display_modes	7 X8R8G8B8 modes, current 1470x956
+serial	aarch64	d3d9	mtld3d		PASS	d3d9.caps	HAL: VS 3.0 PS 3.0, max texture 16384x16384, 8 texture stages, 16 streams, 4 RTs
+serial	aarch64	d3d9	mtld3d		PASS	d3d9.formats	CheckDeviceFormat: all of A8R8G8B8 texture/RT, D24S8, DXT1, DXT5 supported
+serial	aarch64	d3d9	mtld3d		PASS	d3d9.create_ex	Direct3DCreate9Ex 00000000
+serial	aarch64	d3d9	mtld3d		PASS	d3d9.device	CreateDevice(HAL) 00000000
+serial	aarch64	d3d9	mtld3d		PASS	d3d9.clear	64x64 pixels exact, Clear -> GetRenderTargetData
+serial	aarch64	d3d9	mtld3d		PASS	d3d9.draw	64x64 pixels exact, fixed-function XYZRHW quad
+serial	aarch64	d3d9	mtld3d		INFO	d3d9.device_release	final Release returned 0
+serial	aarch64	d3d9	mtld3d		PASS	d3d9.backend	compatdb applied exe=d3d9-aarch64.exe;d3d9=mtld3d
+serial	aarch64	d3d9	wined3d		INFO	d3d9.env	build=aarch64 wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+serial	aarch64	d3d9	wined3d		PASS	d3d9.create	Direct3DCreate9 ok
+serial	aarch64	d3d9	wined3d		PASS	d3d9.adapters	1 adapter(s)
+serial	aarch64	d3d9	wined3d		INFO	d3d9.adapter0	0: NVIDIA GeForce GTX 470 (driver nvd3dum.dll, vendor 10de device 06cd), 14 X8R8G8B8 modes, current 1470x956@60
+serial	aarch64	d3d9	wined3d		PASS	d3d9.display_modes	14 X8R8G8B8 modes, current 1470x956
+serial	aarch64	d3d9	wined3d		PASS	d3d9.caps	HAL: VS 3.0 PS 3.0, max texture 16384x16384, 8 texture stages, 16 streams, 4 RTs
+serial	aarch64	d3d9	wined3d		PASS	d3d9.formats	CheckDeviceFormat: all of A8R8G8B8 texture/RT, D24S8, DXT1, DXT5 supported
+serial	aarch64	d3d9	wined3d		PASS	d3d9.create_ex	Direct3DCreate9Ex 00000000
+serial	aarch64	d3d9	wined3d		PASS	d3d9.device	CreateDevice(HAL) 00000000
+serial	aarch64	d3d9	wined3d		PASS	d3d9.clear	64x64 pixels exact, Clear -> GetRenderTargetData
+serial	aarch64	d3d9	wined3d		PASS	d3d9.draw	64x64 pixels exact, fixed-function XYZRHW quad
+serial	aarch64	d3d9	wined3d		INFO	d3d9.device_release	final Release returned 0
+serial	aarch64	d3d9	wined3d		PASS	d3d9.backend	compatdb applied exe=d3d9-aarch64.exe;d3d9=wined3d
+serial	aarch64	d3d11	wined3d		INFO	d3d11.env	build=aarch64 wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+serial	aarch64	d3d11	wined3d		PASS	d3d11.device	D3D11CreateDevice 00000000, feature level 11_1
+serial	aarch64	d3d11	wined3d		INFO	d3d11.adapter	NVIDIA GeForce GTX 470 (vendor 10de device 06cd), feature level 11_1
+serial	aarch64	d3d11	wined3d		PASS	d3d11.render_target	64x64 RGBA8 render target created
+serial	aarch64	d3d11	wined3d		PASS	d3d11.clear	64x64 pixels exact
+serial	aarch64	d3d11	wined3d		PASS	d3d11.draw_fullscreen	64x64 pixels exact, SV_VertexID triangle + SV_Position shading
+serial	aarch64	d3d11	wined3d		PASS	d3d11.draw_vb_cb	64x64 pixels exact, vertex-buffer quad over the fullscreen pass
+serial	aarch64	d3d11	wined3d		PASS	d3d11.update_subresource	64x64 pixels exact
+serial	aarch64	d3d11	wined3d		PASS	d3d11.copy_region	64x64 pixels exact, 16x16 box from the render target into an initialised texture
+serial	aarch64	d3d11	wined3d		PASS	d3d11.copy_resource	64x64 pixels exact
+serial	aarch64	d3d11	wined3d		PASS	d3d11.buffer_copy	1 KiB..3 KiB slice of an initialised buffer copied to staging: 0 words wrong
+serial	aarch64	d3d11	wined3d		INFO	d3d11.device_release	final Release returned 0
+serial	aarch64	d3d11	wined3d		PASS	d3d11.backend	compatdb applied exe=d3d11-aarch64.exe;dxgi=wined3d
+serial	aarch64	d3d11	dxmt		INFO	d3d11.env	build=aarch64 wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+serial	aarch64	d3d11	dxmt		PASS	d3d11.device	D3D11CreateDevice 00000000, feature level 11_1
+serial	aarch64	d3d11	dxmt		INFO	d3d11.adapter	Apple M2 (vendor 106b device 0000), feature level 11_1
+serial	aarch64	d3d11	dxmt		PASS	d3d11.render_target	64x64 RGBA8 render target created
+serial	aarch64	d3d11	dxmt		PASS	d3d11.clear	64x64 pixels exact
+serial	aarch64	d3d11	dxmt		PASS	d3d11.draw_fullscreen	64x64 pixels exact, SV_VertexID triangle + SV_Position shading
+serial	aarch64	d3d11	dxmt		PASS	d3d11.draw_vb_cb	64x64 pixels exact, vertex-buffer quad over the fullscreen pass
+serial	aarch64	d3d11	dxmt		PASS	d3d11.update_subresource	64x64 pixels exact
+serial	aarch64	d3d11	dxmt		PASS	d3d11.copy_region	64x64 pixels exact, 16x16 box from the render target into an initialised texture
+serial	aarch64	d3d11	dxmt		PASS	d3d11.copy_resource	64x64 pixels exact
+serial	aarch64	d3d11	dxmt		PASS	d3d11.buffer_copy	1 KiB..3 KiB slice of an initialised buffer copied to staging: 0 words wrong
+serial	aarch64	d3d11	dxmt		INFO	d3d11.device_release	final Release returned 0
+serial	aarch64	d3d11	dxmt		PASS	d3d11.backend	compatdb applied exe=d3d11-aarch64.exe;dxgi=dxmt
+serial	aarch64	d3d11	dxvk		INFO	d3d11.env	build=aarch64 wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+serial	aarch64	d3d11	dxvk		PASS	d3d11.device	D3D11CreateDevice 00000000, feature level 11_1
+serial	aarch64	d3d11	dxvk		INFO	d3d11.adapter	Apple M2 (vendor 106b device 0064), feature level 11_1
+serial	aarch64	d3d11	dxvk		PASS	d3d11.render_target	64x64 RGBA8 render target created
+serial	aarch64	d3d11	dxvk		PASS	d3d11.clear	64x64 pixels exact
+serial	aarch64	d3d11	dxvk		PASS	d3d11.draw_fullscreen	64x64 pixels exact, SV_VertexID triangle + SV_Position shading
+serial	aarch64	d3d11	dxvk		PASS	d3d11.draw_vb_cb	64x64 pixels exact, vertex-buffer quad over the fullscreen pass
+serial	aarch64	d3d11	dxvk		PASS	d3d11.update_subresource	64x64 pixels exact
+serial	aarch64	d3d11	dxvk		PASS	d3d11.copy_region	64x64 pixels exact, 16x16 box from the render target into an initialised texture
+serial	aarch64	d3d11	dxvk		PASS	d3d11.copy_resource	64x64 pixels exact
+serial	aarch64	d3d11	dxvk		PASS	d3d11.buffer_copy	1 KiB..3 KiB slice of an initialised buffer copied to staging: 0 words wrong
+serial	aarch64	d3d11	dxvk		INFO	d3d11.device_release	final Release returned 0
+serial	aarch64	d3d11	dxvk		PASS	d3d11.backend	compatdb applied exe=d3d11-aarch64.exe;dxgi=dxvk
+serial	aarch64	d3d12	wined3d		INFO	d3d12.env	build=aarch64 wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+serial	aarch64	d3d12	wined3d		SKIP	d3d12.device	no d3d12.dll in this stack (wined3d tree?)
+serial	aarch64	d3d12	wined3d		PASS	d3d12.backend	compatdb applied exe=d3d12-aarch64.exe;dxgi=wined3d
+serial	aarch64	d3d12	dxmt		INFO	d3d12.env	build=aarch64 wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+serial	aarch64	d3d12	dxmt		PASS	d3d12.device	D3D12CreateDevice(11_0) 00000000
+serial	aarch64	d3d12	dxmt		INFO	d3d12.adapter	Apple M2, max feature level 12_0
+serial	aarch64	d3d12	dxmt		PASS	d3d12.queues	direct + copy queues, lists and a fence created
+serial	aarch64	d3d12	dxmt		PASS	d3d12.fence.cpu_signal	CPU Signal(5): completed value 5, event set
+serial	aarch64	d3d12	dxmt		PASS	d3d12.fence.queue_signal	queue Signal(10) reached 10
+serial	aarch64	d3d12	dxmt		PASS	d3d12.fence.queue_waits_cpu	queue Wait on a CPU-signalled fence: held before the signal, released after
+serial	aarch64	d3d12	dxmt		PASS	d3d12.fence.many_signals	200 queued signals: completed 300
+serial	aarch64	d3d12	dxmt		PASS	d3d12.clear	64x64 pixels exact, ClearRenderTargetView -> CopyTextureRegion -> readback heap
+serial	aarch64	d3d12	dxmt		PASS	d3d12.draw_fullscreen	64x64 pixels exact, SV_VertexID triangle, PSO + root signature
+serial	aarch64	d3d12	dxmt		PASS	d3d12.draw_vb_cbv	64x64 pixels exact, vertex-buffer quad, colour from a root CBV
+serial	aarch64	d3d12	dxmt		PASS	d3d12.copy_queue	64x64 pixels exact, upload on the COPY queue, read on DIRECT after a cross-queue fence wait
+serial	aarch64	d3d12	dxmt		PASS	d3d12.copy_queue.buffers	upload -> default -> readback buffer copies on the COPY queue: 0 of 1024 texels wrong
+serial	aarch64	d3d12	dxmt		INFO	d3d12.device_release	final Release returned 0
+serial	aarch64	d3d12	dxmt		PASS	d3d12.backend	compatdb applied exe=d3d12-aarch64.exe;dxgi=dxmt
+serial	aarch64	d3d12	dxvk		INFO	d3d12.env	build=aarch64 wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+serial	aarch64	d3d12	dxvk		PASS	d3d12.device	D3D12CreateDevice(11_0) 00000000
+serial	aarch64	d3d12	dxvk		INFO	d3d12.adapter	Apple M2, max feature level 12_0
+serial	aarch64	d3d12	dxvk		PASS	d3d12.queues	direct + copy queues, lists and a fence created
+serial	aarch64	d3d12	dxvk		PASS	d3d12.fence.cpu_signal	CPU Signal(5): completed value 5, event set
+serial	aarch64	d3d12	dxvk		PASS	d3d12.fence.queue_signal	queue Signal(10) reached 10
+serial	aarch64	d3d12	dxvk		PASS	d3d12.fence.queue_waits_cpu	queue Wait on a CPU-signalled fence: held before the signal, released after
+serial	aarch64	d3d12	dxvk		PASS	d3d12.fence.many_signals	200 queued signals: completed 300
+serial	aarch64	d3d12	dxvk		PASS	d3d12.clear	64x64 pixels exact, ClearRenderTargetView -> CopyTextureRegion -> readback heap
+serial	aarch64	d3d12	dxvk		PASS	d3d12.draw_fullscreen	64x64 pixels exact, SV_VertexID triangle, PSO + root signature
+serial	aarch64	d3d12	dxvk		PASS	d3d12.draw_vb_cbv	64x64 pixels exact, vertex-buffer quad, colour from a root CBV
+serial	aarch64	d3d12	dxvk		PASS	d3d12.copy_queue	64x64 pixels exact, upload on the COPY queue, read on DIRECT after a cross-queue fence wait
+serial	aarch64	d3d12	dxvk		PASS	d3d12.copy_queue.buffers	upload -> default -> readback buffer copies on the COPY queue: 0 of 1024 texels wrong
+serial	aarch64	d3d12	dxvk		INFO	d3d12.device_release	final Release returned 0
+serial	aarch64	d3d12	dxvk		PASS	d3d12.backend	compatdb applied exe=d3d12-aarch64.exe;dxgi=dxvk
+serial	aarch64	opengl	egl		INFO	opengl.env	build=aarch64 wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+serial	aarch64	opengl	egl		PASS	opengl.context	window 000000000009006C, pixel format 82, context 0000000000010001
+serial	aarch64	opengl	egl		INFO	opengl.renderer	Mesa | zink Vulkan 1.4(Apple M2 (MESA_KOSMICKRISP)) | 4.6 (Compatibility Profile) Mesa 27.0.0-devel (git-4d597245b7)
+serial	aarch64	opengl	egl		PASS	opengl.entry_points	0 of the GL 2.0/3.0 functions missing from wglGetProcAddress
+serial	aarch64	opengl	egl		PASS	opengl.fbo	64x64 RGBA8 framebuffer object status 8cd5
+serial	aarch64	opengl	egl		PASS	opengl.clear	64x64 pixels exact, glClear -> glReadPixels
+serial	aarch64	opengl	egl		PASS	opengl.draw_fixed	64x64 pixels exact, immediate-mode quad
+serial	aarch64	opengl	egl		PASS	opengl.glsl_build	GLSL 1.10 program linked
+serial	aarch64	opengl	egl		PASS	opengl.draw_glsl	64x64 pixels exact, fullscreen GLSL pass
+serial	aarch64	opengl	egl		PASS	opengl.gl_error	glGetError after all draws: 0000
+serial	aarch64	opengl	egl		PASS	opengl.backend	compatdb applied exe=opengl-aarch64.exe;opengl=egl
+serial	aarch64	opengl	cgl		INFO	opengl.env	build=aarch64 wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+serial	aarch64	opengl	cgl		PASS	opengl.context	window 0000000000080058, pixel format 13, context 0000000000010001
+serial	aarch64	opengl	cgl		INFO	opengl.renderer	Apple | Apple M2 | 2.1 Metal - 91.7
+serial	aarch64	opengl	cgl		PASS	opengl.entry_points	0 of the GL 2.0/3.0 functions missing from wglGetProcAddress
+serial	aarch64	opengl	cgl		PASS	opengl.fbo	64x64 RGBA8 framebuffer object status 8cd5
+serial	aarch64	opengl	cgl		PASS	opengl.clear	64x64 pixels exact, glClear -> glReadPixels
+serial	aarch64	opengl	cgl		PASS	opengl.draw_fixed	64x64 pixels exact, immediate-mode quad
+serial	aarch64	opengl	cgl		PASS	opengl.glsl_build	GLSL 1.10 program linked
+serial	aarch64	opengl	cgl		PASS	opengl.draw_glsl	64x64 pixels exact, fullscreen GLSL pass
+serial	aarch64	opengl	cgl		PASS	opengl.gl_error	glGetError after all draws: 0000
+serial	aarch64	opengl	cgl		PASS	opengl.backend	compatdb applied exe=opengl-aarch64.exe;opengl=cgl
+serial	aarch64	vulkan	default		INFO	vulkan.env	build=aarch64 wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+serial	aarch64	vulkan	default		PASS	vulkan.instance	vkCreateInstance: 0
+serial	aarch64	vulkan	default		PASS	vulkan.entry_points	0 functions missing from vkGetInstanceProcAddr
+serial	aarch64	vulkan	default		PASS	vulkan.physical_device	1 physical device(s)
+serial	aarch64	vulkan	default		INFO	vulkan.device	Apple M2, Vulkan 1.4.363, driver 06863063, vendor 106b
+serial	aarch64	vulkan	default		PASS	vulkan.device	graphics queue family 0, vkCreateDevice: 0
+serial	aarch64	vulkan	default		PASS	vulkan.clear	64x64 pixels exact, vkCmdClearColorImage -> vkCmdCopyImageToBuffer
+serial	aarch64	vulkan	default		PASS	vulkan.copy_region	64x64 pixels exact, buffer -> 32x32 image region with row length, then image -> buffer
+serial	aarch64	vulkan	default		FAIL	vulkan.fill_copy_buffer	vkCmdFillBuffer x2 + vkCmdCopyBuffer at offsets: 64 of 1024 words wrong
+serial	aarch64	vulkan	default		PASS	vulkan.fence_reuse	50 fill + submit + wait cycles on one fence: 0 saw stale data
+serial	aarch64	vulkan	default		PASS	vulkan.teardown	device and instance destroyed
+serial	arm64ec	threads			INFO	threads.env	build=arm64ec wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+serial	arm64ec	threads			PASS	threads.tls.static_and_dynamic	32/32 threads kept their own static and TlsAlloc values (expansion slot 64)
+serial	arm64ec	threads			PASS	threads.tls.expansion_slots	TlsAlloc beyond 64 slots gave index 64
+serial	arm64ec	threads			PASS	threads.tls.fls_callback	FLS destructor ran 32 times for 32 exited threads
+serial	arm64ec	threads			PASS	threads.tls.image_callback	TLS directory callback ran DLL_THREAD_ATTACH in 32 of 32 new threads
+serial	arm64ec	threads			PASS	threads.locks.counters	critical section 800000, SRW 800000, Interlocked 800000 (want 800000 each)
+serial	arm64ec	threads			PASS	threads.locks.condvar	consumed sum 200010000 (want 200010000), in order 1
+serial	arm64ec	threads			PASS	threads.apc.sleepex	wait returned 192 (want WAIT_IO_COMPLETION=192), 1 APCs ran on the target thread in order 'a' (want 'a')
+serial	arm64ec	threads			PASS	threads.apc.wait_ex	wait returned 192 (want WAIT_IO_COMPLETION=192), 1 APCs ran on the target thread in order 'a' (want 'a')
+serial	arm64ec	threads			PASS	threads.apc.nonalertable	wait returned 192 (want WAIT_IO_COMPLETION=192), 5 APCs ran on the target thread in order 'abcde' (want 'abcde'), none during the non-alertable wait
+serial	arm64ec	threads			PASS	threads.apc.self	ran before the alertable wait=0, SleepEx(0, TRUE)=192, ran=1
+serial	arm64ec	threads			PASS	threads.apc.timer	periodic waitable-timer completion routine ran 3 times in 41 ms
+serial	arm64ec	threads			PASS	threads.spawn	500 short threads, 0 wrong exit codes, 107 ms
+serial	arm64ec	seh			INFO	seh.env	build=arm64ec wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+serial	arm64ec	seh			PASS	seh.av_read	code=c0000005 info=[0, 0000000000900123] want [0, 0000000000900123], ExceptionAddress=00000001400016D0 context pc=00000001400016D0 sp=000000000011FDF0
+serial	arm64ec	seh			PASS	seh.av_write	code=c0000005 info=[1, 0000000000900456] want [1, 0000000000900456], ExceptionAddress=00000001400016D8 context pc=00000001400016D8 sp=000000000011FDF0
+serial	arm64ec	seh			PASS	seh.av_null_read	code=c0000005 info=[0, 0000000000000000] want [0, 0000000000000000], ExceptionAddress=00000001400016D0 context pc=00000001400016D0 sp=000000000011FDF0
+serial	arm64ec	seh			FAIL	seh.av_exec_noaccess	code=c0000005 info=[0, 0000000000900200] want [8, 0000000000900200], ExceptionAddress=00006FFFFFEC9724 context pc=00006FFFFFEC9724 sp=000000000011FDE0
+serial	arm64ec	seh			FAIL	seh.run	crash (exit 9 after 0s); log tail: compatdb:   arguments = unset (upstream: the command line the process was started with) | compatdb:   debug_channels = unset (upstream: the WINEDEBUG the process was started with) | compatdb:   env FEX_X87REDUCEDPRECISION=1, built-in: set
+serial	arm64ec	callbacks			INFO	callbacks.env	build=arm64ec wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+serial	arm64ec	callbacks			PASS	callbacks.wndproc.create	CreateWindow ok, WM_CREATE seen 1 times
+serial	arm64ec	callbacks			PASS	callbacks.wndproc.send	SendMessage returned 37 (want 37)
+serial	arm64ec	callbacks			PASS	callbacks.wndproc.cross_thread	cross-thread SendMessage returned 17 (want 17), procedure ran on the window's thread
+serial	arm64ec	callbacks			PASS	callbacks.wndproc.subclass	subclassed SendMessage returned 1040 (want 1040)
+serial	arm64ec	callbacks			PASS	callbacks.enum_windows	EnumWindows returned 1 after 16 callbacks; our 4 windows seen 1/1/1/1 times
+serial	arm64ec	callbacks			PASS	callbacks.enum_windows_stop	callback returning FALSE: EnumWindows returned 0 after 2 calls (want 0 after 2)
+serial	arm64ec	callbacks			PASS	callbacks.enum_child_windows	EnumChildWindows saw 4 children, ours 1/1/1/1
+serial	arm64ec	callbacks			PASS	callbacks.set_timer	TIMERPROC ran 7 times in 71 ms, 0 with wrong arguments
+serial	arm64ec	callbacks			PASS	callbacks.hook	WH_CALLWNDPROC hook saw 3 of 3 messages
+serial	arm64ec	callbacks			PASS	callbacks.timer_queue	timer-queue callback ran 5 times, 0 with wrong arguments
+serial	arm64ec	callbacks			PASS	callbacks.threadpool_work	100 work items summed to 5050 (want 5050)
+serial	arm64ec	callbacks			PASS	callbacks.registered_wait	RegisterWaitForSingleObject callback ran 3 of 3 times
+serial	arm64ec	callbacks			PASS	callbacks.qsort	CRT qsort with a program comparator sorted correctly
+serial	arm64ec	callbacks			PASS	callbacks.enum_fonts	EnumFontFamiliesEx callback ran 2300 times, 0 with bad arguments
+serial	arm64ec	memory			INFO	memory.env	build=arm64ec wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+serial	arm64ec	memory			PASS	memory.sysinfo	page size 4096, allocation granularity 65536
+serial	arm64ec	memory			PASS	memory.alloc_granularity	0 of 20 reservations not 64K-aligned (or failed)
+serial	arm64ec	memory			PASS	memory.commit_zeroed	fresh commit reads zero
+serial	arm64ec	memory			PASS	memory.protect_4k.set	VirtualProtect on single 4K pages ok (0)
+serial	arm64ec	memory			PASS	memory.protect_4k.access	each 4K page faults exactly per its own protection
+serial	arm64ec	memory			PASS	memory.protect_4k.query	VirtualQuery reports 4K-granular regions
+serial	arm64ec	memory			PASS	memory.protect_4k.contents	after protect/unprotect every page kept its data (0 bytes wrong)
+serial	arm64ec	memory			PASS	memory.guard_page.read	neighbours 00000000/00000000, first touch 80000001 at +107b (want 80000001 at +107b), second touch 00000000, then unguarded
+serial	arm64ec	memory			PASS	memory.guard_page.write	write: first 80000001, second 00000000
+serial	arm64ec	memory			PASS	memory.reserve_commit.single_page	reserved c0000005, commit one 4K page ok, it 00000000, neighbours c0000005/c0000005, states 2000/1000(size 1000)/2000
+serial	arm64ec	memory			PASS	memory.reserve_commit.decommit	decommitted page faults (c0000005) and recommits zeroed (00)
+serial	arm64ec	memory			PASS	memory.write_watch	written pages 1,2,7,13,30,63; reported [1,2,7,13,30,63] at granularity 4096; after reset 0
+serial	arm64ec	memory			PASS	memory.placeholder.reserve	VirtualAlloc2(MEM_RESERVE_PLACEHOLDER) ok (0)
+serial	arm64ec	memory			PASS	memory.placeholder.split	VirtualFree(MEM_PRESERVE_PLACEHOLDER) split it (0)
+serial	arm64ec	memory			PASS	memory.placeholder.replace_alloc	VirtualAlloc2(MEM_REPLACE_PLACEHOLDER) committed into the placeholder
+serial	arm64ec	memory			PASS	memory.placeholder.map_view	MapViewOfFile3 into the placeholder aliases a second view
+serial	arm64ec	memory			PASS	memory.placeholder.unmap_preserve	after UnmapViewOfFile2(MEM_PRESERVE_PLACEHOLDER) the range is a placeholder again
+serial	arm64ec	memory			PASS	memory.section_alias	two views of one section see each other's writes (0 mismatches)
+serial	arm64ec	memory			PASS	memory.smc.wx_cycle	2000 rewrites through RW -> RX + FlushInstructionCache, 0 stale results
+serial	arm64ec	memory			PASS	memory.smc.rwx_flush	5000 in-place rewrites of RWX code with FlushInstructionCache, 0 stale results
+serial	arm64ec	memory			PASS	memory.smc.rwx_noflush	5000 immediate patches without a flush (legal on x86), 0 stale results
+serial	arm64ec	memory			PASS	memory.smc.same_page_data	20000 data writes next to live code, 0 wrong results
+serial	arm64ec	memory			PASS	memory.smc.realloc	200 release/reallocate cycles at one address (0 moved), 0 stale results
+serial	arm64ec	memory			PASS	memory.smc.neighbor_page	RX code page next to a hot RW page: 0 wrong results, write to the RX page c0000005
+serial	arm64ec	memory			PASS	memory.smc.cross_thread	500 rewrites on one thread, run on another: 0 stale results (last 71f3)
+serial	arm64ec	memory			PASS	memory.big_alloc	reserve 1024 MB, commit and touch 256 MB at its end: ok, 0 bad pages
+serial	arm64ec	ordering			INFO	ordering.env	build=arm64ec wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+serial	arm64ec	ordering			INFO	ordering.config	iterations 500000, native ARM64 code, FEX_HARDWARE_TSO=(unset)
+serial	arm64ec	ordering			INFO	ordering.mp	weak outcome 132/500000 times (129 ms); allowed for native ARM code
+serial	arm64ec	ordering			PASS	ordering.mp_fenced	forbidden outcome 0/500000 times (135 ms)
+serial	arm64ec	ordering			INFO	ordering.lb	weak outcome 0/500000 times (117 ms); allowed for native ARM code
+serial	arm64ec	ordering			PASS	ordering.lb_fenced	forbidden outcome 0/500000 times (124 ms)
+serial	arm64ec	ordering			INFO	ordering.iriw	weak outcome 0/500000 times (314 ms); allowed for native ARM code
+serial	arm64ec	ordering			PASS	ordering.iriw_fenced	forbidden outcome 0/500000 times (332 ms)
+serial	arm64ec	ordering			INFO	ordering.sb	weak outcome 6905/500000 times (124 ms); allowed by TSO and by ARM (store buffering)
+serial	arm64ec	ordering			PASS	ordering.sb_fenced	forbidden outcome 0/500000 times (129 ms)
+serial	arm64ec	ordering			PASS	ordering.corr	forbidden outcome 0/500000 times (115 ms)
+serial	arm64ec	ordering			INFO	ordering.mp_stream	weak outcome 3292/5000000 times (10 ms); allowed for native ARM code
+serial	arm64ec	ordering			PASS	ordering.mp_stream_fenced	forbidden outcome 0/5000000 times (42 ms)
+serial	arm64ec	ordering			INFO	ordering.lock	5137 of 2000000 increments lost (78 ms); a plain-store unlock is not a release on native ARM
+serial	arm64ec	ordering			PASS	ordering.lock_fenced	0 of 2000000 increments lost (46 ms)
+serial	arm64ec	ordering			PASS	ordering.atomic	0 of 2000000 increments lost (19 ms)
+serial	arm64ec	ordering			INFO	ordering.calibration.overlap	sb store-buffering outcomes 6905: threads do overlap
+serial	arm64ec	ordering			INFO	ordering.calibration.arm	8561 weak outcomes in plain runs; this machine does reorder them, so clean x86 runs under FEX mean something
+serial	arm64ec	d3d9	dxvk		INFO	d3d9.env	build=arm64ec wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+serial	arm64ec	d3d9	dxvk		PASS	d3d9.create	Direct3DCreate9 ok
+serial	arm64ec	d3d9	dxvk		PASS	d3d9.adapters	1 adapter(s)
+serial	arm64ec	d3d9	dxvk		INFO	d3d9.adapter0	0: AMD Radeon RX 6700 XT (driver aticfx64.dll, vendor 1002 device 73df), 14 X8R8G8B8 modes, current 1470x956@60
+serial	arm64ec	d3d9	dxvk		PASS	d3d9.display_modes	14 X8R8G8B8 modes, current 1470x956
+serial	arm64ec	d3d9	dxvk		PASS	d3d9.caps	HAL: VS 3.0 PS 3.0, max texture 16384x16384, 8 texture stages, 16 streams, 4 RTs
+serial	arm64ec	d3d9	dxvk		PASS	d3d9.formats	CheckDeviceFormat: all of A8R8G8B8 texture/RT, D24S8, DXT1, DXT5 supported
+serial	arm64ec	d3d9	dxvk		PASS	d3d9.create_ex	Direct3DCreate9Ex 00000000
+serial	arm64ec	d3d9	dxvk		PASS	d3d9.device	CreateDevice(HAL) 00000000
+serial	arm64ec	d3d9	dxvk		PASS	d3d9.clear	64x64 pixels exact, Clear -> GetRenderTargetData
+serial	arm64ec	d3d9	dxvk		PASS	d3d9.draw	64x64 pixels exact, fixed-function XYZRHW quad
+serial	arm64ec	d3d9	dxvk		INFO	d3d9.device_release	final Release returned 0
+serial	arm64ec	d3d9	dxvk		PASS	d3d9.backend	compatdb applied exe=d3d9-arm64ec.exe;d3d9=dxvk
+serial	arm64ec	d3d9	mtld3d		INFO	d3d9.env	build=arm64ec wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+serial	arm64ec	d3d9	mtld3d		PASS	d3d9.create	Direct3DCreate9 ok
+serial	arm64ec	d3d9	mtld3d		PASS	d3d9.adapters	1 adapter(s)
+serial	arm64ec	d3d9	mtld3d		INFO	d3d9.adapter0	0: Apple M2 (driver mtld3d, vendor 106b device 047a), 7 X8R8G8B8 modes, current 1470x956@60
+serial	arm64ec	d3d9	mtld3d		PASS	d3d9.display_modes	7 X8R8G8B8 modes, current 1470x956
+serial	arm64ec	d3d9	mtld3d		PASS	d3d9.caps	HAL: VS 3.0 PS 3.0, max texture 16384x16384, 8 texture stages, 16 streams, 4 RTs
+serial	arm64ec	d3d9	mtld3d		PASS	d3d9.formats	CheckDeviceFormat: all of A8R8G8B8 texture/RT, D24S8, DXT1, DXT5 supported
+serial	arm64ec	d3d9	mtld3d		PASS	d3d9.create_ex	Direct3DCreate9Ex 00000000
+serial	arm64ec	d3d9	mtld3d		PASS	d3d9.device	CreateDevice(HAL) 00000000
+serial	arm64ec	d3d9	mtld3d		PASS	d3d9.clear	64x64 pixels exact, Clear -> GetRenderTargetData
+serial	arm64ec	d3d9	mtld3d		PASS	d3d9.draw	64x64 pixels exact, fixed-function XYZRHW quad
+serial	arm64ec	d3d9	mtld3d		INFO	d3d9.device_release	final Release returned 0
+serial	arm64ec	d3d9	mtld3d		PASS	d3d9.backend	compatdb applied exe=d3d9-arm64ec.exe;d3d9=mtld3d
+serial	arm64ec	d3d9	wined3d		INFO	d3d9.env	build=arm64ec wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+serial	arm64ec	d3d9	wined3d		PASS	d3d9.create	Direct3DCreate9 ok
+serial	arm64ec	d3d9	wined3d		PASS	d3d9.adapters	1 adapter(s)
+serial	arm64ec	d3d9	wined3d		INFO	d3d9.adapter0	0: NVIDIA GeForce GTX 470 (driver nvd3dum.dll, vendor 10de device 06cd), 14 X8R8G8B8 modes, current 1470x956@60
+serial	arm64ec	d3d9	wined3d		PASS	d3d9.display_modes	14 X8R8G8B8 modes, current 1470x956
+serial	arm64ec	d3d9	wined3d		PASS	d3d9.caps	HAL: VS 3.0 PS 3.0, max texture 16384x16384, 8 texture stages, 16 streams, 4 RTs
+serial	arm64ec	d3d9	wined3d		PASS	d3d9.formats	CheckDeviceFormat: all of A8R8G8B8 texture/RT, D24S8, DXT1, DXT5 supported
+serial	arm64ec	d3d9	wined3d		PASS	d3d9.create_ex	Direct3DCreate9Ex 00000000
+serial	arm64ec	d3d9	wined3d		PASS	d3d9.device	CreateDevice(HAL) 00000000
+serial	arm64ec	d3d9	wined3d		PASS	d3d9.clear	64x64 pixels exact, Clear -> GetRenderTargetData
+serial	arm64ec	d3d9	wined3d		PASS	d3d9.draw	64x64 pixels exact, fixed-function XYZRHW quad
+serial	arm64ec	d3d9	wined3d		INFO	d3d9.device_release	final Release returned 0
+serial	arm64ec	d3d9	wined3d		PASS	d3d9.backend	compatdb applied exe=d3d9-arm64ec.exe;d3d9=wined3d
+serial	arm64ec	d3d11	wined3d		INFO	d3d11.env	build=arm64ec wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+serial	arm64ec	d3d11	wined3d		PASS	d3d11.device	D3D11CreateDevice 00000000, feature level 11_1
+serial	arm64ec	d3d11	wined3d		INFO	d3d11.adapter	NVIDIA GeForce GTX 470 (vendor 10de device 06cd), feature level 11_1
+serial	arm64ec	d3d11	wined3d		PASS	d3d11.render_target	64x64 RGBA8 render target created
+serial	arm64ec	d3d11	wined3d		PASS	d3d11.clear	64x64 pixels exact
+serial	arm64ec	d3d11	wined3d		PASS	d3d11.draw_fullscreen	64x64 pixels exact, SV_VertexID triangle + SV_Position shading
+serial	arm64ec	d3d11	wined3d		PASS	d3d11.draw_vb_cb	64x64 pixels exact, vertex-buffer quad over the fullscreen pass
+serial	arm64ec	d3d11	wined3d		PASS	d3d11.update_subresource	64x64 pixels exact
+serial	arm64ec	d3d11	wined3d		PASS	d3d11.copy_region	64x64 pixels exact, 16x16 box from the render target into an initialised texture
+serial	arm64ec	d3d11	wined3d		PASS	d3d11.copy_resource	64x64 pixels exact
+serial	arm64ec	d3d11	wined3d		PASS	d3d11.buffer_copy	1 KiB..3 KiB slice of an initialised buffer copied to staging: 0 words wrong
+serial	arm64ec	d3d11	wined3d		INFO	d3d11.device_release	final Release returned 0
+serial	arm64ec	d3d11	wined3d		PASS	d3d11.backend	compatdb applied exe=d3d11-arm64ec.exe;dxgi=wined3d
+serial	arm64ec	d3d11	dxmt		INFO	d3d11.env	build=arm64ec wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+serial	arm64ec	d3d11	dxmt		PASS	d3d11.device	D3D11CreateDevice 00000000, feature level 11_1
+serial	arm64ec	d3d11	dxmt		INFO	d3d11.adapter	Apple M2 (vendor 106b device 0000), feature level 11_1
+serial	arm64ec	d3d11	dxmt		PASS	d3d11.render_target	64x64 RGBA8 render target created
+serial	arm64ec	d3d11	dxmt		PASS	d3d11.clear	64x64 pixels exact
+serial	arm64ec	d3d11	dxmt		PASS	d3d11.draw_fullscreen	64x64 pixels exact, SV_VertexID triangle + SV_Position shading
+serial	arm64ec	d3d11	dxmt		PASS	d3d11.draw_vb_cb	64x64 pixels exact, vertex-buffer quad over the fullscreen pass
+serial	arm64ec	d3d11	dxmt		PASS	d3d11.update_subresource	64x64 pixels exact
+serial	arm64ec	d3d11	dxmt		PASS	d3d11.copy_region	64x64 pixels exact, 16x16 box from the render target into an initialised texture
+serial	arm64ec	d3d11	dxmt		PASS	d3d11.copy_resource	64x64 pixels exact
+serial	arm64ec	d3d11	dxmt		PASS	d3d11.buffer_copy	1 KiB..3 KiB slice of an initialised buffer copied to staging: 0 words wrong
+serial	arm64ec	d3d11	dxmt		INFO	d3d11.device_release	final Release returned 0
+serial	arm64ec	d3d11	dxmt		PASS	d3d11.backend	compatdb applied exe=d3d11-arm64ec.exe;dxgi=dxmt
+serial	arm64ec	d3d11	dxvk		INFO	d3d11.env	build=arm64ec wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+serial	arm64ec	d3d11	dxvk		PASS	d3d11.device	D3D11CreateDevice 00000000, feature level 11_1
+serial	arm64ec	d3d11	dxvk		INFO	d3d11.adapter	Apple M2 (vendor 106b device 0064), feature level 11_1
+serial	arm64ec	d3d11	dxvk		PASS	d3d11.render_target	64x64 RGBA8 render target created
+serial	arm64ec	d3d11	dxvk		PASS	d3d11.clear	64x64 pixels exact
+serial	arm64ec	d3d11	dxvk		PASS	d3d11.draw_fullscreen	64x64 pixels exact, SV_VertexID triangle + SV_Position shading
+serial	arm64ec	d3d11	dxvk		PASS	d3d11.draw_vb_cb	64x64 pixels exact, vertex-buffer quad over the fullscreen pass
+serial	arm64ec	d3d11	dxvk		PASS	d3d11.update_subresource	64x64 pixels exact
+serial	arm64ec	d3d11	dxvk		PASS	d3d11.copy_region	64x64 pixels exact, 16x16 box from the render target into an initialised texture
+serial	arm64ec	d3d11	dxvk		PASS	d3d11.copy_resource	64x64 pixels exact
+serial	arm64ec	d3d11	dxvk		PASS	d3d11.buffer_copy	1 KiB..3 KiB slice of an initialised buffer copied to staging: 0 words wrong
+serial	arm64ec	d3d11	dxvk		INFO	d3d11.device_release	final Release returned 0
+serial	arm64ec	d3d11	dxvk		PASS	d3d11.backend	compatdb applied exe=d3d11-arm64ec.exe;dxgi=dxvk
+serial	arm64ec	d3d12	wined3d		INFO	d3d12.env	build=arm64ec wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+serial	arm64ec	d3d12	wined3d		SKIP	d3d12.device	no d3d12.dll in this stack (wined3d tree?)
+serial	arm64ec	d3d12	wined3d		PASS	d3d12.backend	compatdb applied exe=d3d12-arm64ec.exe;dxgi=wined3d
+serial	arm64ec	d3d12	dxmt		INFO	d3d12.env	build=arm64ec wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+serial	arm64ec	d3d12	dxmt		PASS	d3d12.device	D3D12CreateDevice(11_0) 00000000
+serial	arm64ec	d3d12	dxmt		INFO	d3d12.adapter	Apple M2, max feature level 12_0
+serial	arm64ec	d3d12	dxmt		PASS	d3d12.queues	direct + copy queues, lists and a fence created
+serial	arm64ec	d3d12	dxmt		PASS	d3d12.fence.cpu_signal	CPU Signal(5): completed value 5, event set
+serial	arm64ec	d3d12	dxmt		PASS	d3d12.fence.queue_signal	queue Signal(10) reached 10
+serial	arm64ec	d3d12	dxmt		PASS	d3d12.fence.queue_waits_cpu	queue Wait on a CPU-signalled fence: held before the signal, released after
+serial	arm64ec	d3d12	dxmt		PASS	d3d12.fence.many_signals	200 queued signals: completed 300
+serial	arm64ec	d3d12	dxmt		PASS	d3d12.clear	64x64 pixels exact, ClearRenderTargetView -> CopyTextureRegion -> readback heap
+serial	arm64ec	d3d12	dxmt		PASS	d3d12.draw_fullscreen	64x64 pixels exact, SV_VertexID triangle, PSO + root signature
+serial	arm64ec	d3d12	dxmt		PASS	d3d12.draw_vb_cbv	64x64 pixels exact, vertex-buffer quad, colour from a root CBV
+serial	arm64ec	d3d12	dxmt		PASS	d3d12.copy_queue	64x64 pixels exact, upload on the COPY queue, read on DIRECT after a cross-queue fence wait
+serial	arm64ec	d3d12	dxmt		PASS	d3d12.copy_queue.buffers	upload -> default -> readback buffer copies on the COPY queue: 0 of 1024 texels wrong
+serial	arm64ec	d3d12	dxmt		INFO	d3d12.device_release	final Release returned 0
+serial	arm64ec	d3d12	dxmt		PASS	d3d12.backend	compatdb applied exe=d3d12-arm64ec.exe;dxgi=dxmt
+serial	arm64ec	d3d12	dxvk		INFO	d3d12.env	build=arm64ec wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+serial	arm64ec	d3d12	dxvk		PASS	d3d12.device	D3D12CreateDevice(11_0) 00000000
+serial	arm64ec	d3d12	dxvk		INFO	d3d12.adapter	Apple M2, max feature level 12_0
+serial	arm64ec	d3d12	dxvk		PASS	d3d12.queues	direct + copy queues, lists and a fence created
+serial	arm64ec	d3d12	dxvk		PASS	d3d12.fence.cpu_signal	CPU Signal(5): completed value 5, event set
+serial	arm64ec	d3d12	dxvk		PASS	d3d12.fence.queue_signal	queue Signal(10) reached 10
+serial	arm64ec	d3d12	dxvk		PASS	d3d12.fence.queue_waits_cpu	queue Wait on a CPU-signalled fence: held before the signal, released after
+serial	arm64ec	d3d12	dxvk		PASS	d3d12.fence.many_signals	200 queued signals: completed 300
+serial	arm64ec	d3d12	dxvk		PASS	d3d12.clear	64x64 pixels exact, ClearRenderTargetView -> CopyTextureRegion -> readback heap
+serial	arm64ec	d3d12	dxvk		PASS	d3d12.draw_fullscreen	64x64 pixels exact, SV_VertexID triangle, PSO + root signature
+serial	arm64ec	d3d12	dxvk		PASS	d3d12.draw_vb_cbv	64x64 pixels exact, vertex-buffer quad, colour from a root CBV
+serial	arm64ec	d3d12	dxvk		PASS	d3d12.copy_queue	64x64 pixels exact, upload on the COPY queue, read on DIRECT after a cross-queue fence wait
+serial	arm64ec	d3d12	dxvk		PASS	d3d12.copy_queue.buffers	upload -> default -> readback buffer copies on the COPY queue: 0 of 1024 texels wrong
+serial	arm64ec	d3d12	dxvk		INFO	d3d12.device_release	final Release returned 0
+serial	arm64ec	d3d12	dxvk		PASS	d3d12.backend	compatdb applied exe=d3d12-arm64ec.exe;dxgi=dxvk
+serial	arm64ec	opengl	egl		INFO	opengl.env	build=arm64ec wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+serial	arm64ec	opengl	egl		PASS	opengl.context	window 000000000009006C, pixel format 82, context 0000000000010001
+serial	arm64ec	opengl	egl		INFO	opengl.renderer	Mesa | zink Vulkan 1.4(Apple M2 (MESA_KOSMICKRISP)) | 4.6 (Compatibility Profile) Mesa 27.0.0-devel (git-4d597245b7)
+serial	arm64ec	opengl	egl		PASS	opengl.entry_points	0 of the GL 2.0/3.0 functions missing from wglGetProcAddress
+serial	arm64ec	opengl	egl		PASS	opengl.fbo	64x64 RGBA8 framebuffer object status 8cd5
+serial	arm64ec	opengl	egl		PASS	opengl.clear	64x64 pixels exact, glClear -> glReadPixels
+serial	arm64ec	opengl	egl		PASS	opengl.draw_fixed	64x64 pixels exact, immediate-mode quad
+serial	arm64ec	opengl	egl		PASS	opengl.glsl_build	GLSL 1.10 program linked
+serial	arm64ec	opengl	egl		PASS	opengl.draw_glsl	64x64 pixels exact, fullscreen GLSL pass
+serial	arm64ec	opengl	egl		PASS	opengl.gl_error	glGetError after all draws: 0000
+serial	arm64ec	opengl	egl		PASS	opengl.backend	compatdb applied exe=opengl-arm64ec.exe;opengl=egl
+serial	arm64ec	opengl	cgl		INFO	opengl.env	build=arm64ec wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+serial	arm64ec	opengl	cgl		PASS	opengl.context	window 0000000000090054, pixel format 13, context 0000000000010001
+serial	arm64ec	opengl	cgl		INFO	opengl.renderer	Apple | Apple M2 | 2.1 Metal - 91.7
+serial	arm64ec	opengl	cgl		PASS	opengl.entry_points	0 of the GL 2.0/3.0 functions missing from wglGetProcAddress
+serial	arm64ec	opengl	cgl		PASS	opengl.fbo	64x64 RGBA8 framebuffer object status 8cd5
+serial	arm64ec	opengl	cgl		PASS	opengl.clear	64x64 pixels exact, glClear -> glReadPixels
+serial	arm64ec	opengl	cgl		PASS	opengl.draw_fixed	64x64 pixels exact, immediate-mode quad
+serial	arm64ec	opengl	cgl		PASS	opengl.glsl_build	GLSL 1.10 program linked
+serial	arm64ec	opengl	cgl		PASS	opengl.draw_glsl	64x64 pixels exact, fullscreen GLSL pass
+serial	arm64ec	opengl	cgl		PASS	opengl.gl_error	glGetError after all draws: 0000
+serial	arm64ec	opengl	cgl		PASS	opengl.backend	compatdb applied exe=opengl-arm64ec.exe;opengl=cgl
+serial	arm64ec	vulkan	default		INFO	vulkan.env	build=arm64ec wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+serial	arm64ec	vulkan	default		PASS	vulkan.instance	vkCreateInstance: 0
+serial	arm64ec	vulkan	default		PASS	vulkan.entry_points	0 functions missing from vkGetInstanceProcAddr
+serial	arm64ec	vulkan	default		PASS	vulkan.physical_device	1 physical device(s)
+serial	arm64ec	vulkan	default		INFO	vulkan.device	Apple M2, Vulkan 1.4.363, driver 06863063, vendor 106b
+serial	arm64ec	vulkan	default		PASS	vulkan.device	graphics queue family 0, vkCreateDevice: 0
+serial	arm64ec	vulkan	default		PASS	vulkan.clear	64x64 pixels exact, vkCmdClearColorImage -> vkCmdCopyImageToBuffer
+serial	arm64ec	vulkan	default		PASS	vulkan.copy_region	64x64 pixels exact, buffer -> 32x32 image region with row length, then image -> buffer
+serial	arm64ec	vulkan	default		FAIL	vulkan.fill_copy_buffer	vkCmdFillBuffer x2 + vkCmdCopyBuffer at offsets: 128 of 1024 words wrong
+serial	arm64ec	vulkan	default		PASS	vulkan.fence_reuse	50 fill + submit + wait cycles on one fence: 0 saw stale data
+serial	arm64ec	vulkan	default		PASS	vulkan.teardown	device and instance destroyed
+serial	x86_64	threads			INFO	threads.env	build=x86_64 wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+serial	x86_64	threads			PASS	threads.tls.static_and_dynamic	32/32 threads kept their own static and TlsAlloc values (expansion slot 64)
+serial	x86_64	threads			PASS	threads.tls.expansion_slots	TlsAlloc beyond 64 slots gave index 64
+serial	x86_64	threads			PASS	threads.tls.fls_callback	FLS destructor ran 32 times for 32 exited threads
+serial	x86_64	threads			PASS	threads.tls.image_callback	TLS directory callback ran DLL_THREAD_ATTACH in 32 of 32 new threads
+serial	x86_64	threads			PASS	threads.locks.counters	critical section 800000, SRW 800000, Interlocked 800000 (want 800000 each)
+serial	x86_64	threads			PASS	threads.locks.condvar	consumed sum 200010000 (want 200010000), in order 1
+serial	x86_64	threads			PASS	threads.apc.sleepex	wait returned 192 (want WAIT_IO_COMPLETION=192), 1 APCs ran on the target thread in order 'a' (want 'a')
+serial	x86_64	threads			PASS	threads.apc.wait_ex	wait returned 192 (want WAIT_IO_COMPLETION=192), 1 APCs ran on the target thread in order 'a' (want 'a')
+serial	x86_64	threads			PASS	threads.apc.nonalertable	wait returned 192 (want WAIT_IO_COMPLETION=192), 5 APCs ran on the target thread in order 'abcde' (want 'abcde'), none during the non-alertable wait
+serial	x86_64	threads			PASS	threads.apc.self	ran before the alertable wait=0, SleepEx(0, TRUE)=192, ran=1
+serial	x86_64	threads			PASS	threads.apc.timer	periodic waitable-timer completion routine ran 3 times in 41 ms
+serial	x86_64	threads			PASS	threads.spawn	500 short threads, 0 wrong exit codes, 142 ms
+serial	x86_64	seh			INFO	seh.env	build=x86_64 wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+serial	x86_64	seh			PASS	seh.av_read	code=c0000005 info=[0, 0000000000900123] want [0, 0000000000900123], ExceptionAddress=0000000140002890 context pc=0000000140002890 sp=000000000011FD18
+serial	x86_64	seh			PASS	seh.av_write	code=c0000005 info=[1, 0000000000900456] want [1, 0000000000900456], ExceptionAddress=00000001400028A0 context pc=00000001400028A0 sp=000000000011FD18
+serial	x86_64	seh			PASS	seh.av_null_read	code=c0000005 info=[0, 0000000000000000] want [0, 0000000000000000], ExceptionAddress=0000000140002890 context pc=0000000140002890 sp=000000000011FD18
+serial	x86_64	seh			PASS	seh.av_exec_noaccess	code=c0000005 info=[8, 0000000000900200] want [8, 0000000000900200], ExceptionAddress=0000000000900200 context pc=0000000000900200 sp=000000000011FD18
+serial	x86_64	seh			FAIL	seh.div0	caught=0 code=00000000 (want c0000094) address=0000000000000000 pc=0000000000000000
+serial	x86_64	seh			PASS	seh.breakpoint	caught=1 code=80000003
+serial	x86_64	seh			PASS	seh.nested_search	order inner-filter,outer-filter,finally-abnormal,outer-handler (want inner-filter,outer-filter,finally-abnormal,outer-handler)
+serial	x86_64	seh			PASS	seh.nested_rethrow	order inner-caught,outer-filter,outer-handler (want inner-caught,outer-filter,outer-handler)
+serial	x86_64	seh			PASS	seh.finally_normal	order body,finally-normal,
+serial	x86_64	seh			PASS	seh.raise_frames	caught=1 code=e0c0ffee params=3 [1234 ffffffff c0ffee] finally order 8a,6a,4a, (want 8a,6a,4a,)
+serial	x86_64	seh			PASS	seh.raise_continue	caught=0 resumed=1
+serial	x86_64	seh			PASS	seh.veh_fixup	frame handler reached=0, handler calls=1 (want 1), stores landed=1
+serial	x86_64	seh			PASS	seh.veh_order	first-registered handler ran first=1, then frame handler caught=1
+serial	x86_64	seh			PASS	seh.cxx_throw	caught value 42 (want 42), destructors run 9 (want 9)
+serial	x86_64	seh			FAIL	seh.stack_overflow	caught code=00000000 (want c00000fd), thread wait=0 exit=00000000
+serial	x86_64	callbacks			INFO	callbacks.env	build=x86_64 wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+serial	x86_64	callbacks			PASS	callbacks.wndproc.create	CreateWindow ok, WM_CREATE seen 1 times
+serial	x86_64	callbacks			PASS	callbacks.wndproc.send	SendMessage returned 37 (want 37)
+serial	x86_64	callbacks			PASS	callbacks.wndproc.cross_thread	cross-thread SendMessage returned 17 (want 17), procedure ran on the window's thread
+serial	x86_64	callbacks			PASS	callbacks.wndproc.subclass	subclassed SendMessage returned 1040 (want 1040)
+serial	x86_64	callbacks			PASS	callbacks.enum_windows	EnumWindows returned 1 after 16 callbacks; our 4 windows seen 1/1/1/1 times
+serial	x86_64	callbacks			PASS	callbacks.enum_windows_stop	callback returning FALSE: EnumWindows returned 0 after 2 calls (want 0 after 2)
+serial	x86_64	callbacks			PASS	callbacks.enum_child_windows	EnumChildWindows saw 4 children, ours 1/1/1/1
+serial	x86_64	callbacks			PASS	callbacks.set_timer	TIMERPROC ran 6 times in 66 ms, 0 with wrong arguments
+serial	x86_64	callbacks			PASS	callbacks.hook	WH_CALLWNDPROC hook saw 3 of 3 messages
+serial	x86_64	callbacks			PASS	callbacks.timer_queue	timer-queue callback ran 6 times, 0 with wrong arguments
+serial	x86_64	callbacks			PASS	callbacks.threadpool_work	100 work items summed to 5050 (want 5050)
+serial	x86_64	callbacks			PASS	callbacks.registered_wait	RegisterWaitForSingleObject callback ran 3 of 3 times
+serial	x86_64	callbacks			PASS	callbacks.qsort	CRT qsort with a program comparator sorted correctly
+serial	x86_64	callbacks			PASS	callbacks.enum_fonts	EnumFontFamiliesEx callback ran 2300 times, 0 with bad arguments
+serial	x86_64	memory			INFO	memory.env	build=x86_64 wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+serial	x86_64	memory			PASS	memory.sysinfo	page size 4096, allocation granularity 65536
+serial	x86_64	memory			PASS	memory.alloc_granularity	0 of 20 reservations not 64K-aligned (or failed)
+serial	x86_64	memory			PASS	memory.commit_zeroed	fresh commit reads zero
+serial	x86_64	memory			PASS	memory.protect_4k.set	VirtualProtect on single 4K pages ok (0)
+serial	x86_64	memory			PASS	memory.protect_4k.access	each 4K page faults exactly per its own protection
+serial	x86_64	memory			PASS	memory.protect_4k.query	VirtualQuery reports 4K-granular regions
+serial	x86_64	memory			PASS	memory.protect_4k.contents	after protect/unprotect every page kept its data (0 bytes wrong)
+serial	x86_64	memory			PASS	memory.guard_page.read	neighbours 00000000/00000000, first touch 80000001 at +107b (want 80000001 at +107b), second touch 00000000, then unguarded
+serial	x86_64	memory			PASS	memory.guard_page.write	write: first 80000001, second 00000000
+serial	x86_64	memory			PASS	memory.reserve_commit.single_page	reserved c0000005, commit one 4K page ok, it 00000000, neighbours c0000005/c0000005, states 2000/1000(size 1000)/2000
+serial	x86_64	memory			PASS	memory.reserve_commit.decommit	decommitted page faults (c0000005) and recommits zeroed (00)
+serial	x86_64	memory			PASS	memory.write_watch	written pages 1,2,7,13,30,63; reported [1,2,7,13,30,63] at granularity 4096; after reset 0
+serial	x86_64	memory			PASS	memory.placeholder.reserve	VirtualAlloc2(MEM_RESERVE_PLACEHOLDER) ok (0)
+serial	x86_64	memory			PASS	memory.placeholder.split	VirtualFree(MEM_PRESERVE_PLACEHOLDER) split it (0)
+serial	x86_64	memory			PASS	memory.placeholder.replace_alloc	VirtualAlloc2(MEM_REPLACE_PLACEHOLDER) committed into the placeholder
+serial	x86_64	memory			PASS	memory.placeholder.map_view	MapViewOfFile3 into the placeholder aliases a second view
+serial	x86_64	memory			PASS	memory.placeholder.unmap_preserve	after UnmapViewOfFile2(MEM_PRESERVE_PLACEHOLDER) the range is a placeholder again
+serial	x86_64	memory			PASS	memory.section_alias	two views of one section see each other's writes (0 mismatches)
+serial	x86_64	memory			PASS	memory.smc.wx_cycle	2000 rewrites through RW -> RX + FlushInstructionCache, 0 stale results
+serial	x86_64	memory			PASS	memory.smc.rwx_flush	5000 in-place rewrites of RWX code with FlushInstructionCache, 0 stale results
+serial	x86_64	memory			PASS	memory.smc.rwx_noflush	5000 immediate patches without a flush (legal on x86), 0 stale results
+serial	x86_64	memory			PASS	memory.smc.same_page_data	20000 data writes next to live code, 0 wrong results
+serial	x86_64	memory			PASS	memory.smc.realloc	200 release/reallocate cycles at one address (0 moved), 0 stale results
+serial	x86_64	memory			PASS	memory.smc.neighbor_page	RX code page next to a hot RW page: 0 wrong results, write to the RX page c0000005
+serial	x86_64	memory			PASS	memory.smc.cross_thread	500 rewrites on one thread, run on another: 0 stale results (last 71f3)
+serial	x86_64	memory			PASS	memory.big_alloc	reserve 1024 MB, commit and touch 256 MB at its end: ok, 0 bad pages
+serial	x86_64	ordering			INFO	ordering.env	build=x86_64 wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+serial	x86_64	ordering			INFO	ordering.config	iterations 500000, x86 code, FEX_HARDWARE_TSO=(unset)
+serial	x86_64	ordering			PASS	ordering.mp	forbidden outcome 0/500000 times (118 ms)
+serial	x86_64	ordering			PASS	ordering.mp_fenced	forbidden outcome 0/500000 times (126 ms)
+serial	x86_64	ordering			PASS	ordering.lb	forbidden outcome 0/500000 times (110 ms)
+serial	x86_64	ordering			PASS	ordering.lb_fenced	forbidden outcome 0/500000 times (119 ms)
+serial	x86_64	ordering			PASS	ordering.iriw	forbidden outcome 0/500000 times (207 ms)
+serial	x86_64	ordering			PASS	ordering.iriw_fenced	forbidden outcome 0/500000 times (218 ms)
+serial	x86_64	ordering			INFO	ordering.sb	weak outcome 13062/500000 times (115 ms); allowed by TSO and by ARM (store buffering)
+serial	x86_64	ordering			PASS	ordering.sb_fenced	forbidden outcome 0/500000 times (122 ms)
+serial	x86_64	ordering			PASS	ordering.corr	forbidden outcome 0/500000 times (117 ms)
+serial	x86_64	ordering			PASS	ordering.mp_stream	forbidden outcome 0/5000000 times (13 ms)
+serial	x86_64	ordering			PASS	ordering.mp_stream_fenced	forbidden outcome 0/5000000 times (42 ms)
+serial	x86_64	ordering			PASS	ordering.lock	0 of 2000000 increments lost (43 ms)
+serial	x86_64	ordering			PASS	ordering.lock_fenced	0 of 2000000 increments lost (239 ms)
+serial	x86_64	ordering			PASS	ordering.atomic	0 of 2000000 increments lost (35 ms)
+serial	x86_64	ordering			INFO	ordering.calibration.overlap	sb store-buffering outcomes 13062: threads do overlap
+serial	x86_64	d3d9	dxvk		INFO	d3d9.env	build=x86_64 wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+serial	x86_64	d3d9	dxvk		PASS	d3d9.create	Direct3DCreate9 ok
+serial	x86_64	d3d9	dxvk		PASS	d3d9.adapters	1 adapter(s)
+serial	x86_64	d3d9	dxvk		INFO	d3d9.adapter0	0: AMD Radeon RX 6700 XT (driver aticfx64.dll, vendor 1002 device 73df), 14 X8R8G8B8 modes, current 1470x956@60
+serial	x86_64	d3d9	dxvk		PASS	d3d9.display_modes	14 X8R8G8B8 modes, current 1470x956
+serial	x86_64	d3d9	dxvk		PASS	d3d9.caps	HAL: VS 3.0 PS 3.0, max texture 16384x16384, 8 texture stages, 16 streams, 4 RTs
+serial	x86_64	d3d9	dxvk		PASS	d3d9.formats	CheckDeviceFormat: all of A8R8G8B8 texture/RT, D24S8, DXT1, DXT5 supported
+serial	x86_64	d3d9	dxvk		PASS	d3d9.create_ex	Direct3DCreate9Ex 00000000
+serial	x86_64	d3d9	dxvk		PASS	d3d9.device	CreateDevice(HAL) 00000000
+serial	x86_64	d3d9	dxvk		PASS	d3d9.clear	64x64 pixels exact, Clear -> GetRenderTargetData
+serial	x86_64	d3d9	dxvk		PASS	d3d9.draw	64x64 pixels exact, fixed-function XYZRHW quad
+serial	x86_64	d3d9	dxvk		INFO	d3d9.device_release	final Release returned 0
+serial	x86_64	d3d9	dxvk		PASS	d3d9.backend	compatdb applied exe=d3d9-x86_64.exe;d3d9=dxvk
+serial	x86_64	d3d9	mtld3d		INFO	d3d9.env	build=x86_64 wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+serial	x86_64	d3d9	mtld3d		PASS	d3d9.create	Direct3DCreate9 ok
+serial	x86_64	d3d9	mtld3d		PASS	d3d9.adapters	1 adapter(s)
+serial	x86_64	d3d9	mtld3d		INFO	d3d9.adapter0	0: Apple M2 (driver mtld3d, vendor 106b device 047a), 7 X8R8G8B8 modes, current 1470x956@60
+serial	x86_64	d3d9	mtld3d		PASS	d3d9.display_modes	7 X8R8G8B8 modes, current 1470x956
+serial	x86_64	d3d9	mtld3d		PASS	d3d9.caps	HAL: VS 3.0 PS 3.0, max texture 16384x16384, 8 texture stages, 16 streams, 4 RTs
+serial	x86_64	d3d9	mtld3d		PASS	d3d9.formats	CheckDeviceFormat: all of A8R8G8B8 texture/RT, D24S8, DXT1, DXT5 supported
+serial	x86_64	d3d9	mtld3d		PASS	d3d9.create_ex	Direct3DCreate9Ex 00000000
+serial	x86_64	d3d9	mtld3d		PASS	d3d9.device	CreateDevice(HAL) 00000000
+serial	x86_64	d3d9	mtld3d		PASS	d3d9.clear	64x64 pixels exact, Clear -> GetRenderTargetData
+serial	x86_64	d3d9	mtld3d		PASS	d3d9.draw	64x64 pixels exact, fixed-function XYZRHW quad
+serial	x86_64	d3d9	mtld3d		INFO	d3d9.device_release	final Release returned 0
+serial	x86_64	d3d9	mtld3d		PASS	d3d9.backend	compatdb applied exe=d3d9-x86_64.exe;d3d9=mtld3d
+serial	x86_64	d3d9	wined3d		INFO	d3d9.env	build=x86_64 wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+serial	x86_64	d3d9	wined3d		PASS	d3d9.create	Direct3DCreate9 ok
+serial	x86_64	d3d9	wined3d		PASS	d3d9.adapters	1 adapter(s)
+serial	x86_64	d3d9	wined3d		INFO	d3d9.adapter0	0: NVIDIA GeForce GTX 470 (driver nvd3dum.dll, vendor 10de device 06cd), 14 X8R8G8B8 modes, current 1470x956@60
+serial	x86_64	d3d9	wined3d		PASS	d3d9.display_modes	14 X8R8G8B8 modes, current 1470x956
+serial	x86_64	d3d9	wined3d		PASS	d3d9.caps	HAL: VS 3.0 PS 3.0, max texture 16384x16384, 8 texture stages, 16 streams, 4 RTs
+serial	x86_64	d3d9	wined3d		PASS	d3d9.formats	CheckDeviceFormat: all of A8R8G8B8 texture/RT, D24S8, DXT1, DXT5 supported
+serial	x86_64	d3d9	wined3d		PASS	d3d9.create_ex	Direct3DCreate9Ex 00000000
+serial	x86_64	d3d9	wined3d		PASS	d3d9.device	CreateDevice(HAL) 00000000
+serial	x86_64	d3d9	wined3d		PASS	d3d9.clear	64x64 pixels exact, Clear -> GetRenderTargetData
+serial	x86_64	d3d9	wined3d		PASS	d3d9.draw	64x64 pixels exact, fixed-function XYZRHW quad
+serial	x86_64	d3d9	wined3d		INFO	d3d9.device_release	final Release returned 0
+serial	x86_64	d3d9	wined3d		PASS	d3d9.backend	compatdb applied exe=d3d9-x86_64.exe;d3d9=wined3d
+serial	x86_64	d3d11	wined3d		INFO	d3d11.env	build=x86_64 wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+serial	x86_64	d3d11	wined3d		PASS	d3d11.device	D3D11CreateDevice 00000000, feature level 11_1
+serial	x86_64	d3d11	wined3d		INFO	d3d11.adapter	NVIDIA GeForce GTX 470 (vendor 10de device 06cd), feature level 11_1
+serial	x86_64	d3d11	wined3d		PASS	d3d11.render_target	64x64 RGBA8 render target created
+serial	x86_64	d3d11	wined3d		PASS	d3d11.clear	64x64 pixels exact
+serial	x86_64	d3d11	wined3d		PASS	d3d11.draw_fullscreen	64x64 pixels exact, SV_VertexID triangle + SV_Position shading
+serial	x86_64	d3d11	wined3d		PASS	d3d11.draw_vb_cb	64x64 pixels exact, vertex-buffer quad over the fullscreen pass
+serial	x86_64	d3d11	wined3d		PASS	d3d11.update_subresource	64x64 pixels exact
+serial	x86_64	d3d11	wined3d		PASS	d3d11.copy_region	64x64 pixels exact, 16x16 box from the render target into an initialised texture
+serial	x86_64	d3d11	wined3d		PASS	d3d11.copy_resource	64x64 pixels exact
+serial	x86_64	d3d11	wined3d		PASS	d3d11.buffer_copy	1 KiB..3 KiB slice of an initialised buffer copied to staging: 0 words wrong
+serial	x86_64	d3d11	wined3d		INFO	d3d11.device_release	final Release returned 0
+serial	x86_64	d3d11	wined3d		PASS	d3d11.backend	compatdb applied exe=d3d11-x86_64.exe;dxgi=wined3d
+serial	x86_64	d3d11	dxmt		INFO	d3d11.env	build=x86_64 wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+serial	x86_64	d3d11	dxmt		PASS	d3d11.device	D3D11CreateDevice 00000000, feature level 11_1
+serial	x86_64	d3d11	dxmt		INFO	d3d11.adapter	Apple M2 (vendor 106b device 0000), feature level 11_1
+serial	x86_64	d3d11	dxmt		PASS	d3d11.render_target	64x64 RGBA8 render target created
+serial	x86_64	d3d11	dxmt		PASS	d3d11.clear	64x64 pixels exact
+serial	x86_64	d3d11	dxmt		PASS	d3d11.draw_fullscreen	64x64 pixels exact, SV_VertexID triangle + SV_Position shading
+serial	x86_64	d3d11	dxmt		PASS	d3d11.draw_vb_cb	64x64 pixels exact, vertex-buffer quad over the fullscreen pass
+serial	x86_64	d3d11	dxmt		PASS	d3d11.update_subresource	64x64 pixels exact
+serial	x86_64	d3d11	dxmt		PASS	d3d11.copy_region	64x64 pixels exact, 16x16 box from the render target into an initialised texture
+serial	x86_64	d3d11	dxmt		PASS	d3d11.copy_resource	64x64 pixels exact
+serial	x86_64	d3d11	dxmt		PASS	d3d11.buffer_copy	1 KiB..3 KiB slice of an initialised buffer copied to staging: 0 words wrong
+serial	x86_64	d3d11	dxmt		INFO	d3d11.device_release	final Release returned 0
+serial	x86_64	d3d11	dxmt		PASS	d3d11.backend	compatdb applied exe=d3d11-x86_64.exe;dxgi=dxmt
+serial	x86_64	d3d11	dxvk		INFO	d3d11.env	build=x86_64 wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+serial	x86_64	d3d11	dxvk		PASS	d3d11.device	D3D11CreateDevice 00000000, feature level 11_1
+serial	x86_64	d3d11	dxvk		INFO	d3d11.adapter	Apple M2 (vendor 106b device 0064), feature level 11_1
+serial	x86_64	d3d11	dxvk		PASS	d3d11.render_target	64x64 RGBA8 render target created
+serial	x86_64	d3d11	dxvk		PASS	d3d11.clear	64x64 pixels exact
+serial	x86_64	d3d11	dxvk		PASS	d3d11.draw_fullscreen	64x64 pixels exact, SV_VertexID triangle + SV_Position shading
+serial	x86_64	d3d11	dxvk		PASS	d3d11.draw_vb_cb	64x64 pixels exact, vertex-buffer quad over the fullscreen pass
+serial	x86_64	d3d11	dxvk		PASS	d3d11.update_subresource	64x64 pixels exact
+serial	x86_64	d3d11	dxvk		PASS	d3d11.copy_region	64x64 pixels exact, 16x16 box from the render target into an initialised texture
+serial	x86_64	d3d11	dxvk		PASS	d3d11.copy_resource	64x64 pixels exact
+serial	x86_64	d3d11	dxvk		PASS	d3d11.buffer_copy	1 KiB..3 KiB slice of an initialised buffer copied to staging: 0 words wrong
+serial	x86_64	d3d11	dxvk		INFO	d3d11.device_release	final Release returned 0
+serial	x86_64	d3d11	dxvk		PASS	d3d11.backend	compatdb applied exe=d3d11-x86_64.exe;dxgi=dxvk
+serial	x86_64	d3d12	wined3d		INFO	d3d12.env	build=x86_64 wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+serial	x86_64	d3d12	wined3d		SKIP	d3d12.device	no d3d12.dll in this stack (wined3d tree?)
+serial	x86_64	d3d12	wined3d		PASS	d3d12.backend	compatdb applied exe=d3d12-x86_64.exe;dxgi=wined3d
+serial	x86_64	d3d12	dxmt		INFO	d3d12.env	build=x86_64 wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+serial	x86_64	d3d12	dxmt		PASS	d3d12.device	D3D12CreateDevice(11_0) 00000000
+serial	x86_64	d3d12	dxmt		INFO	d3d12.adapter	Apple M2, max feature level 12_0
+serial	x86_64	d3d12	dxmt		PASS	d3d12.queues	direct + copy queues, lists and a fence created
+serial	x86_64	d3d12	dxmt		PASS	d3d12.fence.cpu_signal	CPU Signal(5): completed value 5, event set
+serial	x86_64	d3d12	dxmt		PASS	d3d12.fence.queue_signal	queue Signal(10) reached 10
+serial	x86_64	d3d12	dxmt		PASS	d3d12.fence.queue_waits_cpu	queue Wait on a CPU-signalled fence: held before the signal, released after
+serial	x86_64	d3d12	dxmt		PASS	d3d12.fence.many_signals	200 queued signals: completed 300
+serial	x86_64	d3d12	dxmt		PASS	d3d12.clear	64x64 pixels exact, ClearRenderTargetView -> CopyTextureRegion -> readback heap
+serial	x86_64	d3d12	dxmt		PASS	d3d12.draw_fullscreen	64x64 pixels exact, SV_VertexID triangle, PSO + root signature
+serial	x86_64	d3d12	dxmt		PASS	d3d12.draw_vb_cbv	64x64 pixels exact, vertex-buffer quad, colour from a root CBV
+serial	x86_64	d3d12	dxmt		PASS	d3d12.copy_queue	64x64 pixels exact, upload on the COPY queue, read on DIRECT after a cross-queue fence wait
+serial	x86_64	d3d12	dxmt		PASS	d3d12.copy_queue.buffers	upload -> default -> readback buffer copies on the COPY queue: 0 of 1024 texels wrong
+serial	x86_64	d3d12	dxmt		INFO	d3d12.device_release	final Release returned 0
+serial	x86_64	d3d12	dxmt		PASS	d3d12.backend	compatdb applied exe=d3d12-x86_64.exe;dxgi=dxmt
+serial	x86_64	d3d12	dxvk		INFO	d3d12.env	build=x86_64 wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+serial	x86_64	d3d12	dxvk		PASS	d3d12.device	D3D12CreateDevice(11_0) 00000000
+serial	x86_64	d3d12	dxvk		INFO	d3d12.adapter	Apple M2, max feature level 12_0
+serial	x86_64	d3d12	dxvk		PASS	d3d12.queues	direct + copy queues, lists and a fence created
+serial	x86_64	d3d12	dxvk		PASS	d3d12.fence.cpu_signal	CPU Signal(5): completed value 5, event set
+serial	x86_64	d3d12	dxvk		PASS	d3d12.fence.queue_signal	queue Signal(10) reached 10
+serial	x86_64	d3d12	dxvk		PASS	d3d12.fence.queue_waits_cpu	queue Wait on a CPU-signalled fence: held before the signal, released after
+serial	x86_64	d3d12	dxvk		PASS	d3d12.fence.many_signals	200 queued signals: completed 300
+serial	x86_64	d3d12	dxvk		PASS	d3d12.clear	64x64 pixels exact, ClearRenderTargetView -> CopyTextureRegion -> readback heap
+serial	x86_64	d3d12	dxvk		PASS	d3d12.draw_fullscreen	64x64 pixels exact, SV_VertexID triangle, PSO + root signature
+serial	x86_64	d3d12	dxvk		PASS	d3d12.draw_vb_cbv	64x64 pixels exact, vertex-buffer quad, colour from a root CBV
+serial	x86_64	d3d12	dxvk		PASS	d3d12.copy_queue	64x64 pixels exact, upload on the COPY queue, read on DIRECT after a cross-queue fence wait
+serial	x86_64	d3d12	dxvk		PASS	d3d12.copy_queue.buffers	upload -> default -> readback buffer copies on the COPY queue: 0 of 1024 texels wrong
+serial	x86_64	d3d12	dxvk		INFO	d3d12.device_release	final Release returned 0
+serial	x86_64	d3d12	dxvk		PASS	d3d12.backend	compatdb applied exe=d3d12-x86_64.exe;dxgi=dxvk
+serial	x86_64	opengl	egl		INFO	opengl.env	build=x86_64 wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+serial	x86_64	opengl	egl		PASS	opengl.context	window 000000000009006C, pixel format 82, context 0000000000010001
+serial	x86_64	opengl	egl		INFO	opengl.renderer	Mesa | zink Vulkan 1.4(Apple M2 (MESA_KOSMICKRISP)) | 4.6 (Compatibility Profile) Mesa 27.0.0-devel (git-4d597245b7)
+serial	x86_64	opengl	egl		PASS	opengl.entry_points	0 of the GL 2.0/3.0 functions missing from wglGetProcAddress
+serial	x86_64	opengl	egl		PASS	opengl.fbo	64x64 RGBA8 framebuffer object status 8cd5
+serial	x86_64	opengl	egl		PASS	opengl.clear	64x64 pixels exact, glClear -> glReadPixels
+serial	x86_64	opengl	egl		PASS	opengl.draw_fixed	64x64 pixels exact, immediate-mode quad
+serial	x86_64	opengl	egl		PASS	opengl.glsl_build	GLSL 1.10 program linked
+serial	x86_64	opengl	egl		PASS	opengl.draw_glsl	64x64 pixels exact, fullscreen GLSL pass
+serial	x86_64	opengl	egl		PASS	opengl.gl_error	glGetError after all draws: 0000
+serial	x86_64	opengl	egl		PASS	opengl.backend	compatdb applied exe=opengl-x86_64.exe;opengl=egl
+serial	x86_64	opengl	cgl		INFO	opengl.env	build=x86_64 wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+serial	x86_64	opengl	cgl		PASS	opengl.context	window 0000000000080058, pixel format 13, context 0000000000010001
+serial	x86_64	opengl	cgl		INFO	opengl.renderer	Apple | Apple M2 | 2.1 Metal - 91.7
+serial	x86_64	opengl	cgl		PASS	opengl.entry_points	0 of the GL 2.0/3.0 functions missing from wglGetProcAddress
+serial	x86_64	opengl	cgl		PASS	opengl.fbo	64x64 RGBA8 framebuffer object status 8cd5
+serial	x86_64	opengl	cgl		PASS	opengl.clear	64x64 pixels exact, glClear -> glReadPixels
+serial	x86_64	opengl	cgl		PASS	opengl.draw_fixed	64x64 pixels exact, immediate-mode quad
+serial	x86_64	opengl	cgl		PASS	opengl.glsl_build	GLSL 1.10 program linked
+serial	x86_64	opengl	cgl		PASS	opengl.draw_glsl	64x64 pixels exact, fullscreen GLSL pass
+serial	x86_64	opengl	cgl		PASS	opengl.gl_error	glGetError after all draws: 0000
+serial	x86_64	opengl	cgl		PASS	opengl.backend	compatdb applied exe=opengl-x86_64.exe;opengl=cgl
+serial	x86_64	vulkan	default		INFO	vulkan.env	build=x86_64 wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+serial	x86_64	vulkan	default		PASS	vulkan.instance	vkCreateInstance: 0
+serial	x86_64	vulkan	default		PASS	vulkan.entry_points	0 functions missing from vkGetInstanceProcAddr
+serial	x86_64	vulkan	default		PASS	vulkan.physical_device	1 physical device(s)
+serial	x86_64	vulkan	default		INFO	vulkan.device	Apple M2, Vulkan 1.4.363, driver 06863063, vendor 106b
+serial	x86_64	vulkan	default		PASS	vulkan.device	graphics queue family 0, vkCreateDevice: 0
+serial	x86_64	vulkan	default		PASS	vulkan.clear	64x64 pixels exact, vkCmdClearColorImage -> vkCmdCopyImageToBuffer
+serial	x86_64	vulkan	default		PASS	vulkan.copy_region	64x64 pixels exact, buffer -> 32x32 image region with row length, then image -> buffer
+serial	x86_64	vulkan	default		FAIL	vulkan.fill_copy_buffer	vkCmdFillBuffer x2 + vkCmdCopyBuffer at offsets: 128 of 1024 words wrong
+serial	x86_64	vulkan	default		PASS	vulkan.fence_reuse	50 fill + submit + wait cycles on one fence: 0 saw stale data
+serial	x86_64	vulkan	default		PASS	vulkan.teardown	device and instance destroyed
+serial	i686	threads			INFO	threads.env	build=i686 wow64_process=i386 native=arm64 wine=11.20 host=Darwin 27.2.0
+serial	i686	threads			PASS	threads.tls.static_and_dynamic	32/32 threads kept their own static and TlsAlloc values (expansion slot 64)
+serial	i686	threads			PASS	threads.tls.expansion_slots	TlsAlloc beyond 64 slots gave index 64
+serial	i686	threads			PASS	threads.tls.fls_callback	FLS destructor ran 32 times for 32 exited threads
+serial	i686	threads			PASS	threads.tls.image_callback	TLS directory callback ran DLL_THREAD_ATTACH in 32 of 32 new threads
+serial	i686	threads			PASS	threads.locks.counters	critical section 800000, SRW 800000, Interlocked 800000 (want 800000 each)
+serial	i686	threads			PASS	threads.locks.condvar	consumed sum 200010000 (want 200010000), in order 1
+serial	i686	threads			PASS	threads.apc.sleepex	wait returned 192 (want WAIT_IO_COMPLETION=192), 1 APCs ran on the target thread in order 'a' (want 'a')
+serial	i686	threads			PASS	threads.apc.wait_ex	wait returned 192 (want WAIT_IO_COMPLETION=192), 1 APCs ran on the target thread in order 'a' (want 'a')
+serial	i686	threads			PASS	threads.apc.nonalertable	wait returned 192 (want WAIT_IO_COMPLETION=192), 5 APCs ran on the target thread in order 'abcde' (want 'abcde'), none during the non-alertable wait
+serial	i686	threads			PASS	threads.apc.self	ran before the alertable wait=0, SleepEx(0, TRUE)=192, ran=1
+serial	i686	threads			PASS	threads.apc.timer	periodic waitable-timer completion routine ran 3 times in 41 ms
+serial	i686	threads			PASS	threads.spawn	500 short threads, 0 wrong exit codes, 131 ms
+serial	i686	seh			INFO	seh.env	build=i686 wow64_process=i386 native=arm64 wine=11.20 host=Darwin 27.2.0
+serial	i686	seh			PASS	seh.av_read	code=c0000005 info=[0, 00B90123] want [0, 00B90123], ExceptionAddress=00402610 context pc=00402610 sp=0026FE10
+serial	i686	seh			PASS	seh.av_write	code=c0000005 info=[1, 00B90456] want [1, 00B90456], ExceptionAddress=00402620 context pc=00402620 sp=0026FE10
+serial	i686	seh			PASS	seh.av_null_read	code=c0000005 info=[0, 00000000] want [0, 00000000], ExceptionAddress=00402610 context pc=00402610 sp=0026FE10
+serial	i686	seh			PASS	seh.av_exec_noaccess	code=c0000005 info=[8, 00B90200] want [8, 00B90200], ExceptionAddress=00B90200 context pc=00B90200 sp=0026FE10
+serial	i686	seh			FAIL	seh.div0	caught=0 code=00000000 (want c0000094) address=00000000 pc=00000000
+serial	i686	seh			PASS	seh.breakpoint	caught=1 code=80000003
+serial	i686	seh			PASS	seh.nested_search	order inner-filter,outer-filter,finally-abnormal,outer-handler (want inner-filter,outer-filter,finally-abnormal,outer-handler)
+serial	i686	seh			PASS	seh.nested_rethrow	order inner-caught,outer-filter,outer-handler (want inner-caught,outer-filter,outer-handler)
+serial	i686	seh			PASS	seh.finally_normal	order body,finally-normal,
+serial	i686	seh			PASS	seh.raise_frames	caught=1 code=e0c0ffee params=3 [1234 ffffffff c0ffee] finally order 8a,6a,4a, (want 8a,6a,4a,)
+serial	i686	seh			PASS	seh.raise_continue	caught=0 resumed=1
+serial	i686	seh			PASS	seh.veh_fixup	frame handler reached=0, handler calls=1 (want 1), stores landed=1
+serial	i686	seh			PASS	seh.veh_order	first-registered handler ran first=1, then frame handler caught=1
+serial	i686	seh			PASS	seh.cxx_throw	caught value 42 (want 42), destructors run 9 (want 9)
+serial	i686	seh			PASS	seh.stack_overflow	caught code=c00000fd (want c00000fd), thread wait=0 exit=00000000
+serial	i686	callbacks			INFO	callbacks.env	build=i686 wow64_process=i386 native=arm64 wine=11.20 host=Darwin 27.2.0
+serial	i686	callbacks			PASS	callbacks.wndproc.create	CreateWindow ok, WM_CREATE seen 1 times
+serial	i686	callbacks			PASS	callbacks.wndproc.send	SendMessage returned 37 (want 37)
+serial	i686	callbacks			PASS	callbacks.wndproc.cross_thread	cross-thread SendMessage returned 17 (want 17), procedure ran on the window's thread
+serial	i686	callbacks			PASS	callbacks.wndproc.subclass	subclassed SendMessage returned 1040 (want 1040)
+serial	i686	callbacks			PASS	callbacks.enum_windows	EnumWindows returned 1 after 16 callbacks; our 4 windows seen 1/1/1/1 times
+serial	i686	callbacks			PASS	callbacks.enum_windows_stop	callback returning FALSE: EnumWindows returned 0 after 2 calls (want 0 after 2)
+serial	i686	callbacks			PASS	callbacks.enum_child_windows	EnumChildWindows saw 4 children, ours 1/1/1/1
+serial	i686	callbacks			PASS	callbacks.set_timer	TIMERPROC ran 6 times in 66 ms, 0 with wrong arguments
+serial	i686	callbacks			PASS	callbacks.hook	WH_CALLWNDPROC hook saw 3 of 3 messages
+serial	i686	callbacks			PASS	callbacks.timer_queue	timer-queue callback ran 6 times, 0 with wrong arguments
+serial	i686	callbacks			PASS	callbacks.threadpool_work	100 work items summed to 5050 (want 5050)
+serial	i686	callbacks			PASS	callbacks.registered_wait	RegisterWaitForSingleObject callback ran 3 of 3 times
+serial	i686	callbacks			PASS	callbacks.qsort	CRT qsort with a program comparator sorted correctly
+serial	i686	callbacks			PASS	callbacks.enum_fonts	EnumFontFamiliesEx callback ran 2300 times, 0 with bad arguments
+serial	i686	memory			INFO	memory.env	build=i686 wow64_process=i386 native=arm64 wine=11.20 host=Darwin 27.2.0
+serial	i686	memory			PASS	memory.sysinfo	page size 4096, allocation granularity 65536
+serial	i686	memory			PASS	memory.alloc_granularity	0 of 20 reservations not 64K-aligned (or failed)
+serial	i686	memory			PASS	memory.commit_zeroed	fresh commit reads zero
+serial	i686	memory			PASS	memory.protect_4k.set	VirtualProtect on single 4K pages ok (0)
+serial	i686	memory			PASS	memory.protect_4k.access	each 4K page faults exactly per its own protection
+serial	i686	memory			PASS	memory.protect_4k.query	VirtualQuery reports 4K-granular regions
+serial	i686	memory			PASS	memory.protect_4k.contents	after protect/unprotect every page kept its data (0 bytes wrong)
+serial	i686	memory			PASS	memory.guard_page.read	neighbours 00000000/00000000, first touch 80000001 at +107b (want 80000001 at +107b), second touch 00000000, then unguarded
+serial	i686	memory			PASS	memory.guard_page.write	write: first 80000001, second 00000000
+serial	i686	memory			PASS	memory.reserve_commit.single_page	reserved c0000005, commit one 4K page ok, it 00000000, neighbours c0000005/c0000005, states 2000/1000(size 1000)/2000
+serial	i686	memory			PASS	memory.reserve_commit.decommit	decommitted page faults (c0000005) and recommits zeroed (00)
+serial	i686	memory			PASS	memory.write_watch	written pages 1,2,7,13,30,63; reported [1,2,7,13,30,63] at granularity 4096; after reset 0
+serial	i686	memory			PASS	memory.placeholder.reserve	VirtualAlloc2(MEM_RESERVE_PLACEHOLDER) ok (0)
+serial	i686	memory			PASS	memory.placeholder.split	VirtualFree(MEM_PRESERVE_PLACEHOLDER) split it (0)
+serial	i686	memory			PASS	memory.placeholder.replace_alloc	VirtualAlloc2(MEM_REPLACE_PLACEHOLDER) committed into the placeholder
+serial	i686	memory			PASS	memory.placeholder.map_view	MapViewOfFile3 into the placeholder aliases a second view
+serial	i686	memory			PASS	memory.placeholder.unmap_preserve	after UnmapViewOfFile2(MEM_PRESERVE_PLACEHOLDER) the range is a placeholder again
+serial	i686	memory			PASS	memory.section_alias	two views of one section see each other's writes (0 mismatches)
+serial	i686	memory			PASS	memory.smc.wx_cycle	2000 rewrites through RW -> RX + FlushInstructionCache, 0 stale results
+serial	i686	memory			PASS	memory.smc.rwx_flush	5000 in-place rewrites of RWX code with FlushInstructionCache, 0 stale results
+serial	i686	memory			PASS	memory.smc.rwx_noflush	5000 immediate patches without a flush (legal on x86), 0 stale results
+serial	i686	memory			PASS	memory.smc.same_page_data	20000 data writes next to live code, 0 wrong results
+serial	i686	memory			PASS	memory.smc.realloc	200 release/reallocate cycles at one address (0 moved), 0 stale results
+serial	i686	memory			PASS	memory.smc.neighbor_page	RX code page next to a hot RW page: 0 wrong results, write to the RX page c0000005
+serial	i686	memory			PASS	memory.smc.cross_thread	500 rewrites on one thread, run on another: 0 stale results (last 71f3)
+serial	i686	memory			PASS	memory.big_alloc	reserve 512 MB, commit and touch 128 MB at its end: ok, 0 bad pages
+serial	i686	ordering			INFO	ordering.env	build=i686 wow64_process=i386 native=arm64 wine=11.20 host=Darwin 27.2.0
+serial	i686	ordering			INFO	ordering.config	iterations 500000, x86 code, FEX_HARDWARE_TSO=(unset)
+serial	i686	ordering			PASS	ordering.mp	forbidden outcome 0/500000 times (123 ms)
+serial	i686	ordering			PASS	ordering.mp_fenced	forbidden outcome 0/500000 times (136 ms)
+serial	i686	ordering			PASS	ordering.lb	forbidden outcome 0/500000 times (110 ms)
+serial	i686	ordering			PASS	ordering.lb_fenced	forbidden outcome 0/500000 times (122 ms)
+serial	i686	ordering			PASS	ordering.iriw	forbidden outcome 0/500000 times (229 ms)
+serial	i686	ordering			PASS	ordering.iriw_fenced	forbidden outcome 0/500000 times (209 ms)
+serial	i686	ordering			INFO	ordering.sb	weak outcome 13390/500000 times (116 ms); allowed by TSO and by ARM (store buffering)
+serial	i686	ordering			PASS	ordering.sb_fenced	forbidden outcome 0/500000 times (149 ms)
+serial	i686	ordering			PASS	ordering.corr	forbidden outcome 0/500000 times (148 ms)
+serial	i686	ordering			PASS	ordering.mp_stream	forbidden outcome 0/5000000 times (14 ms)
+serial	i686	ordering			PASS	ordering.mp_stream_fenced	forbidden outcome 0/5000000 times (39 ms)
+serial	i686	ordering			PASS	ordering.lock	0 of 2000000 increments lost (66 ms)
+serial	i686	ordering			PASS	ordering.lock_fenced	0 of 2000000 increments lost (223 ms)
+serial	i686	ordering			PASS	ordering.atomic	0 of 2000000 increments lost (46 ms)
+serial	i686	ordering			INFO	ordering.calibration.overlap	sb store-buffering outcomes 13390: threads do overlap
+serial	i686	d3d9	dxvk		INFO	d3d9.env	build=i686 wow64_process=i386 native=arm64 wine=11.20 host=Darwin 27.2.0
+serial	i686	d3d9	dxvk		PASS	d3d9.create	Direct3DCreate9 ok
+serial	i686	d3d9	dxvk		PASS	d3d9.adapters	1 adapter(s)
+serial	i686	d3d9	dxvk		INFO	d3d9.adapter0	0: AMD Radeon RX 6700 XT (driver aticfx32.dll, vendor 1002 device 73df), 14 X8R8G8B8 modes, current 1470x956@60
+serial	i686	d3d9	dxvk		PASS	d3d9.display_modes	14 X8R8G8B8 modes, current 1470x956
+serial	i686	d3d9	dxvk		PASS	d3d9.caps	HAL: VS 3.0 PS 3.0, max texture 16384x16384, 8 texture stages, 16 streams, 4 RTs
+serial	i686	d3d9	dxvk		PASS	d3d9.formats	CheckDeviceFormat: all of A8R8G8B8 texture/RT, D24S8, DXT1, DXT5 supported
+serial	i686	d3d9	dxvk		PASS	d3d9.create_ex	Direct3DCreate9Ex 00000000
+serial	i686	d3d9	dxvk		PASS	d3d9.device	CreateDevice(HAL) 00000000
+serial	i686	d3d9	dxvk		PASS	d3d9.clear	64x64 pixels exact, Clear -> GetRenderTargetData
+serial	i686	d3d9	dxvk		PASS	d3d9.draw	64x64 pixels exact, fixed-function XYZRHW quad
+serial	i686	d3d9	dxvk		INFO	d3d9.device_release	final Release returned 0
+serial	i686	d3d9	dxvk		PASS	d3d9.backend	compatdb applied exe=d3d9-i686.exe;d3d9=dxvk
+serial	i686	d3d9	mtld3d		INFO	d3d9.env	build=i686 wow64_process=i386 native=arm64 wine=11.20 host=Darwin 27.2.0
+serial	i686	d3d9	mtld3d		PASS	d3d9.create	Direct3DCreate9 ok
+serial	i686	d3d9	mtld3d		PASS	d3d9.adapters	1 adapter(s)
+serial	i686	d3d9	mtld3d		INFO	d3d9.adapter0	0: Apple M2 (driver mtld3d, vendor 106b device 047a), 7 X8R8G8B8 modes, current 1470x956@60
+serial	i686	d3d9	mtld3d		PASS	d3d9.display_modes	7 X8R8G8B8 modes, current 1470x956
+serial	i686	d3d9	mtld3d		PASS	d3d9.caps	HAL: VS 3.0 PS 3.0, max texture 16384x16384, 8 texture stages, 16 streams, 4 RTs
+serial	i686	d3d9	mtld3d		PASS	d3d9.formats	CheckDeviceFormat: all of A8R8G8B8 texture/RT, D24S8, DXT1, DXT5 supported
+serial	i686	d3d9	mtld3d		PASS	d3d9.create_ex	Direct3DCreate9Ex 00000000
+serial	i686	d3d9	mtld3d		PASS	d3d9.device	CreateDevice(HAL) 00000000
+serial	i686	d3d9	mtld3d		PASS	d3d9.clear	64x64 pixels exact, Clear -> GetRenderTargetData
+serial	i686	d3d9	mtld3d		PASS	d3d9.draw	64x64 pixels exact, fixed-function XYZRHW quad
+serial	i686	d3d9	mtld3d		INFO	d3d9.device_release	final Release returned 0
+serial	i686	d3d9	mtld3d		PASS	d3d9.backend	compatdb applied exe=d3d9-i686.exe;d3d9=mtld3d
+serial	i686	d3d9	wined3d		INFO	d3d9.env	build=i686 wow64_process=i386 native=arm64 wine=11.20 host=Darwin 27.2.0
+serial	i686	d3d9	wined3d		PASS	d3d9.create	Direct3DCreate9 ok
+serial	i686	d3d9	wined3d		PASS	d3d9.adapters	1 adapter(s)
+serial	i686	d3d9	wined3d		INFO	d3d9.adapter0	0: NVIDIA GeForce GTX 470 (driver nvd3dum.dll, vendor 10de device 06cd), 14 X8R8G8B8 modes, current 1470x956@60
+serial	i686	d3d9	wined3d		PASS	d3d9.display_modes	14 X8R8G8B8 modes, current 1470x956
+serial	i686	d3d9	wined3d		PASS	d3d9.caps	HAL: VS 3.0 PS 3.0, max texture 16384x16384, 8 texture stages, 16 streams, 4 RTs
+serial	i686	d3d9	wined3d		PASS	d3d9.formats	CheckDeviceFormat: all of A8R8G8B8 texture/RT, D24S8, DXT1, DXT5 supported
+serial	i686	d3d9	wined3d		PASS	d3d9.create_ex	Direct3DCreate9Ex 00000000
+serial	i686	d3d9	wined3d		PASS	d3d9.device	CreateDevice(HAL) 00000000
+serial	i686	d3d9	wined3d		PASS	d3d9.clear	64x64 pixels exact, Clear -> GetRenderTargetData
+serial	i686	d3d9	wined3d		PASS	d3d9.draw	64x64 pixels exact, fixed-function XYZRHW quad
+serial	i686	d3d9	wined3d		INFO	d3d9.device_release	final Release returned 0
+serial	i686	d3d9	wined3d		PASS	d3d9.backend	compatdb applied exe=d3d9-i686.exe;d3d9=wined3d
+serial	i686	d3d11	wined3d		INFO	d3d11.env	build=i686 wow64_process=i386 native=arm64 wine=11.20 host=Darwin 27.2.0
+serial	i686	d3d11	wined3d		PASS	d3d11.device	D3D11CreateDevice 00000000, feature level 11_1
+serial	i686	d3d11	wined3d		INFO	d3d11.adapter	NVIDIA GeForce GTX 470 (vendor 10de device 06cd), feature level 11_1
+serial	i686	d3d11	wined3d		PASS	d3d11.render_target	64x64 RGBA8 render target created
+serial	i686	d3d11	wined3d		PASS	d3d11.clear	64x64 pixels exact
+serial	i686	d3d11	wined3d		PASS	d3d11.draw_fullscreen	64x64 pixels exact, SV_VertexID triangle + SV_Position shading
+serial	i686	d3d11	wined3d		PASS	d3d11.draw_vb_cb	64x64 pixels exact, vertex-buffer quad over the fullscreen pass
+serial	i686	d3d11	wined3d		PASS	d3d11.update_subresource	64x64 pixels exact
+serial	i686	d3d11	wined3d		PASS	d3d11.copy_region	64x64 pixels exact, 16x16 box from the render target into an initialised texture
+serial	i686	d3d11	wined3d		PASS	d3d11.copy_resource	64x64 pixels exact
+serial	i686	d3d11	wined3d		PASS	d3d11.buffer_copy	1 KiB..3 KiB slice of an initialised buffer copied to staging: 0 words wrong
+serial	i686	d3d11	wined3d		INFO	d3d11.device_release	final Release returned 0
+serial	i686	d3d11	wined3d		PASS	d3d11.backend	compatdb applied exe=d3d11-i686.exe;dxgi=wined3d
+serial	i686	d3d11	dxmt		INFO	d3d11.env	build=i686 wow64_process=i386 native=arm64 wine=11.20 host=Darwin 27.2.0
+serial	i686	d3d11	dxmt		PASS	d3d11.device	D3D11CreateDevice 00000000, feature level 11_1
+serial	i686	d3d11	dxmt		INFO	d3d11.adapter	Apple M2 (vendor 106b device 0000), feature level 11_1
+serial	i686	d3d11	dxmt		PASS	d3d11.render_target	64x64 RGBA8 render target created
+serial	i686	d3d11	dxmt		PASS	d3d11.clear	64x64 pixels exact
+serial	i686	d3d11	dxmt		PASS	d3d11.draw_fullscreen	64x64 pixels exact, SV_VertexID triangle + SV_Position shading
+serial	i686	d3d11	dxmt		PASS	d3d11.draw_vb_cb	64x64 pixels exact, vertex-buffer quad over the fullscreen pass
+serial	i686	d3d11	dxmt		PASS	d3d11.update_subresource	64x64 pixels exact
+serial	i686	d3d11	dxmt		PASS	d3d11.copy_region	64x64 pixels exact, 16x16 box from the render target into an initialised texture
+serial	i686	d3d11	dxmt		PASS	d3d11.copy_resource	64x64 pixels exact
+serial	i686	d3d11	dxmt		PASS	d3d11.buffer_copy	1 KiB..3 KiB slice of an initialised buffer copied to staging: 0 words wrong
+serial	i686	d3d11	dxmt		INFO	d3d11.device_release	final Release returned 0
+serial	i686	d3d11	dxmt		PASS	d3d11.backend	compatdb applied exe=d3d11-i686.exe;dxgi=dxmt
+serial	i686	d3d11	dxvk		INFO	d3d11.env	build=i686 wow64_process=i386 native=arm64 wine=11.20 host=Darwin 27.2.0
+serial	i686	d3d11	dxvk		PASS	d3d11.device	D3D11CreateDevice 00000000, feature level 11_1
+serial	i686	d3d11	dxvk		INFO	d3d11.adapter	Apple M2 (vendor 106b device 0064), feature level 11_1
+serial	i686	d3d11	dxvk		PASS	d3d11.render_target	64x64 RGBA8 render target created
+serial	i686	d3d11	dxvk		PASS	d3d11.clear	64x64 pixels exact
+serial	i686	d3d11	dxvk		PASS	d3d11.draw_fullscreen	64x64 pixels exact, SV_VertexID triangle + SV_Position shading
+serial	i686	d3d11	dxvk		PASS	d3d11.draw_vb_cb	64x64 pixels exact, vertex-buffer quad over the fullscreen pass
+serial	i686	d3d11	dxvk		PASS	d3d11.update_subresource	64x64 pixels exact
+serial	i686	d3d11	dxvk		PASS	d3d11.copy_region	64x64 pixels exact, 16x16 box from the render target into an initialised texture
+serial	i686	d3d11	dxvk		PASS	d3d11.copy_resource	64x64 pixels exact
+serial	i686	d3d11	dxvk		PASS	d3d11.buffer_copy	1 KiB..3 KiB slice of an initialised buffer copied to staging: 0 words wrong
+serial	i686	d3d11	dxvk		INFO	d3d11.device_release	final Release returned 0
+serial	i686	d3d11	dxvk		PASS	d3d11.backend	compatdb applied exe=d3d11-i686.exe;dxgi=dxvk
+serial	i686	d3d12	wined3d		INFO	d3d12.env	build=i686 wow64_process=i386 native=arm64 wine=11.20 host=Darwin 27.2.0
+serial	i686	d3d12	wined3d		SKIP	d3d12.device	no d3d12.dll in this stack (wined3d tree?)
+serial	i686	d3d12	wined3d		PASS	d3d12.backend	compatdb applied exe=d3d12-i686.exe;dxgi=wined3d
+serial	i686	d3d12	dxmt		INFO	d3d12.env	build=i686 wow64_process=i386 native=arm64 wine=11.20 host=Darwin 27.2.0
+serial	i686	d3d12	dxmt		PASS	d3d12.device	D3D12CreateDevice(11_0) 00000000
+serial	i686	d3d12	dxmt		INFO	d3d12.adapter	Apple M2, max feature level 12_0
+serial	i686	d3d12	dxmt		PASS	d3d12.queues	direct + copy queues, lists and a fence created
+serial	i686	d3d12	dxmt		PASS	d3d12.fence.cpu_signal	CPU Signal(5): completed value 5, event set
+serial	i686	d3d12	dxmt		PASS	d3d12.fence.queue_signal	queue Signal(10) reached 10
+serial	i686	d3d12	dxmt		PASS	d3d12.fence.queue_waits_cpu	queue Wait on a CPU-signalled fence: held before the signal, released after
+serial	i686	d3d12	dxmt		PASS	d3d12.fence.many_signals	200 queued signals: completed 300
+serial	i686	d3d12	dxmt		PASS	d3d12.clear	64x64 pixels exact, ClearRenderTargetView -> CopyTextureRegion -> readback heap
+serial	i686	d3d12	dxmt		PASS	d3d12.draw_fullscreen	64x64 pixels exact, SV_VertexID triangle, PSO + root signature
+serial	i686	d3d12	dxmt		PASS	d3d12.draw_vb_cbv	64x64 pixels exact, vertex-buffer quad, colour from a root CBV
+serial	i686	d3d12	dxmt		PASS	d3d12.copy_queue	64x64 pixels exact, upload on the COPY queue, read on DIRECT after a cross-queue fence wait
+serial	i686	d3d12	dxmt		PASS	d3d12.copy_queue.buffers	upload -> default -> readback buffer copies on the COPY queue: 0 of 1024 texels wrong
+serial	i686	d3d12	dxmt		INFO	d3d12.device_release	final Release returned 0
+serial	i686	d3d12	dxmt		PASS	d3d12.backend	compatdb applied exe=d3d12-i686.exe;dxgi=dxmt
+serial	i686	d3d12	dxvk		INFO	d3d12.env	build=i686 wow64_process=i386 native=arm64 wine=11.20 host=Darwin 27.2.0
+serial	i686	d3d12	dxvk		PASS	d3d12.device	D3D12CreateDevice(11_0) 00000000
+serial	i686	d3d12	dxvk		INFO	d3d12.adapter	Apple M2, max feature level 12_0
+serial	i686	d3d12	dxvk		PASS	d3d12.queues	direct + copy queues, lists and a fence created
+serial	i686	d3d12	dxvk		PASS	d3d12.fence.cpu_signal	CPU Signal(5): completed value 5, event set
+serial	i686	d3d12	dxvk		PASS	d3d12.fence.queue_signal	queue Signal(10) reached 10
+serial	i686	d3d12	dxvk		PASS	d3d12.fence.queue_waits_cpu	queue Wait on a CPU-signalled fence: held before the signal, released after
+serial	i686	d3d12	dxvk		PASS	d3d12.fence.many_signals	200 queued signals: completed 300
+serial	i686	d3d12	dxvk		PASS	d3d12.clear	64x64 pixels exact, ClearRenderTargetView -> CopyTextureRegion -> readback heap
+serial	i686	d3d12	dxvk		PASS	d3d12.draw_fullscreen	64x64 pixels exact, SV_VertexID triangle, PSO + root signature
+serial	i686	d3d12	dxvk		PASS	d3d12.draw_vb_cbv	64x64 pixels exact, vertex-buffer quad, colour from a root CBV
+serial	i686	d3d12	dxvk		PASS	d3d12.copy_queue	64x64 pixels exact, upload on the COPY queue, read on DIRECT after a cross-queue fence wait
+serial	i686	d3d12	dxvk		PASS	d3d12.copy_queue.buffers	upload -> default -> readback buffer copies on the COPY queue: 0 of 1024 texels wrong
+serial	i686	d3d12	dxvk		INFO	d3d12.device_release	final Release returned 0
+serial	i686	d3d12	dxvk		PASS	d3d12.backend	compatdb applied exe=d3d12-i686.exe;dxgi=dxvk
+serial	i686	opengl	egl		INFO	opengl.env	build=i686 wow64_process=i386 native=arm64 wine=11.20 host=Darwin 27.2.0
+serial	i686	opengl	egl		PASS	opengl.context	window 0009006E, pixel format 82, context 00010001
+serial	i686	opengl	egl		INFO	opengl.renderer	Mesa | zink Vulkan 1.4(Apple M2 (MESA_KOSMICKRISP)) | 4.6 (Compatibility Profile) Mesa 27.0.0-devel (git-4d597245b7)
+serial	i686	opengl	egl		PASS	opengl.entry_points	0 of the GL 2.0/3.0 functions missing from wglGetProcAddress
+serial	i686	opengl	egl		PASS	opengl.fbo	64x64 RGBA8 framebuffer object status 8cd5
+serial	i686	opengl	egl		PASS	opengl.clear	64x64 pixels exact, glClear -> glReadPixels
+serial	i686	opengl	egl		PASS	opengl.draw_fixed	64x64 pixels exact, immediate-mode quad
+serial	i686	opengl	egl		PASS	opengl.glsl_build	GLSL 1.10 program linked
+serial	i686	opengl	egl		PASS	opengl.draw_glsl	64x64 pixels exact, fullscreen GLSL pass
+serial	i686	opengl	egl		PASS	opengl.gl_error	glGetError after all draws: 0000
+serial	i686	opengl	egl		PASS	opengl.backend	compatdb applied exe=opengl-i686.exe;opengl=egl
+serial	i686	opengl	cgl		INFO	opengl.env	build=i686 wow64_process=i386 native=arm64 wine=11.20 host=Darwin 27.2.0
+serial	i686	opengl	cgl		PASS	opengl.context	window 00080058, pixel format 13, context 00010001
+serial	i686	opengl	cgl		INFO	opengl.renderer	Apple | Apple M2 | 2.1 Metal - 91.7
+serial	i686	opengl	cgl		PASS	opengl.entry_points	0 of the GL 2.0/3.0 functions missing from wglGetProcAddress
+serial	i686	opengl	cgl		PASS	opengl.fbo	64x64 RGBA8 framebuffer object status 8cd5
+serial	i686	opengl	cgl		PASS	opengl.clear	64x64 pixels exact, glClear -> glReadPixels
+serial	i686	opengl	cgl		PASS	opengl.draw_fixed	64x64 pixels exact, immediate-mode quad
+serial	i686	opengl	cgl		PASS	opengl.glsl_build	GLSL 1.10 program linked
+serial	i686	opengl	cgl		PASS	opengl.draw_glsl	64x64 pixels exact, fullscreen GLSL pass
+serial	i686	opengl	cgl		PASS	opengl.gl_error	glGetError after all draws: 0000
+serial	i686	opengl	cgl		PASS	opengl.backend	compatdb applied exe=opengl-i686.exe;opengl=cgl
+serial	i686	vulkan	default		INFO	vulkan.env	build=i686 wow64_process=i386 native=arm64 wine=11.20 host=Darwin 27.2.0
+serial	i686	vulkan	default		PASS	vulkan.instance	vkCreateInstance: 0
+serial	i686	vulkan	default		PASS	vulkan.entry_points	0 functions missing from vkGetInstanceProcAddr
+serial	i686	vulkan	default		PASS	vulkan.physical_device	1 physical device(s)
+serial	i686	vulkan	default		INFO	vulkan.device	Apple M2, Vulkan 1.4.363, driver 06863063, vendor 106b
+serial	i686	vulkan	default		PASS	vulkan.device	graphics queue family 0, vkCreateDevice: 0
+serial	i686	vulkan	default		PASS	vulkan.clear	64x64 pixels exact, vkCmdClearColorImage -> vkCmdCopyImageToBuffer
+serial	i686	vulkan	default		PASS	vulkan.copy_region	64x64 pixels exact, buffer -> 32x32 image region with row length, then image -> buffer
+serial	i686	vulkan	default		FAIL	vulkan.fill_copy_buffer	vkCmdFillBuffer x2 + vkCmdCopyBuffer at offsets: 80 of 1024 words wrong
+serial	i686	vulkan	default		PASS	vulkan.fence_reuse	50 fill + submit + wait cycles on one fence: 0 saw stale data
+serial	i686	vulkan	default		PASS	vulkan.teardown	device and instance destroyed
+concurrent	aarch64	threads			INFO	threads.env	build=aarch64 wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+concurrent	aarch64	threads			PASS	threads.tls.static_and_dynamic	32/32 threads kept their own static and TlsAlloc values (expansion slot 64)
+concurrent	aarch64	threads			PASS	threads.tls.expansion_slots	TlsAlloc beyond 64 slots gave index 64
+concurrent	aarch64	threads			PASS	threads.tls.fls_callback	FLS destructor ran 32 times for 32 exited threads
+concurrent	aarch64	threads			PASS	threads.tls.image_callback	TLS directory callback ran DLL_THREAD_ATTACH in 32 of 32 new threads
+concurrent	aarch64	threads			PASS	threads.locks.counters	critical section 800000, SRW 800000, Interlocked 800000 (want 800000 each)
+concurrent	aarch64	threads			PASS	threads.locks.condvar	consumed sum 200010000 (want 200010000), in order 1
+concurrent	aarch64	threads			PASS	threads.apc.sleepex	wait returned 192 (want WAIT_IO_COMPLETION=192), 1 APCs ran on the target thread in order 'a' (want 'a')
+concurrent	aarch64	threads			PASS	threads.apc.wait_ex	wait returned 192 (want WAIT_IO_COMPLETION=192), 1 APCs ran on the target thread in order 'a' (want 'a')
+concurrent	aarch64	threads			PASS	threads.apc.nonalertable	wait returned 192 (want WAIT_IO_COMPLETION=192), 5 APCs ran on the target thread in order 'abcde' (want 'abcde'), none during the non-alertable wait
+concurrent	aarch64	threads			PASS	threads.apc.self	ran before the alertable wait=0, SleepEx(0, TRUE)=192, ran=1
+concurrent	aarch64	threads			PASS	threads.apc.timer	periodic waitable-timer completion routine ran 3 times in 40 ms
+concurrent	aarch64	threads			PASS	threads.spawn	500 short threads, 0 wrong exit codes, 88 ms
+concurrent	aarch64	seh			INFO	seh.env	build=aarch64 wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+concurrent	aarch64	seh			PASS	seh.av_read	code=c0000005 info=[0, 0000000000900123] want [0, 0000000000900123], ExceptionAddress=000000014000289C context pc=000000014000289C sp=000000000011FDE0
+concurrent	aarch64	seh			PASS	seh.av_write	code=c0000005 info=[1, 0000000000900456] want [1, 0000000000900456], ExceptionAddress=00000001400028A4 context pc=00000001400028A4 sp=000000000011FDE0
+concurrent	aarch64	seh			PASS	seh.av_null_read	code=c0000005 info=[0, 0000000000000000] want [0, 0000000000000000], ExceptionAddress=000000014000289C context pc=000000014000289C sp=000000000011FDE0
+concurrent	aarch64	seh			PASS	seh.av_exec_noaccess	code=c0000005 info=[8, 0000000000900200] want [8, 0000000000900200], ExceptionAddress=0000000000900200 context pc=0000000000900200 sp=000000000011FDE0
+concurrent	aarch64	seh			FAIL	seh.run	crash (exit 9 after 0s); log tail: compatdb:   arguments = unset (upstream: the command line the process was started with) | compatdb:   debug_channels = unset (upstream: the WINEDEBUG the process was started with) | compatdb:   env FEX_X87REDUCEDPRECISION=1, built-in: set
+concurrent	aarch64	callbacks			INFO	callbacks.env	build=aarch64 wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+concurrent	aarch64	callbacks			PASS	callbacks.wndproc.create	CreateWindow ok, WM_CREATE seen 1 times
+concurrent	aarch64	callbacks			PASS	callbacks.wndproc.send	SendMessage returned 37 (want 37)
+concurrent	aarch64	callbacks			PASS	callbacks.wndproc.cross_thread	cross-thread SendMessage returned 17 (want 17), procedure ran on the window's thread
+concurrent	aarch64	callbacks			PASS	callbacks.wndproc.subclass	subclassed SendMessage returned 1040 (want 1040)
+concurrent	aarch64	callbacks			PASS	callbacks.enum_windows	EnumWindows returned 1 after 30 callbacks; our 4 windows seen 1/1/1/1 times
+concurrent	aarch64	callbacks			PASS	callbacks.enum_windows_stop	callback returning FALSE: EnumWindows returned 0 after 2 calls (want 0 after 2)
+concurrent	aarch64	callbacks			PASS	callbacks.enum_child_windows	EnumChildWindows saw 4 children, ours 1/1/1/1
+concurrent	aarch64	callbacks			PASS	callbacks.set_timer	TIMERPROC ran 6 times in 66 ms, 0 with wrong arguments
+concurrent	aarch64	callbacks			PASS	callbacks.hook	WH_CALLWNDPROC hook saw 3 of 3 messages
+concurrent	aarch64	callbacks			PASS	callbacks.timer_queue	timer-queue callback ran 5 times, 0 with wrong arguments
+concurrent	aarch64	callbacks			PASS	callbacks.threadpool_work	100 work items summed to 5050 (want 5050)
+concurrent	aarch64	callbacks			PASS	callbacks.registered_wait	RegisterWaitForSingleObject callback ran 3 of 3 times
+concurrent	aarch64	callbacks			PASS	callbacks.qsort	CRT qsort with a program comparator sorted correctly
+concurrent	aarch64	callbacks			PASS	callbacks.enum_fonts	EnumFontFamiliesEx callback ran 2300 times, 0 with bad arguments
+concurrent	aarch64	memory			INFO	memory.env	build=aarch64 wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+concurrent	aarch64	memory			PASS	memory.sysinfo	page size 4096, allocation granularity 65536
+concurrent	aarch64	memory			PASS	memory.alloc_granularity	0 of 20 reservations not 64K-aligned (or failed)
+concurrent	aarch64	memory			PASS	memory.commit_zeroed	fresh commit reads zero
+concurrent	aarch64	memory			PASS	memory.protect_4k.set	VirtualProtect on single 4K pages ok (0)
+concurrent	aarch64	memory			PASS	memory.protect_4k.access	each 4K page faults exactly per its own protection
+concurrent	aarch64	memory			PASS	memory.protect_4k.query	VirtualQuery reports 4K-granular regions
+concurrent	aarch64	memory			PASS	memory.protect_4k.contents	after protect/unprotect every page kept its data (0 bytes wrong)
+concurrent	aarch64	memory			PASS	memory.guard_page.read	neighbours 00000000/00000000, first touch 80000001 at +107b (want 80000001 at +107b), second touch 00000000, then unguarded
+concurrent	aarch64	memory			PASS	memory.guard_page.write	write: first 80000001, second 00000000
+concurrent	aarch64	memory			PASS	memory.reserve_commit.single_page	reserved c0000005, commit one 4K page ok, it 00000000, neighbours c0000005/c0000005, states 2000/1000(size 1000)/2000
+concurrent	aarch64	memory			PASS	memory.reserve_commit.decommit	decommitted page faults (c0000005) and recommits zeroed (00)
+concurrent	aarch64	memory			PASS	memory.write_watch	written pages 1,2,7,13,30,63; reported [1,2,7,13,30,63] at granularity 4096; after reset 0
+concurrent	aarch64	memory			PASS	memory.placeholder.reserve	VirtualAlloc2(MEM_RESERVE_PLACEHOLDER) ok (0)
+concurrent	aarch64	memory			PASS	memory.placeholder.split	VirtualFree(MEM_PRESERVE_PLACEHOLDER) split it (0)
+concurrent	aarch64	memory			PASS	memory.placeholder.replace_alloc	VirtualAlloc2(MEM_REPLACE_PLACEHOLDER) committed into the placeholder
+concurrent	aarch64	memory			PASS	memory.placeholder.map_view	MapViewOfFile3 into the placeholder aliases a second view
+concurrent	aarch64	memory			PASS	memory.placeholder.unmap_preserve	after UnmapViewOfFile2(MEM_PRESERVE_PLACEHOLDER) the range is a placeholder again
+concurrent	aarch64	memory			PASS	memory.section_alias	two views of one section see each other's writes (0 mismatches)
+concurrent	aarch64	memory			PASS	memory.smc.wx_cycle	2000 rewrites through RW -> RX + FlushInstructionCache, 0 stale results
+concurrent	aarch64	memory			PASS	memory.smc.rwx_flush	5000 in-place rewrites of RWX code with FlushInstructionCache, 0 stale results
+concurrent	aarch64	memory			SKIP	memory.smc.rwx_noflush	ARM64 code needs FlushInstructionCache by architecture
+concurrent	aarch64	memory			PASS	memory.smc.same_page_data	20000 data writes next to live code, 0 wrong results
+concurrent	aarch64	memory			PASS	memory.smc.realloc	200 release/reallocate cycles at one address (0 moved), 0 stale results
+concurrent	aarch64	memory			PASS	memory.smc.neighbor_page	RX code page next to a hot RW page: 0 wrong results, write to the RX page c0000005
+concurrent	aarch64	memory			PASS	memory.smc.cross_thread	500 rewrites on one thread, run on another: 0 stale results (last 71f3)
+concurrent	aarch64	memory			PASS	memory.big_alloc	reserve 1024 MB, commit and touch 256 MB at its end: ok, 0 bad pages
+concurrent	aarch64	ordering			INFO	ordering.env	build=aarch64 wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+concurrent	aarch64	ordering			INFO	ordering.config	iterations 500000, native ARM64 code, FEX_HARDWARE_TSO=(unset)
+concurrent	aarch64	ordering			INFO	ordering.mp	weak outcome 6/500000 times (432 ms); allowed for native ARM code
+concurrent	aarch64	ordering			PASS	ordering.mp_fenced	forbidden outcome 0/500000 times (313 ms)
+concurrent	aarch64	ordering			INFO	ordering.lb	weak outcome 0/500000 times (216 ms); allowed for native ARM code
+concurrent	aarch64	ordering			PASS	ordering.lb_fenced	forbidden outcome 0/500000 times (404 ms)
+concurrent	aarch64	ordering			INFO	ordering.iriw	weak outcome 0/500000 times (13054 ms); allowed for native ARM code
+concurrent	aarch64	ordering			PASS	ordering.iriw_fenced	forbidden outcome 0/500000 times (5576 ms)
+concurrent	aarch64	ordering			INFO	ordering.sb	weak outcome 154/500000 times (128 ms); allowed by TSO and by ARM (store buffering)
+concurrent	aarch64	ordering			PASS	ordering.sb_fenced	forbidden outcome 0/500000 times (138 ms)
+concurrent	aarch64	ordering			PASS	ordering.corr	forbidden outcome 0/500000 times (132 ms)
+concurrent	aarch64	ordering			INFO	ordering.mp_stream	weak outcome 2165/5000000 times (10 ms); allowed for native ARM code
+concurrent	aarch64	ordering			PASS	ordering.mp_stream_fenced	forbidden outcome 0/5000000 times (37 ms)
+concurrent	aarch64	ordering			INFO	ordering.lock	3512 of 2000000 increments lost (54 ms); a plain-store unlock is not a release on native ARM
+concurrent	aarch64	ordering			PASS	ordering.lock_fenced	0 of 2000000 increments lost (76 ms)
+concurrent	aarch64	ordering			PASS	ordering.atomic	0 of 2000000 increments lost (23 ms)
+concurrent	aarch64	ordering			INFO	ordering.calibration.overlap	sb store-buffering outcomes 154: threads do overlap
+concurrent	aarch64	ordering			INFO	ordering.calibration.arm	5683 weak outcomes in plain runs; this machine does reorder them, so clean x86 runs under FEX mean something
+concurrent	aarch64	d3d9			INFO	d3d9.env	build=aarch64 wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+concurrent	aarch64	d3d9			PASS	d3d9.create	Direct3DCreate9 ok
+concurrent	aarch64	d3d9			PASS	d3d9.adapters	1 adapter(s)
+concurrent	aarch64	d3d9			INFO	d3d9.adapter0	0: Apple M2 (driver mtld3d, vendor 106b device 047a), 7 X8R8G8B8 modes, current 1470x956@60
+concurrent	aarch64	d3d9			PASS	d3d9.display_modes	7 X8R8G8B8 modes, current 1470x956
+concurrent	aarch64	d3d9			PASS	d3d9.caps	HAL: VS 3.0 PS 3.0, max texture 16384x16384, 8 texture stages, 16 streams, 4 RTs
+concurrent	aarch64	d3d9			PASS	d3d9.formats	CheckDeviceFormat: all of A8R8G8B8 texture/RT, D24S8, DXT1, DXT5 supported
+concurrent	aarch64	d3d9			PASS	d3d9.create_ex	Direct3DCreate9Ex 00000000
+concurrent	aarch64	d3d9			PASS	d3d9.device	CreateDevice(HAL) 00000000
+concurrent	aarch64	d3d9			PASS	d3d9.clear	64x64 pixels exact, Clear -> GetRenderTargetData
+concurrent	aarch64	d3d9			PASS	d3d9.draw	64x64 pixels exact, fixed-function XYZRHW quad
+concurrent	aarch64	d3d9			INFO	d3d9.device_release	final Release returned 0
+concurrent	aarch64	d3d11			INFO	d3d11.env	build=aarch64 wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+concurrent	aarch64	d3d11			PASS	d3d11.device	D3D11CreateDevice 00000000, feature level 11_1
+concurrent	aarch64	d3d11			INFO	d3d11.adapter	Apple M2 (vendor 106b device 0000), feature level 11_1
+concurrent	aarch64	d3d11			PASS	d3d11.render_target	64x64 RGBA8 render target created
+concurrent	aarch64	d3d11			PASS	d3d11.clear	64x64 pixels exact
+concurrent	aarch64	d3d11			PASS	d3d11.draw_fullscreen	64x64 pixels exact, SV_VertexID triangle + SV_Position shading
+concurrent	aarch64	d3d11			PASS	d3d11.draw_vb_cb	64x64 pixels exact, vertex-buffer quad over the fullscreen pass
+concurrent	aarch64	d3d11			PASS	d3d11.update_subresource	64x64 pixels exact
+concurrent	aarch64	d3d11			PASS	d3d11.copy_region	64x64 pixels exact, 16x16 box from the render target into an initialised texture
+concurrent	aarch64	d3d11			PASS	d3d11.copy_resource	64x64 pixels exact
+concurrent	aarch64	d3d11			PASS	d3d11.buffer_copy	1 KiB..3 KiB slice of an initialised buffer copied to staging: 0 words wrong
+concurrent	aarch64	d3d11			INFO	d3d11.device_release	final Release returned 0
+concurrent	aarch64	d3d12			INFO	d3d12.env	build=aarch64 wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+concurrent	aarch64	d3d12			PASS	d3d12.device	D3D12CreateDevice(11_0) 00000000
+concurrent	aarch64	d3d12			INFO	d3d12.adapter	Apple M2, max feature level 12_0
+concurrent	aarch64	d3d12			PASS	d3d12.queues	direct + copy queues, lists and a fence created
+concurrent	aarch64	d3d12			PASS	d3d12.fence.cpu_signal	CPU Signal(5): completed value 5, event set
+concurrent	aarch64	d3d12			PASS	d3d12.fence.queue_signal	queue Signal(10) reached 10
+concurrent	aarch64	d3d12			PASS	d3d12.fence.queue_waits_cpu	queue Wait on a CPU-signalled fence: held before the signal, released after
+concurrent	aarch64	d3d12			PASS	d3d12.fence.many_signals	200 queued signals: completed 300
+concurrent	aarch64	d3d12			PASS	d3d12.clear	64x64 pixels exact, ClearRenderTargetView -> CopyTextureRegion -> readback heap
+concurrent	aarch64	d3d12			PASS	d3d12.draw_fullscreen	64x64 pixels exact, SV_VertexID triangle, PSO + root signature
+concurrent	aarch64	d3d12			PASS	d3d12.draw_vb_cbv	64x64 pixels exact, vertex-buffer quad, colour from a root CBV
+concurrent	aarch64	d3d12			PASS	d3d12.copy_queue	64x64 pixels exact, upload on the COPY queue, read on DIRECT after a cross-queue fence wait
+concurrent	aarch64	d3d12			PASS	d3d12.copy_queue.buffers	upload -> default -> readback buffer copies on the COPY queue: 0 of 1024 texels wrong
+concurrent	aarch64	d3d12			INFO	d3d12.device_release	final Release returned 0
+concurrent	aarch64	opengl			INFO	opengl.env	build=aarch64 wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+concurrent	aarch64	opengl			PASS	opengl.context	window 0000000000070076, pixel format 82, context 0000000000010001
+concurrent	aarch64	opengl			INFO	opengl.renderer	Mesa | zink Vulkan 1.4(Apple M2 (MESA_KOSMICKRISP)) | 4.6 (Compatibility Profile) Mesa 27.0.0-devel (git-4d597245b7)
+concurrent	aarch64	opengl			PASS	opengl.entry_points	0 of the GL 2.0/3.0 functions missing from wglGetProcAddress
+concurrent	aarch64	opengl			PASS	opengl.fbo	64x64 RGBA8 framebuffer object status 8cd5
+concurrent	aarch64	opengl			PASS	opengl.clear	64x64 pixels exact, glClear -> glReadPixels
+concurrent	aarch64	opengl			PASS	opengl.draw_fixed	64x64 pixels exact, immediate-mode quad
+concurrent	aarch64	opengl			PASS	opengl.glsl_build	GLSL 1.10 program linked
+concurrent	aarch64	opengl			PASS	opengl.draw_glsl	64x64 pixels exact, fullscreen GLSL pass
+concurrent	aarch64	opengl			PASS	opengl.gl_error	glGetError after all draws: 0000
+concurrent	aarch64	vulkan			INFO	vulkan.env	build=aarch64 wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+concurrent	aarch64	vulkan			PASS	vulkan.instance	vkCreateInstance: 0
+concurrent	aarch64	vulkan			PASS	vulkan.entry_points	0 functions missing from vkGetInstanceProcAddr
+concurrent	aarch64	vulkan			PASS	vulkan.physical_device	1 physical device(s)
+concurrent	aarch64	vulkan			INFO	vulkan.device	Apple M2, Vulkan 1.4.363, driver 06863063, vendor 106b
+concurrent	aarch64	vulkan			PASS	vulkan.device	graphics queue family 0, vkCreateDevice: 0
+concurrent	aarch64	vulkan			PASS	vulkan.clear	64x64 pixels exact, vkCmdClearColorImage -> vkCmdCopyImageToBuffer
+concurrent	aarch64	vulkan			PASS	vulkan.copy_region	64x64 pixels exact, buffer -> 32x32 image region with row length, then image -> buffer
+concurrent	aarch64	vulkan			FAIL	vulkan.fill_copy_buffer	vkCmdFillBuffer x2 + vkCmdCopyBuffer at offsets: 96 of 1024 words wrong
+concurrent	aarch64	vulkan			PASS	vulkan.fence_reuse	50 fill + submit + wait cycles on one fence: 0 saw stale data
+concurrent	aarch64	vulkan			PASS	vulkan.teardown	device and instance destroyed
+concurrent	arm64ec	threads			INFO	threads.env	build=arm64ec wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+concurrent	arm64ec	threads			PASS	threads.tls.static_and_dynamic	32/32 threads kept their own static and TlsAlloc values (expansion slot 64)
+concurrent	arm64ec	threads			PASS	threads.tls.expansion_slots	TlsAlloc beyond 64 slots gave index 64
+concurrent	arm64ec	threads			PASS	threads.tls.fls_callback	FLS destructor ran 32 times for 32 exited threads
+concurrent	arm64ec	threads			PASS	threads.tls.image_callback	TLS directory callback ran DLL_THREAD_ATTACH in 32 of 32 new threads
+concurrent	arm64ec	threads			PASS	threads.locks.counters	critical section 800000, SRW 800000, Interlocked 800000 (want 800000 each)
+concurrent	arm64ec	threads			PASS	threads.locks.condvar	consumed sum 200010000 (want 200010000), in order 1
+concurrent	arm64ec	threads			PASS	threads.apc.sleepex	wait returned 192 (want WAIT_IO_COMPLETION=192), 1 APCs ran on the target thread in order 'a' (want 'a')
+concurrent	arm64ec	threads			PASS	threads.apc.wait_ex	wait returned 192 (want WAIT_IO_COMPLETION=192), 1 APCs ran on the target thread in order 'a' (want 'a')
+concurrent	arm64ec	threads			PASS	threads.apc.nonalertable	wait returned 192 (want WAIT_IO_COMPLETION=192), 5 APCs ran on the target thread in order 'abcde' (want 'abcde'), none during the non-alertable wait
+concurrent	arm64ec	threads			PASS	threads.apc.self	ran before the alertable wait=0, SleepEx(0, TRUE)=192, ran=1
+concurrent	arm64ec	threads			PASS	threads.apc.timer	periodic waitable-timer completion routine ran 3 times in 41 ms
+concurrent	arm64ec	threads			PASS	threads.spawn	500 short threads, 0 wrong exit codes, 125 ms
+concurrent	arm64ec	seh			INFO	seh.env	build=arm64ec wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+concurrent	arm64ec	seh			PASS	seh.av_read	code=c0000005 info=[0, 0000000000900123] want [0, 0000000000900123], ExceptionAddress=00000001400016D0 context pc=00000001400016D0 sp=000000000011FDF0
+concurrent	arm64ec	seh			PASS	seh.av_write	code=c0000005 info=[1, 0000000000900456] want [1, 0000000000900456], ExceptionAddress=00000001400016D8 context pc=00000001400016D8 sp=000000000011FDF0
+concurrent	arm64ec	seh			PASS	seh.av_null_read	code=c0000005 info=[0, 0000000000000000] want [0, 0000000000000000], ExceptionAddress=00000001400016D0 context pc=00000001400016D0 sp=000000000011FDF0
+concurrent	arm64ec	seh			FAIL	seh.av_exec_noaccess	code=c0000005 info=[0, 0000000000900200] want [8, 0000000000900200], ExceptionAddress=00006FFFFFEC9724 context pc=00006FFFFFEC9724 sp=000000000011FDE0
+concurrent	arm64ec	seh			FAIL	seh.run	crash (exit 9 after 0s); log tail: compatdb:   arguments = unset (upstream: the command line the process was started with) | compatdb:   debug_channels = unset (upstream: the WINEDEBUG the process was started with) | compatdb:   env FEX_X87REDUCEDPRECISION=1, built-in: set
+concurrent	arm64ec	callbacks			INFO	callbacks.env	build=arm64ec wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+concurrent	arm64ec	callbacks			PASS	callbacks.wndproc.create	CreateWindow ok, WM_CREATE seen 1 times
+concurrent	arm64ec	callbacks			PASS	callbacks.wndproc.send	SendMessage returned 37 (want 37)
+concurrent	arm64ec	callbacks			PASS	callbacks.wndproc.cross_thread	cross-thread SendMessage returned 17 (want 17), procedure ran on the window's thread
+concurrent	arm64ec	callbacks			PASS	callbacks.wndproc.subclass	subclassed SendMessage returned 1040 (want 1040)
+concurrent	arm64ec	callbacks			PASS	callbacks.enum_windows	EnumWindows returned 1 after 30 callbacks; our 4 windows seen 1/1/1/1 times
+concurrent	arm64ec	callbacks			PASS	callbacks.enum_windows_stop	callback returning FALSE: EnumWindows returned 0 after 2 calls (want 0 after 2)
+concurrent	arm64ec	callbacks			PASS	callbacks.enum_child_windows	EnumChildWindows saw 4 children, ours 1/1/1/1
+concurrent	arm64ec	callbacks			PASS	callbacks.set_timer	TIMERPROC ran 6 times in 66 ms, 0 with wrong arguments
+concurrent	arm64ec	callbacks			PASS	callbacks.hook	WH_CALLWNDPROC hook saw 3 of 3 messages
+concurrent	arm64ec	callbacks			PASS	callbacks.timer_queue	timer-queue callback ran 5 times, 0 with wrong arguments
+concurrent	arm64ec	callbacks			PASS	callbacks.threadpool_work	100 work items summed to 5050 (want 5050)
+concurrent	arm64ec	callbacks			PASS	callbacks.registered_wait	RegisterWaitForSingleObject callback ran 3 of 3 times
+concurrent	arm64ec	callbacks			PASS	callbacks.qsort	CRT qsort with a program comparator sorted correctly
+concurrent	arm64ec	callbacks			PASS	callbacks.enum_fonts	EnumFontFamiliesEx callback ran 2300 times, 0 with bad arguments
+concurrent	arm64ec	memory			INFO	memory.env	build=arm64ec wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+concurrent	arm64ec	memory			PASS	memory.sysinfo	page size 4096, allocation granularity 65536
+concurrent	arm64ec	memory			PASS	memory.alloc_granularity	0 of 20 reservations not 64K-aligned (or failed)
+concurrent	arm64ec	memory			PASS	memory.commit_zeroed	fresh commit reads zero
+concurrent	arm64ec	memory			PASS	memory.protect_4k.set	VirtualProtect on single 4K pages ok (0)
+concurrent	arm64ec	memory			PASS	memory.protect_4k.access	each 4K page faults exactly per its own protection
+concurrent	arm64ec	memory			PASS	memory.protect_4k.query	VirtualQuery reports 4K-granular regions
+concurrent	arm64ec	memory			PASS	memory.protect_4k.contents	after protect/unprotect every page kept its data (0 bytes wrong)
+concurrent	arm64ec	memory			PASS	memory.guard_page.read	neighbours 00000000/00000000, first touch 80000001 at +107b (want 80000001 at +107b), second touch 00000000, then unguarded
+concurrent	arm64ec	memory			PASS	memory.guard_page.write	write: first 80000001, second 00000000
+concurrent	arm64ec	memory			PASS	memory.reserve_commit.single_page	reserved c0000005, commit one 4K page ok, it 00000000, neighbours c0000005/c0000005, states 2000/1000(size 1000)/2000
+concurrent	arm64ec	memory			PASS	memory.reserve_commit.decommit	decommitted page faults (c0000005) and recommits zeroed (00)
+concurrent	arm64ec	memory			PASS	memory.write_watch	written pages 1,2,7,13,30,63; reported [1,2,7,13,30,63] at granularity 4096; after reset 0
+concurrent	arm64ec	memory			PASS	memory.placeholder.reserve	VirtualAlloc2(MEM_RESERVE_PLACEHOLDER) ok (0)
+concurrent	arm64ec	memory			PASS	memory.placeholder.split	VirtualFree(MEM_PRESERVE_PLACEHOLDER) split it (0)
+concurrent	arm64ec	memory			PASS	memory.placeholder.replace_alloc	VirtualAlloc2(MEM_REPLACE_PLACEHOLDER) committed into the placeholder
+concurrent	arm64ec	memory			PASS	memory.placeholder.map_view	MapViewOfFile3 into the placeholder aliases a second view
+concurrent	arm64ec	memory			PASS	memory.placeholder.unmap_preserve	after UnmapViewOfFile2(MEM_PRESERVE_PLACEHOLDER) the range is a placeholder again
+concurrent	arm64ec	memory			PASS	memory.section_alias	two views of one section see each other's writes (0 mismatches)
+concurrent	arm64ec	memory			PASS	memory.smc.wx_cycle	2000 rewrites through RW -> RX + FlushInstructionCache, 0 stale results
+concurrent	arm64ec	memory			PASS	memory.smc.rwx_flush	5000 in-place rewrites of RWX code with FlushInstructionCache, 0 stale results
+concurrent	arm64ec	memory			PASS	memory.smc.rwx_noflush	5000 immediate patches without a flush (legal on x86), 0 stale results
+concurrent	arm64ec	memory			PASS	memory.smc.same_page_data	20000 data writes next to live code, 0 wrong results
+concurrent	arm64ec	memory			PASS	memory.smc.realloc	200 release/reallocate cycles at one address (0 moved), 0 stale results
+concurrent	arm64ec	memory			PASS	memory.smc.neighbor_page	RX code page next to a hot RW page: 0 wrong results, write to the RX page c0000005
+concurrent	arm64ec	memory			PASS	memory.smc.cross_thread	500 rewrites on one thread, run on another: 0 stale results (last 71f3)
+concurrent	arm64ec	memory			PASS	memory.big_alloc	reserve 1024 MB, commit and touch 256 MB at its end: ok, 0 bad pages
+concurrent	arm64ec	ordering			INFO	ordering.env	build=arm64ec wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+concurrent	arm64ec	ordering			INFO	ordering.config	iterations 500000, native ARM64 code, FEX_HARDWARE_TSO=(unset)
+concurrent	arm64ec	ordering			INFO	ordering.mp	weak outcome 210/500000 times (271 ms); allowed for native ARM code
+concurrent	arm64ec	ordering			PASS	ordering.mp_fenced	forbidden outcome 0/500000 times (380 ms)
+concurrent	arm64ec	ordering			INFO	ordering.lb	weak outcome 0/500000 times (316 ms); allowed for native ARM code
+concurrent	arm64ec	ordering			PASS	ordering.lb_fenced	forbidden outcome 0/500000 times (312 ms)
+concurrent	arm64ec	ordering			INFO	ordering.iriw	weak outcome 0/500000 times (12621 ms); allowed for native ARM code
+concurrent	arm64ec	ordering			PASS	ordering.iriw_fenced	forbidden outcome 0/500000 times (5323 ms)
+concurrent	arm64ec	ordering			INFO	ordering.sb	weak outcome 6149/500000 times (125 ms); allowed by TSO and by ARM (store buffering)
+concurrent	arm64ec	ordering			PASS	ordering.sb_fenced	forbidden outcome 0/500000 times (128 ms)
+concurrent	arm64ec	ordering			PASS	ordering.corr	forbidden outcome 0/500000 times (135 ms)
+concurrent	arm64ec	ordering			INFO	ordering.mp_stream	weak outcome 1887/5000000 times (10 ms); allowed for native ARM code
+concurrent	arm64ec	ordering			PASS	ordering.mp_stream_fenced	forbidden outcome 0/5000000 times (25 ms)
+concurrent	arm64ec	ordering			INFO	ordering.lock	9650 of 2000000 increments lost (53 ms); a plain-store unlock is not a release on native ARM
+concurrent	arm64ec	ordering			PASS	ordering.lock_fenced	0 of 2000000 increments lost (91 ms)
+concurrent	arm64ec	ordering			PASS	ordering.atomic	0 of 2000000 increments lost (19 ms)
+concurrent	arm64ec	ordering			INFO	ordering.calibration.overlap	sb store-buffering outcomes 6149: threads do overlap
+concurrent	arm64ec	ordering			INFO	ordering.calibration.arm	11747 weak outcomes in plain runs; this machine does reorder them, so clean x86 runs under FEX mean something
+concurrent	arm64ec	d3d9			INFO	d3d9.env	build=arm64ec wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+concurrent	arm64ec	d3d9			PASS	d3d9.create	Direct3DCreate9 ok
+concurrent	arm64ec	d3d9			PASS	d3d9.adapters	1 adapter(s)
+concurrent	arm64ec	d3d9			INFO	d3d9.adapter0	0: Apple M2 (driver mtld3d, vendor 106b device 047a), 7 X8R8G8B8 modes, current 1470x956@60
+concurrent	arm64ec	d3d9			PASS	d3d9.display_modes	7 X8R8G8B8 modes, current 1470x956
+concurrent	arm64ec	d3d9			PASS	d3d9.caps	HAL: VS 3.0 PS 3.0, max texture 16384x16384, 8 texture stages, 16 streams, 4 RTs
+concurrent	arm64ec	d3d9			PASS	d3d9.formats	CheckDeviceFormat: all of A8R8G8B8 texture/RT, D24S8, DXT1, DXT5 supported
+concurrent	arm64ec	d3d9			PASS	d3d9.create_ex	Direct3DCreate9Ex 00000000
+concurrent	arm64ec	d3d9			PASS	d3d9.device	CreateDevice(HAL) 00000000
+concurrent	arm64ec	d3d9			PASS	d3d9.clear	64x64 pixels exact, Clear -> GetRenderTargetData
+concurrent	arm64ec	d3d9			PASS	d3d9.draw	64x64 pixels exact, fixed-function XYZRHW quad
+concurrent	arm64ec	d3d9			INFO	d3d9.device_release	final Release returned 0
+concurrent	arm64ec	d3d11			INFO	d3d11.env	build=arm64ec wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+concurrent	arm64ec	d3d11			PASS	d3d11.device	D3D11CreateDevice 00000000, feature level 11_1
+concurrent	arm64ec	d3d11			INFO	d3d11.adapter	Apple M2 (vendor 106b device 0000), feature level 11_1
+concurrent	arm64ec	d3d11			PASS	d3d11.render_target	64x64 RGBA8 render target created
+concurrent	arm64ec	d3d11			PASS	d3d11.clear	64x64 pixels exact
+concurrent	arm64ec	d3d11			PASS	d3d11.draw_fullscreen	64x64 pixels exact, SV_VertexID triangle + SV_Position shading
+concurrent	arm64ec	d3d11			PASS	d3d11.draw_vb_cb	64x64 pixels exact, vertex-buffer quad over the fullscreen pass
+concurrent	arm64ec	d3d11			PASS	d3d11.update_subresource	64x64 pixels exact
+concurrent	arm64ec	d3d11			PASS	d3d11.copy_region	64x64 pixels exact, 16x16 box from the render target into an initialised texture
+concurrent	arm64ec	d3d11			PASS	d3d11.copy_resource	64x64 pixels exact
+concurrent	arm64ec	d3d11			PASS	d3d11.buffer_copy	1 KiB..3 KiB slice of an initialised buffer copied to staging: 0 words wrong
+concurrent	arm64ec	d3d11			INFO	d3d11.device_release	final Release returned 0
+concurrent	arm64ec	d3d12			INFO	d3d12.env	build=arm64ec wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+concurrent	arm64ec	d3d12			PASS	d3d12.device	D3D12CreateDevice(11_0) 00000000
+concurrent	arm64ec	d3d12			INFO	d3d12.adapter	Apple M2, max feature level 12_0
+concurrent	arm64ec	d3d12			PASS	d3d12.queues	direct + copy queues, lists and a fence created
+concurrent	arm64ec	d3d12			PASS	d3d12.fence.cpu_signal	CPU Signal(5): completed value 5, event set
+concurrent	arm64ec	d3d12			PASS	d3d12.fence.queue_signal	queue Signal(10) reached 10
+concurrent	arm64ec	d3d12			PASS	d3d12.fence.queue_waits_cpu	queue Wait on a CPU-signalled fence: held before the signal, released after
+concurrent	arm64ec	d3d12			PASS	d3d12.fence.many_signals	200 queued signals: completed 300
+concurrent	arm64ec	d3d12			PASS	d3d12.clear	64x64 pixels exact, ClearRenderTargetView -> CopyTextureRegion -> readback heap
+concurrent	arm64ec	d3d12			PASS	d3d12.draw_fullscreen	64x64 pixels exact, SV_VertexID triangle, PSO + root signature
+concurrent	arm64ec	d3d12			PASS	d3d12.draw_vb_cbv	64x64 pixels exact, vertex-buffer quad, colour from a root CBV
+concurrent	arm64ec	d3d12			PASS	d3d12.copy_queue	64x64 pixels exact, upload on the COPY queue, read on DIRECT after a cross-queue fence wait
+concurrent	arm64ec	d3d12			PASS	d3d12.copy_queue.buffers	upload -> default -> readback buffer copies on the COPY queue: 0 of 1024 texels wrong
+concurrent	arm64ec	d3d12			INFO	d3d12.device_release	final Release returned 0
+concurrent	arm64ec	opengl			INFO	opengl.env	build=arm64ec wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+concurrent	arm64ec	opengl			PASS	opengl.context	window 000000000004003E, pixel format 82, context 0000000000010001
+concurrent	arm64ec	opengl			INFO	opengl.renderer	Mesa | zink Vulkan 1.4(Apple M2 (MESA_KOSMICKRISP)) | 4.6 (Compatibility Profile) Mesa 27.0.0-devel (git-4d597245b7)
+concurrent	arm64ec	opengl			PASS	opengl.entry_points	0 of the GL 2.0/3.0 functions missing from wglGetProcAddress
+concurrent	arm64ec	opengl			PASS	opengl.fbo	64x64 RGBA8 framebuffer object status 8cd5
+concurrent	arm64ec	opengl			PASS	opengl.clear	64x64 pixels exact, glClear -> glReadPixels
+concurrent	arm64ec	opengl			PASS	opengl.draw_fixed	64x64 pixels exact, immediate-mode quad
+concurrent	arm64ec	opengl			PASS	opengl.glsl_build	GLSL 1.10 program linked
+concurrent	arm64ec	opengl			PASS	opengl.draw_glsl	64x64 pixels exact, fullscreen GLSL pass
+concurrent	arm64ec	opengl			PASS	opengl.gl_error	glGetError after all draws: 0000
+concurrent	arm64ec	vulkan			INFO	vulkan.env	build=arm64ec wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+concurrent	arm64ec	vulkan			PASS	vulkan.instance	vkCreateInstance: 0
+concurrent	arm64ec	vulkan			PASS	vulkan.entry_points	0 functions missing from vkGetInstanceProcAddr
+concurrent	arm64ec	vulkan			PASS	vulkan.physical_device	1 physical device(s)
+concurrent	arm64ec	vulkan			INFO	vulkan.device	Apple M2, Vulkan 1.4.363, driver 06863063, vendor 106b
+concurrent	arm64ec	vulkan			PASS	vulkan.device	graphics queue family 0, vkCreateDevice: 0
+concurrent	arm64ec	vulkan			PASS	vulkan.clear	64x64 pixels exact, vkCmdClearColorImage -> vkCmdCopyImageToBuffer
+concurrent	arm64ec	vulkan			PASS	vulkan.copy_region	64x64 pixels exact, buffer -> 32x32 image region with row length, then image -> buffer
+concurrent	arm64ec	vulkan			FAIL	vulkan.fill_copy_buffer	vkCmdFillBuffer x2 + vkCmdCopyBuffer at offsets: 48 of 1024 words wrong
+concurrent	arm64ec	vulkan			PASS	vulkan.fence_reuse	50 fill + submit + wait cycles on one fence: 0 saw stale data
+concurrent	arm64ec	vulkan			PASS	vulkan.teardown	device and instance destroyed
+concurrent	x86_64	threads			INFO	threads.env	build=x86_64 wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+concurrent	x86_64	threads			PASS	threads.tls.static_and_dynamic	32/32 threads kept their own static and TlsAlloc values (expansion slot 64)
+concurrent	x86_64	threads			PASS	threads.tls.expansion_slots	TlsAlloc beyond 64 slots gave index 64
+concurrent	x86_64	threads			PASS	threads.tls.fls_callback	FLS destructor ran 32 times for 32 exited threads
+concurrent	x86_64	threads			PASS	threads.tls.image_callback	TLS directory callback ran DLL_THREAD_ATTACH in 32 of 32 new threads
+concurrent	x86_64	threads			PASS	threads.locks.counters	critical section 800000, SRW 800000, Interlocked 800000 (want 800000 each)
+concurrent	x86_64	threads			PASS	threads.locks.condvar	consumed sum 200010000 (want 200010000), in order 1
+concurrent	x86_64	threads			PASS	threads.apc.sleepex	wait returned 192 (want WAIT_IO_COMPLETION=192), 1 APCs ran on the target thread in order 'a' (want 'a')
+concurrent	x86_64	threads			PASS	threads.apc.wait_ex	wait returned 192 (want WAIT_IO_COMPLETION=192), 1 APCs ran on the target thread in order 'a' (want 'a')
+concurrent	x86_64	threads			PASS	threads.apc.nonalertable	wait returned 192 (want WAIT_IO_COMPLETION=192), 5 APCs ran on the target thread in order 'abcde' (want 'abcde'), none during the non-alertable wait
+concurrent	x86_64	threads			PASS	threads.apc.self	ran before the alertable wait=0, SleepEx(0, TRUE)=192, ran=1
+concurrent	x86_64	threads			PASS	threads.apc.timer	periodic waitable-timer completion routine ran 3 times in 40 ms
+concurrent	x86_64	threads			PASS	threads.spawn	500 short threads, 0 wrong exit codes, 155 ms
+concurrent	x86_64	seh			INFO	seh.env	build=x86_64 wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+concurrent	x86_64	seh			PASS	seh.av_read	code=c0000005 info=[0, 0000000000900123] want [0, 0000000000900123], ExceptionAddress=0000000140002890 context pc=0000000140002890 sp=000000000011FD18
+concurrent	x86_64	seh			PASS	seh.av_write	code=c0000005 info=[1, 0000000000900456] want [1, 0000000000900456], ExceptionAddress=00000001400028A0 context pc=00000001400028A0 sp=000000000011FD18
+concurrent	x86_64	seh			PASS	seh.av_null_read	code=c0000005 info=[0, 0000000000000000] want [0, 0000000000000000], ExceptionAddress=0000000140002890 context pc=0000000140002890 sp=000000000011FD18
+concurrent	x86_64	seh			PASS	seh.av_exec_noaccess	code=c0000005 info=[8, 0000000000900200] want [8, 0000000000900200], ExceptionAddress=0000000000900200 context pc=0000000000900200 sp=000000000011FD18
+concurrent	x86_64	seh			FAIL	seh.div0	caught=0 code=00000000 (want c0000094) address=0000000000000000 pc=0000000000000000
+concurrent	x86_64	seh			PASS	seh.breakpoint	caught=1 code=80000003
+concurrent	x86_64	seh			PASS	seh.nested_search	order inner-filter,outer-filter,finally-abnormal,outer-handler (want inner-filter,outer-filter,finally-abnormal,outer-handler)
+concurrent	x86_64	seh			PASS	seh.nested_rethrow	order inner-caught,outer-filter,outer-handler (want inner-caught,outer-filter,outer-handler)
+concurrent	x86_64	seh			PASS	seh.finally_normal	order body,finally-normal,
+concurrent	x86_64	seh			PASS	seh.raise_frames	caught=1 code=e0c0ffee params=3 [1234 ffffffff c0ffee] finally order 8a,6a,4a, (want 8a,6a,4a,)
+concurrent	x86_64	seh			PASS	seh.raise_continue	caught=0 resumed=1
+concurrent	x86_64	seh			PASS	seh.veh_fixup	frame handler reached=0, handler calls=1 (want 1), stores landed=1
+concurrent	x86_64	seh			PASS	seh.veh_order	first-registered handler ran first=1, then frame handler caught=1
+concurrent	x86_64	seh			PASS	seh.cxx_throw	caught value 42 (want 42), destructors run 9 (want 9)
+concurrent	x86_64	seh			FAIL	seh.stack_overflow	caught code=00000000 (want c00000fd), thread wait=0 exit=00000000
+concurrent	x86_64	callbacks			INFO	callbacks.env	build=x86_64 wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+concurrent	x86_64	callbacks			PASS	callbacks.wndproc.create	CreateWindow ok, WM_CREATE seen 1 times
+concurrent	x86_64	callbacks			PASS	callbacks.wndproc.send	SendMessage returned 37 (want 37)
+concurrent	x86_64	callbacks			PASS	callbacks.wndproc.cross_thread	cross-thread SendMessage returned 17 (want 17), procedure ran on the window's thread
+concurrent	x86_64	callbacks			PASS	callbacks.wndproc.subclass	subclassed SendMessage returned 1040 (want 1040)
+concurrent	x86_64	callbacks			PASS	callbacks.enum_windows	EnumWindows returned 1 after 30 callbacks; our 4 windows seen 1/1/1/1 times
+concurrent	x86_64	callbacks			PASS	callbacks.enum_windows_stop	callback returning FALSE: EnumWindows returned 0 after 2 calls (want 0 after 2)
+concurrent	x86_64	callbacks			PASS	callbacks.enum_child_windows	EnumChildWindows saw 4 children, ours 1/1/1/1
+concurrent	x86_64	callbacks			PASS	callbacks.set_timer	TIMERPROC ran 6 times in 66 ms, 0 with wrong arguments
+concurrent	x86_64	callbacks			PASS	callbacks.hook	WH_CALLWNDPROC hook saw 3 of 3 messages
+concurrent	x86_64	callbacks			PASS	callbacks.timer_queue	timer-queue callback ran 5 times, 0 with wrong arguments
+concurrent	x86_64	callbacks			PASS	callbacks.threadpool_work	100 work items summed to 5050 (want 5050)
+concurrent	x86_64	callbacks			PASS	callbacks.registered_wait	RegisterWaitForSingleObject callback ran 3 of 3 times
+concurrent	x86_64	callbacks			PASS	callbacks.qsort	CRT qsort with a program comparator sorted correctly
+concurrent	x86_64	callbacks			PASS	callbacks.enum_fonts	EnumFontFamiliesEx callback ran 2300 times, 0 with bad arguments
+concurrent	x86_64	memory			INFO	memory.env	build=x86_64 wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+concurrent	x86_64	memory			PASS	memory.sysinfo	page size 4096, allocation granularity 65536
+concurrent	x86_64	memory			PASS	memory.alloc_granularity	0 of 20 reservations not 64K-aligned (or failed)
+concurrent	x86_64	memory			PASS	memory.commit_zeroed	fresh commit reads zero
+concurrent	x86_64	memory			PASS	memory.protect_4k.set	VirtualProtect on single 4K pages ok (0)
+concurrent	x86_64	memory			PASS	memory.protect_4k.access	each 4K page faults exactly per its own protection
+concurrent	x86_64	memory			PASS	memory.protect_4k.query	VirtualQuery reports 4K-granular regions
+concurrent	x86_64	memory			PASS	memory.protect_4k.contents	after protect/unprotect every page kept its data (0 bytes wrong)
+concurrent	x86_64	memory			PASS	memory.guard_page.read	neighbours 00000000/00000000, first touch 80000001 at +107b (want 80000001 at +107b), second touch 00000000, then unguarded
+concurrent	x86_64	memory			PASS	memory.guard_page.write	write: first 80000001, second 00000000
+concurrent	x86_64	memory			PASS	memory.reserve_commit.single_page	reserved c0000005, commit one 4K page ok, it 00000000, neighbours c0000005/c0000005, states 2000/1000(size 1000)/2000
+concurrent	x86_64	memory			PASS	memory.reserve_commit.decommit	decommitted page faults (c0000005) and recommits zeroed (00)
+concurrent	x86_64	memory			PASS	memory.write_watch	written pages 1,2,7,13,30,63; reported [1,2,7,13,30,63] at granularity 4096; after reset 0
+concurrent	x86_64	memory			PASS	memory.placeholder.reserve	VirtualAlloc2(MEM_RESERVE_PLACEHOLDER) ok (0)
+concurrent	x86_64	memory			PASS	memory.placeholder.split	VirtualFree(MEM_PRESERVE_PLACEHOLDER) split it (0)
+concurrent	x86_64	memory			PASS	memory.placeholder.replace_alloc	VirtualAlloc2(MEM_REPLACE_PLACEHOLDER) committed into the placeholder
+concurrent	x86_64	memory			PASS	memory.placeholder.map_view	MapViewOfFile3 into the placeholder aliases a second view
+concurrent	x86_64	memory			PASS	memory.placeholder.unmap_preserve	after UnmapViewOfFile2(MEM_PRESERVE_PLACEHOLDER) the range is a placeholder again
+concurrent	x86_64	memory			PASS	memory.section_alias	two views of one section see each other's writes (0 mismatches)
+concurrent	x86_64	memory			PASS	memory.smc.wx_cycle	2000 rewrites through RW -> RX + FlushInstructionCache, 0 stale results
+concurrent	x86_64	memory			PASS	memory.smc.rwx_flush	5000 in-place rewrites of RWX code with FlushInstructionCache, 0 stale results
+concurrent	x86_64	memory			PASS	memory.smc.rwx_noflush	5000 immediate patches without a flush (legal on x86), 0 stale results
+concurrent	x86_64	memory			PASS	memory.smc.same_page_data	20000 data writes next to live code, 0 wrong results
+concurrent	x86_64	memory			PASS	memory.smc.realloc	200 release/reallocate cycles at one address (0 moved), 0 stale results
+concurrent	x86_64	memory			PASS	memory.smc.neighbor_page	RX code page next to a hot RW page: 0 wrong results, write to the RX page c0000005
+concurrent	x86_64	memory			PASS	memory.smc.cross_thread	500 rewrites on one thread, run on another: 0 stale results (last 71f3)
+concurrent	x86_64	memory			PASS	memory.big_alloc	reserve 1024 MB, commit and touch 256 MB at its end: ok, 0 bad pages
+concurrent	x86_64	ordering			INFO	ordering.env	build=x86_64 wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+concurrent	x86_64	ordering			INFO	ordering.config	iterations 500000, x86 code, FEX_HARDWARE_TSO=(unset)
+concurrent	x86_64	ordering			PASS	ordering.mp	forbidden outcome 0/500000 times (224 ms)
+concurrent	x86_64	ordering			PASS	ordering.mp_fenced	forbidden outcome 0/500000 times (236 ms)
+concurrent	x86_64	ordering			PASS	ordering.lb	forbidden outcome 0/500000 times (175 ms)
+concurrent	x86_64	ordering			PASS	ordering.lb_fenced	forbidden outcome 0/500000 times (195 ms)
+concurrent	x86_64	ordering			PASS	ordering.iriw	forbidden outcome 0/500000 times (3485 ms)
+concurrent	x86_64	ordering			PASS	ordering.iriw_fenced	forbidden outcome 0/500000 times (7372 ms)
+concurrent	x86_64	ordering			INFO	ordering.sb	weak outcome 11438/500000 times (194 ms); allowed by TSO and by ARM (store buffering)
+concurrent	x86_64	ordering			PASS	ordering.sb_fenced	forbidden outcome 0/500000 times (222 ms)
+concurrent	x86_64	ordering			PASS	ordering.corr	forbidden outcome 0/500000 times (197 ms)
+concurrent	x86_64	ordering			PASS	ordering.mp_stream	forbidden outcome 0/5000000 times (17 ms)
+concurrent	x86_64	ordering			PASS	ordering.mp_stream_fenced	forbidden outcome 0/5000000 times (26 ms)
+concurrent	x86_64	ordering			PASS	ordering.lock	0 of 2000000 increments lost (142 ms)
+concurrent	x86_64	ordering			PASS	ordering.lock_fenced	0 of 2000000 increments lost (235 ms)
+concurrent	x86_64	ordering			PASS	ordering.atomic	0 of 2000000 increments lost (52 ms)
+concurrent	x86_64	ordering			INFO	ordering.calibration.overlap	sb store-buffering outcomes 11438: threads do overlap
+concurrent	x86_64	d3d9			INFO	d3d9.env	build=x86_64 wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+concurrent	x86_64	d3d9			PASS	d3d9.create	Direct3DCreate9 ok
+concurrent	x86_64	d3d9			PASS	d3d9.adapters	1 adapter(s)
+concurrent	x86_64	d3d9			INFO	d3d9.adapter0	0: Apple M2 (driver mtld3d, vendor 106b device 047a), 7 X8R8G8B8 modes, current 1470x956@60
+concurrent	x86_64	d3d9			PASS	d3d9.display_modes	7 X8R8G8B8 modes, current 1470x956
+concurrent	x86_64	d3d9			PASS	d3d9.caps	HAL: VS 3.0 PS 3.0, max texture 16384x16384, 8 texture stages, 16 streams, 4 RTs
+concurrent	x86_64	d3d9			PASS	d3d9.formats	CheckDeviceFormat: all of A8R8G8B8 texture/RT, D24S8, DXT1, DXT5 supported
+concurrent	x86_64	d3d9			PASS	d3d9.create_ex	Direct3DCreate9Ex 00000000
+concurrent	x86_64	d3d9			PASS	d3d9.device	CreateDevice(HAL) 00000000
+concurrent	x86_64	d3d9			PASS	d3d9.clear	64x64 pixels exact, Clear -> GetRenderTargetData
+concurrent	x86_64	d3d9			PASS	d3d9.draw	64x64 pixels exact, fixed-function XYZRHW quad
+concurrent	x86_64	d3d9			INFO	d3d9.device_release	final Release returned 0
+concurrent	x86_64	d3d11			INFO	d3d11.env	build=x86_64 wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+concurrent	x86_64	d3d11			PASS	d3d11.device	D3D11CreateDevice 00000000, feature level 11_1
+concurrent	x86_64	d3d11			INFO	d3d11.adapter	Apple M2 (vendor 106b device 0000), feature level 11_1
+concurrent	x86_64	d3d11			PASS	d3d11.render_target	64x64 RGBA8 render target created
+concurrent	x86_64	d3d11			PASS	d3d11.clear	64x64 pixels exact
+concurrent	x86_64	d3d11			PASS	d3d11.draw_fullscreen	64x64 pixels exact, SV_VertexID triangle + SV_Position shading
+concurrent	x86_64	d3d11			PASS	d3d11.draw_vb_cb	64x64 pixels exact, vertex-buffer quad over the fullscreen pass
+concurrent	x86_64	d3d11			PASS	d3d11.update_subresource	64x64 pixels exact
+concurrent	x86_64	d3d11			PASS	d3d11.copy_region	64x64 pixels exact, 16x16 box from the render target into an initialised texture
+concurrent	x86_64	d3d11			PASS	d3d11.copy_resource	64x64 pixels exact
+concurrent	x86_64	d3d11			PASS	d3d11.buffer_copy	1 KiB..3 KiB slice of an initialised buffer copied to staging: 0 words wrong
+concurrent	x86_64	d3d11			INFO	d3d11.device_release	final Release returned 0
+concurrent	x86_64	d3d12			INFO	d3d12.env	build=x86_64 wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+concurrent	x86_64	d3d12			PASS	d3d12.device	D3D12CreateDevice(11_0) 00000000
+concurrent	x86_64	d3d12			INFO	d3d12.adapter	Apple M2, max feature level 12_0
+concurrent	x86_64	d3d12			PASS	d3d12.queues	direct + copy queues, lists and a fence created
+concurrent	x86_64	d3d12			PASS	d3d12.fence.cpu_signal	CPU Signal(5): completed value 5, event set
+concurrent	x86_64	d3d12			PASS	d3d12.fence.queue_signal	queue Signal(10) reached 10
+concurrent	x86_64	d3d12			PASS	d3d12.fence.queue_waits_cpu	queue Wait on a CPU-signalled fence: held before the signal, released after
+concurrent	x86_64	d3d12			PASS	d3d12.fence.many_signals	200 queued signals: completed 300
+concurrent	x86_64	d3d12			PASS	d3d12.clear	64x64 pixels exact, ClearRenderTargetView -> CopyTextureRegion -> readback heap
+concurrent	x86_64	d3d12			PASS	d3d12.draw_fullscreen	64x64 pixels exact, SV_VertexID triangle, PSO + root signature
+concurrent	x86_64	d3d12			PASS	d3d12.draw_vb_cbv	64x64 pixels exact, vertex-buffer quad, colour from a root CBV
+concurrent	x86_64	d3d12			PASS	d3d12.copy_queue	64x64 pixels exact, upload on the COPY queue, read on DIRECT after a cross-queue fence wait
+concurrent	x86_64	d3d12			PASS	d3d12.copy_queue.buffers	upload -> default -> readback buffer copies on the COPY queue: 0 of 1024 texels wrong
+concurrent	x86_64	d3d12			INFO	d3d12.device_release	final Release returned 0
+concurrent	x86_64	opengl			INFO	opengl.env	build=x86_64 wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+concurrent	x86_64	opengl			PASS	opengl.context	window 00000000000A008C, pixel format 82, context 0000000000010001
+concurrent	x86_64	opengl			INFO	opengl.renderer	Mesa | zink Vulkan 1.4(Apple M2 (MESA_KOSMICKRISP)) | 4.6 (Compatibility Profile) Mesa 27.0.0-devel (git-4d597245b7)
+concurrent	x86_64	opengl			PASS	opengl.entry_points	0 of the GL 2.0/3.0 functions missing from wglGetProcAddress
+concurrent	x86_64	opengl			PASS	opengl.fbo	64x64 RGBA8 framebuffer object status 8cd5
+concurrent	x86_64	opengl			PASS	opengl.clear	64x64 pixels exact, glClear -> glReadPixels
+concurrent	x86_64	opengl			PASS	opengl.draw_fixed	64x64 pixels exact, immediate-mode quad
+concurrent	x86_64	opengl			PASS	opengl.glsl_build	GLSL 1.10 program linked
+concurrent	x86_64	opengl			PASS	opengl.draw_glsl	64x64 pixels exact, fullscreen GLSL pass
+concurrent	x86_64	opengl			PASS	opengl.gl_error	glGetError after all draws: 0000
+concurrent	x86_64	vulkan			INFO	vulkan.env	build=x86_64 wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+concurrent	x86_64	vulkan			PASS	vulkan.instance	vkCreateInstance: 0
+concurrent	x86_64	vulkan			PASS	vulkan.entry_points	0 functions missing from vkGetInstanceProcAddr
+concurrent	x86_64	vulkan			PASS	vulkan.physical_device	1 physical device(s)
+concurrent	x86_64	vulkan			INFO	vulkan.device	Apple M2, Vulkan 1.4.363, driver 06863063, vendor 106b
+concurrent	x86_64	vulkan			PASS	vulkan.device	graphics queue family 0, vkCreateDevice: 0
+concurrent	x86_64	vulkan			PASS	vulkan.clear	64x64 pixels exact, vkCmdClearColorImage -> vkCmdCopyImageToBuffer
+concurrent	x86_64	vulkan			PASS	vulkan.copy_region	64x64 pixels exact, buffer -> 32x32 image region with row length, then image -> buffer
+concurrent	x86_64	vulkan			FAIL	vulkan.fill_copy_buffer	vkCmdFillBuffer x2 + vkCmdCopyBuffer at offsets: 48 of 1024 words wrong
+concurrent	x86_64	vulkan			PASS	vulkan.fence_reuse	50 fill + submit + wait cycles on one fence: 0 saw stale data
+concurrent	x86_64	vulkan			PASS	vulkan.teardown	device and instance destroyed
+concurrent	i686	threads			INFO	threads.env	build=i686 wow64_process=i386 native=arm64 wine=11.20 host=Darwin 27.2.0
+concurrent	i686	threads			PASS	threads.tls.static_and_dynamic	32/32 threads kept their own static and TlsAlloc values (expansion slot 64)
+concurrent	i686	threads			PASS	threads.tls.expansion_slots	TlsAlloc beyond 64 slots gave index 64
+concurrent	i686	threads			PASS	threads.tls.fls_callback	FLS destructor ran 32 times for 32 exited threads
+concurrent	i686	threads			PASS	threads.tls.image_callback	TLS directory callback ran DLL_THREAD_ATTACH in 32 of 32 new threads
+concurrent	i686	threads			PASS	threads.locks.counters	critical section 800000, SRW 800000, Interlocked 800000 (want 800000 each)
+concurrent	i686	threads			PASS	threads.locks.condvar	consumed sum 200010000 (want 200010000), in order 1
+concurrent	i686	threads			PASS	threads.apc.sleepex	wait returned 192 (want WAIT_IO_COMPLETION=192), 1 APCs ran on the target thread in order 'a' (want 'a')
+concurrent	i686	threads			PASS	threads.apc.wait_ex	wait returned 192 (want WAIT_IO_COMPLETION=192), 1 APCs ran on the target thread in order 'a' (want 'a')
+concurrent	i686	threads			PASS	threads.apc.nonalertable	wait returned 192 (want WAIT_IO_COMPLETION=192), 5 APCs ran on the target thread in order 'abcde' (want 'abcde'), none during the non-alertable wait
+concurrent	i686	threads			PASS	threads.apc.self	ran before the alertable wait=0, SleepEx(0, TRUE)=192, ran=1
+concurrent	i686	threads			PASS	threads.apc.timer	periodic waitable-timer completion routine ran 3 times in 41 ms
+concurrent	i686	threads			PASS	threads.spawn	500 short threads, 0 wrong exit codes, 114 ms
+concurrent	i686	seh			INFO	seh.env	build=i686 wow64_process=i386 native=arm64 wine=11.20 host=Darwin 27.2.0
+concurrent	i686	seh			PASS	seh.av_read	code=c0000005 info=[0, 00B90123] want [0, 00B90123], ExceptionAddress=00402610 context pc=00402610 sp=0026FE10
+concurrent	i686	seh			PASS	seh.av_write	code=c0000005 info=[1, 00B90456] want [1, 00B90456], ExceptionAddress=00402620 context pc=00402620 sp=0026FE10
+concurrent	i686	seh			PASS	seh.av_null_read	code=c0000005 info=[0, 00000000] want [0, 00000000], ExceptionAddress=00402610 context pc=00402610 sp=0026FE10
+concurrent	i686	seh			PASS	seh.av_exec_noaccess	code=c0000005 info=[8, 00B90200] want [8, 00B90200], ExceptionAddress=00B90200 context pc=00B90200 sp=0026FE10
+concurrent	i686	seh			FAIL	seh.div0	caught=0 code=00000000 (want c0000094) address=00000000 pc=00000000
+concurrent	i686	seh			PASS	seh.breakpoint	caught=1 code=80000003
+concurrent	i686	seh			PASS	seh.nested_search	order inner-filter,outer-filter,finally-abnormal,outer-handler (want inner-filter,outer-filter,finally-abnormal,outer-handler)
+concurrent	i686	seh			PASS	seh.nested_rethrow	order inner-caught,outer-filter,outer-handler (want inner-caught,outer-filter,outer-handler)
+concurrent	i686	seh			PASS	seh.finally_normal	order body,finally-normal,
+concurrent	i686	seh			PASS	seh.raise_frames	caught=1 code=e0c0ffee params=3 [1234 ffffffff c0ffee] finally order 8a,6a,4a, (want 8a,6a,4a,)
+concurrent	i686	seh			PASS	seh.raise_continue	caught=0 resumed=1
+concurrent	i686	seh			PASS	seh.veh_fixup	frame handler reached=0, handler calls=1 (want 1), stores landed=1
+concurrent	i686	seh			PASS	seh.veh_order	first-registered handler ran first=1, then frame handler caught=1
+concurrent	i686	seh			PASS	seh.cxx_throw	caught value 42 (want 42), destructors run 9 (want 9)
+concurrent	i686	seh			PASS	seh.stack_overflow	caught code=c00000fd (want c00000fd), thread wait=0 exit=00000000
+concurrent	i686	callbacks			INFO	callbacks.env	build=i686 wow64_process=i386 native=arm64 wine=11.20 host=Darwin 27.2.0
+concurrent	i686	callbacks			PASS	callbacks.wndproc.create	CreateWindow ok, WM_CREATE seen 1 times
+concurrent	i686	callbacks			PASS	callbacks.wndproc.send	SendMessage returned 37 (want 37)
+concurrent	i686	callbacks			PASS	callbacks.wndproc.cross_thread	cross-thread SendMessage returned 17 (want 17), procedure ran on the window's thread
+concurrent	i686	callbacks			PASS	callbacks.wndproc.subclass	subclassed SendMessage returned 1040 (want 1040)
+concurrent	i686	callbacks			PASS	callbacks.enum_windows	EnumWindows returned 1 after 31 callbacks; our 4 windows seen 1/1/1/1 times
+concurrent	i686	callbacks			PASS	callbacks.enum_windows_stop	callback returning FALSE: EnumWindows returned 0 after 2 calls (want 0 after 2)
+concurrent	i686	callbacks			PASS	callbacks.enum_child_windows	EnumChildWindows saw 4 children, ours 1/1/1/1
+concurrent	i686	callbacks			PASS	callbacks.set_timer	TIMERPROC ran 6 times in 66 ms, 0 with wrong arguments
+concurrent	i686	callbacks			PASS	callbacks.hook	WH_CALLWNDPROC hook saw 3 of 3 messages
+concurrent	i686	callbacks			PASS	callbacks.timer_queue	timer-queue callback ran 5 times, 0 with wrong arguments
+concurrent	i686	callbacks			PASS	callbacks.threadpool_work	100 work items summed to 5050 (want 5050)
+concurrent	i686	callbacks			PASS	callbacks.registered_wait	RegisterWaitForSingleObject callback ran 3 of 3 times
+concurrent	i686	callbacks			PASS	callbacks.qsort	CRT qsort with a program comparator sorted correctly
+concurrent	i686	callbacks			PASS	callbacks.enum_fonts	EnumFontFamiliesEx callback ran 2300 times, 0 with bad arguments
+concurrent	i686	memory			INFO	memory.env	build=i686 wow64_process=i386 native=arm64 wine=11.20 host=Darwin 27.2.0
+concurrent	i686	memory			PASS	memory.sysinfo	page size 4096, allocation granularity 65536
+concurrent	i686	memory			PASS	memory.alloc_granularity	0 of 20 reservations not 64K-aligned (or failed)
+concurrent	i686	memory			PASS	memory.commit_zeroed	fresh commit reads zero
+concurrent	i686	memory			PASS	memory.protect_4k.set	VirtualProtect on single 4K pages ok (0)
+concurrent	i686	memory			PASS	memory.protect_4k.access	each 4K page faults exactly per its own protection
+concurrent	i686	memory			PASS	memory.protect_4k.query	VirtualQuery reports 4K-granular regions
+concurrent	i686	memory			PASS	memory.protect_4k.contents	after protect/unprotect every page kept its data (0 bytes wrong)
+concurrent	i686	memory			PASS	memory.guard_page.read	neighbours 00000000/00000000, first touch 80000001 at +107b (want 80000001 at +107b), second touch 00000000, then unguarded
+concurrent	i686	memory			PASS	memory.guard_page.write	write: first 80000001, second 00000000
+concurrent	i686	memory			PASS	memory.reserve_commit.single_page	reserved c0000005, commit one 4K page ok, it 00000000, neighbours c0000005/c0000005, states 2000/1000(size 1000)/2000
+concurrent	i686	memory			PASS	memory.reserve_commit.decommit	decommitted page faults (c0000005) and recommits zeroed (00)
+concurrent	i686	memory			PASS	memory.write_watch	written pages 1,2,7,13,30,63; reported [1,2,7,13,30,63] at granularity 4096; after reset 0
+concurrent	i686	memory			PASS	memory.placeholder.reserve	VirtualAlloc2(MEM_RESERVE_PLACEHOLDER) ok (0)
+concurrent	i686	memory			PASS	memory.placeholder.split	VirtualFree(MEM_PRESERVE_PLACEHOLDER) split it (0)
+concurrent	i686	memory			PASS	memory.placeholder.replace_alloc	VirtualAlloc2(MEM_REPLACE_PLACEHOLDER) committed into the placeholder
+concurrent	i686	memory			PASS	memory.placeholder.map_view	MapViewOfFile3 into the placeholder aliases a second view
+concurrent	i686	memory			PASS	memory.placeholder.unmap_preserve	after UnmapViewOfFile2(MEM_PRESERVE_PLACEHOLDER) the range is a placeholder again
+concurrent	i686	memory			PASS	memory.section_alias	two views of one section see each other's writes (0 mismatches)
+concurrent	i686	memory			PASS	memory.smc.wx_cycle	2000 rewrites through RW -> RX + FlushInstructionCache, 0 stale results
+concurrent	i686	memory			PASS	memory.smc.rwx_flush	5000 in-place rewrites of RWX code with FlushInstructionCache, 0 stale results
+concurrent	i686	memory			PASS	memory.smc.rwx_noflush	5000 immediate patches without a flush (legal on x86), 0 stale results
+concurrent	i686	memory			PASS	memory.smc.same_page_data	20000 data writes next to live code, 0 wrong results
+concurrent	i686	memory			PASS	memory.smc.realloc	200 release/reallocate cycles at one address (0 moved), 0 stale results
+concurrent	i686	memory			PASS	memory.smc.neighbor_page	RX code page next to a hot RW page: 0 wrong results, write to the RX page c0000005
+concurrent	i686	memory			PASS	memory.smc.cross_thread	500 rewrites on one thread, run on another: 0 stale results (last 71f3)
+concurrent	i686	memory			PASS	memory.big_alloc	reserve 512 MB, commit and touch 128 MB at its end: ok, 0 bad pages
+concurrent	i686	ordering			INFO	ordering.env	build=i686 wow64_process=i386 native=arm64 wine=11.20 host=Darwin 27.2.0
+concurrent	i686	ordering			INFO	ordering.config	iterations 500000, x86 code, FEX_HARDWARE_TSO=(unset)
+concurrent	i686	ordering			PASS	ordering.mp	forbidden outcome 0/500000 times (203 ms)
+concurrent	i686	ordering			PASS	ordering.mp_fenced	forbidden outcome 0/500000 times (226 ms)
+concurrent	i686	ordering			PASS	ordering.lb	forbidden outcome 0/500000 times (165 ms)
+concurrent	i686	ordering			PASS	ordering.lb_fenced	forbidden outcome 0/500000 times (195 ms)
+concurrent	i686	ordering			PASS	ordering.iriw	forbidden outcome 0/500000 times (3108 ms)
+concurrent	i686	ordering			PASS	ordering.iriw_fenced	forbidden outcome 0/500000 times (6798 ms)
+concurrent	i686	ordering			INFO	ordering.sb	weak outcome 12393/500000 times (186 ms); allowed by TSO and by ARM (store buffering)
+concurrent	i686	ordering			PASS	ordering.sb_fenced	forbidden outcome 0/500000 times (192 ms)
+concurrent	i686	ordering			PASS	ordering.corr	forbidden outcome 0/500000 times (149 ms)
+concurrent	i686	ordering			PASS	ordering.mp_stream	forbidden outcome 0/5000000 times (13 ms)
+concurrent	i686	ordering			PASS	ordering.mp_stream_fenced	forbidden outcome 0/5000000 times (32 ms)
+concurrent	i686	ordering			PASS	ordering.lock	0 of 2000000 increments lost (63 ms)
+concurrent	i686	ordering			PASS	ordering.lock_fenced	0 of 2000000 increments lost (233 ms)
+concurrent	i686	ordering			PASS	ordering.atomic	0 of 2000000 increments lost (36 ms)
+concurrent	i686	ordering			INFO	ordering.calibration.overlap	sb store-buffering outcomes 12393: threads do overlap
+concurrent	i686	d3d9			INFO	d3d9.env	build=i686 wow64_process=i386 native=arm64 wine=11.20 host=Darwin 27.2.0
+concurrent	i686	d3d9			PASS	d3d9.create	Direct3DCreate9 ok
+concurrent	i686	d3d9			PASS	d3d9.adapters	1 adapter(s)
+concurrent	i686	d3d9			INFO	d3d9.adapter0	0: Apple M2 (driver mtld3d, vendor 106b device 047a), 7 X8R8G8B8 modes, current 1470x956@60
+concurrent	i686	d3d9			PASS	d3d9.display_modes	7 X8R8G8B8 modes, current 1470x956
+concurrent	i686	d3d9			PASS	d3d9.caps	HAL: VS 3.0 PS 3.0, max texture 16384x16384, 8 texture stages, 16 streams, 4 RTs
+concurrent	i686	d3d9			PASS	d3d9.formats	CheckDeviceFormat: all of A8R8G8B8 texture/RT, D24S8, DXT1, DXT5 supported
+concurrent	i686	d3d9			PASS	d3d9.create_ex	Direct3DCreate9Ex 00000000
+concurrent	i686	d3d9			PASS	d3d9.device	CreateDevice(HAL) 00000000
+concurrent	i686	d3d9			PASS	d3d9.clear	64x64 pixels exact, Clear -> GetRenderTargetData
+concurrent	i686	d3d9			PASS	d3d9.draw	64x64 pixels exact, fixed-function XYZRHW quad
+concurrent	i686	d3d9			INFO	d3d9.device_release	final Release returned 0
+concurrent	i686	d3d11			INFO	d3d11.env	build=i686 wow64_process=i386 native=arm64 wine=11.20 host=Darwin 27.2.0
+concurrent	i686	d3d11			PASS	d3d11.device	D3D11CreateDevice 00000000, feature level 11_1
+concurrent	i686	d3d11			INFO	d3d11.adapter	Apple M2 (vendor 106b device 0000), feature level 11_1
+concurrent	i686	d3d11			PASS	d3d11.render_target	64x64 RGBA8 render target created
+concurrent	i686	d3d11			PASS	d3d11.clear	64x64 pixels exact
+concurrent	i686	d3d11			PASS	d3d11.draw_fullscreen	64x64 pixels exact, SV_VertexID triangle + SV_Position shading
+concurrent	i686	d3d11			PASS	d3d11.draw_vb_cb	64x64 pixels exact, vertex-buffer quad over the fullscreen pass
+concurrent	i686	d3d11			PASS	d3d11.update_subresource	64x64 pixels exact
+concurrent	i686	d3d11			PASS	d3d11.copy_region	64x64 pixels exact, 16x16 box from the render target into an initialised texture
+concurrent	i686	d3d11			PASS	d3d11.copy_resource	64x64 pixels exact
+concurrent	i686	d3d11			PASS	d3d11.buffer_copy	1 KiB..3 KiB slice of an initialised buffer copied to staging: 0 words wrong
+concurrent	i686	d3d11			INFO	d3d11.device_release	final Release returned 0
+concurrent	i686	d3d12			INFO	d3d12.env	build=i686 wow64_process=i386 native=arm64 wine=11.20 host=Darwin 27.2.0
+concurrent	i686	d3d12			PASS	d3d12.device	D3D12CreateDevice(11_0) 00000000
+concurrent	i686	d3d12			INFO	d3d12.adapter	Apple M2, max feature level 12_0
+concurrent	i686	d3d12			PASS	d3d12.queues	direct + copy queues, lists and a fence created
+concurrent	i686	d3d12			PASS	d3d12.fence.cpu_signal	CPU Signal(5): completed value 5, event set
+concurrent	i686	d3d12			PASS	d3d12.fence.queue_signal	queue Signal(10) reached 10
+concurrent	i686	d3d12			PASS	d3d12.fence.queue_waits_cpu	queue Wait on a CPU-signalled fence: held before the signal, released after
+concurrent	i686	d3d12			PASS	d3d12.fence.many_signals	200 queued signals: completed 300
+concurrent	i686	d3d12			PASS	d3d12.clear	64x64 pixels exact, ClearRenderTargetView -> CopyTextureRegion -> readback heap
+concurrent	i686	d3d12			PASS	d3d12.draw_fullscreen	64x64 pixels exact, SV_VertexID triangle, PSO + root signature
+concurrent	i686	d3d12			PASS	d3d12.draw_vb_cbv	64x64 pixels exact, vertex-buffer quad, colour from a root CBV
+concurrent	i686	d3d12			PASS	d3d12.copy_queue	64x64 pixels exact, upload on the COPY queue, read on DIRECT after a cross-queue fence wait
+concurrent	i686	d3d12			PASS	d3d12.copy_queue.buffers	upload -> default -> readback buffer copies on the COPY queue: 0 of 1024 texels wrong
+concurrent	i686	d3d12			INFO	d3d12.device_release	final Release returned 0
+concurrent	i686	opengl			INFO	opengl.env	build=i686 wow64_process=i386 native=arm64 wine=11.20 host=Darwin 27.2.0
+concurrent	i686	opengl			PASS	opengl.context	window 00080064, pixel format 82, context 00010001
+concurrent	i686	opengl			INFO	opengl.renderer	Mesa | zink Vulkan 1.4(Apple M2 (MESA_KOSMICKRISP)) | 4.6 (Compatibility Profile) Mesa 27.0.0-devel (git-4d597245b7)
+concurrent	i686	opengl			PASS	opengl.entry_points	0 of the GL 2.0/3.0 functions missing from wglGetProcAddress
+concurrent	i686	opengl			PASS	opengl.fbo	64x64 RGBA8 framebuffer object status 8cd5
+concurrent	i686	opengl			PASS	opengl.clear	64x64 pixels exact, glClear -> glReadPixels
+concurrent	i686	opengl			PASS	opengl.draw_fixed	64x64 pixels exact, immediate-mode quad
+concurrent	i686	opengl			PASS	opengl.glsl_build	GLSL 1.10 program linked
+concurrent	i686	opengl			PASS	opengl.draw_glsl	64x64 pixels exact, fullscreen GLSL pass
+concurrent	i686	opengl			PASS	opengl.gl_error	glGetError after all draws: 0000
+concurrent	i686	vulkan			INFO	vulkan.env	build=i686 wow64_process=i386 native=arm64 wine=11.20 host=Darwin 27.2.0
+concurrent	i686	vulkan			PASS	vulkan.instance	vkCreateInstance: 0
+concurrent	i686	vulkan			PASS	vulkan.entry_points	0 functions missing from vkGetInstanceProcAddr
+concurrent	i686	vulkan			PASS	vulkan.physical_device	1 physical device(s)
+concurrent	i686	vulkan			INFO	vulkan.device	Apple M2, Vulkan 1.4.363, driver 06863063, vendor 106b
+concurrent	i686	vulkan			PASS	vulkan.device	graphics queue family 0, vkCreateDevice: 0
+concurrent	i686	vulkan			PASS	vulkan.clear	64x64 pixels exact, vkCmdClearColorImage -> vkCmdCopyImageToBuffer
+concurrent	i686	vulkan			PASS	vulkan.copy_region	64x64 pixels exact, buffer -> 32x32 image region with row length, then image -> buffer
+concurrent	i686	vulkan			FAIL	vulkan.fill_copy_buffer	vkCmdFillBuffer x2 + vkCmdCopyBuffer at offsets: 48 of 1024 words wrong
+concurrent	i686	vulkan			PASS	vulkan.fence_reuse	50 fill + submit + wait cycles on one fence: 0 saw stale data
+concurrent	i686	vulkan			PASS	vulkan.teardown	device and instance destroyed
+concurrent	-	server			PASS	server.one_lifetime	the sentinel (aarch64) held one wineserver for every concurrent run
+concurrent	-	server			PASS	server.sentinel_stop	sentinel saw C:\ladder-stop and exited
+tso	x86_64	ordering		1	INFO	ordering.env	build=x86_64 wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+tso	x86_64	ordering		1	INFO	ordering.config	iterations 500000, x86 code, FEX_HARDWARE_TSO=1
+tso	x86_64	ordering		1	PASS	ordering.mp	forbidden outcome 0/500000 times (170 ms)
+tso	x86_64	ordering		1	PASS	ordering.mp_fenced	forbidden outcome 0/500000 times (130 ms)
+tso	x86_64	ordering		1	PASS	ordering.lb	forbidden outcome 0/500000 times (114 ms)
+tso	x86_64	ordering		1	PASS	ordering.lb_fenced	forbidden outcome 0/500000 times (123 ms)
+tso	x86_64	ordering		1	PASS	ordering.iriw	forbidden outcome 0/500000 times (258 ms)
+tso	x86_64	ordering		1	PASS	ordering.iriw_fenced	forbidden outcome 0/500000 times (242 ms)
+tso	x86_64	ordering		1	INFO	ordering.sb	weak outcome 12356/500000 times (135 ms); allowed by TSO and by ARM (store buffering)
+tso	x86_64	ordering		1	PASS	ordering.sb_fenced	forbidden outcome 0/500000 times (126 ms)
+tso	x86_64	ordering		1	PASS	ordering.corr	forbidden outcome 0/500000 times (118 ms)
+tso	x86_64	ordering		1	PASS	ordering.mp_stream	forbidden outcome 0/5000000 times (14 ms)
+tso	x86_64	ordering		1	PASS	ordering.mp_stream_fenced	forbidden outcome 0/5000000 times (34 ms)
+tso	x86_64	ordering		1	PASS	ordering.lock	0 of 2000000 increments lost (51 ms)
+tso	x86_64	ordering		1	PASS	ordering.lock_fenced	0 of 2000000 increments lost (226 ms)
+tso	x86_64	ordering		1	PASS	ordering.atomic	0 of 2000000 increments lost (34 ms)
+tso	x86_64	ordering		1	INFO	ordering.calibration.overlap	sb store-buffering outcomes 12356: threads do overlap
+tso	i686	ordering		1	INFO	ordering.env	build=i686 wow64_process=i386 native=arm64 wine=11.20 host=Darwin 27.2.0
+tso	i686	ordering		1	INFO	ordering.config	iterations 500000, x86 code, FEX_HARDWARE_TSO=1
+tso	i686	ordering		1	PASS	ordering.mp	forbidden outcome 0/500000 times (148 ms)
+tso	i686	ordering		1	PASS	ordering.mp_fenced	forbidden outcome 0/500000 times (143 ms)
+tso	i686	ordering		1	PASS	ordering.lb	forbidden outcome 0/500000 times (115 ms)
+tso	i686	ordering		1	PASS	ordering.lb_fenced	forbidden outcome 0/500000 times (133 ms)
+tso	i686	ordering		1	PASS	ordering.iriw	forbidden outcome 0/500000 times (239 ms)
+tso	i686	ordering		1	PASS	ordering.iriw_fenced	forbidden outcome 0/500000 times (210 ms)
+tso	i686	ordering		1	INFO	ordering.sb	weak outcome 13829/500000 times (120 ms); allowed by TSO and by ARM (store buffering)
+tso	i686	ordering		1	PASS	ordering.sb_fenced	forbidden outcome 0/500000 times (124 ms)
+tso	i686	ordering		1	PASS	ordering.corr	forbidden outcome 0/500000 times (116 ms)
+tso	i686	ordering		1	PASS	ordering.mp_stream	forbidden outcome 0/5000000 times (13 ms)
+tso	i686	ordering		1	PASS	ordering.mp_stream_fenced	forbidden outcome 0/5000000 times (48 ms)
+tso	i686	ordering		1	PASS	ordering.lock	0 of 2000000 increments lost (42 ms)
+tso	i686	ordering		1	PASS	ordering.lock_fenced	0 of 2000000 increments lost (223 ms)
+tso	i686	ordering		1	PASS	ordering.atomic	0 of 2000000 increments lost (33 ms)
+tso	i686	ordering		1	INFO	ordering.calibration.overlap	sb store-buffering outcomes 13829: threads do overlap
+tso	x86_64	ordering		0	INFO	ordering.env	build=x86_64 wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+tso	x86_64	ordering		0	INFO	ordering.config	iterations 500000, x86 code, FEX_HARDWARE_TSO=0
+tso	x86_64	ordering		0	PASS	ordering.mp	forbidden outcome 0/500000 times (158 ms)
+tso	x86_64	ordering		0	PASS	ordering.mp_fenced	forbidden outcome 0/500000 times (151 ms)
+tso	x86_64	ordering		0	PASS	ordering.lb	forbidden outcome 0/500000 times (137 ms)
+tso	x86_64	ordering		0	PASS	ordering.lb_fenced	forbidden outcome 0/500000 times (147 ms)
+tso	x86_64	ordering		0	PASS	ordering.iriw	forbidden outcome 0/500000 times (365 ms)
+tso	x86_64	ordering		0	PASS	ordering.iriw_fenced	forbidden outcome 0/500000 times (317 ms)
+tso	x86_64	ordering		0	INFO	ordering.sb	weak outcome 52379/500000 times (171 ms); allowed by TSO and by ARM (store buffering)
+tso	x86_64	ordering		0	PASS	ordering.sb_fenced	forbidden outcome 0/500000 times (179 ms)
+tso	x86_64	ordering		0	PASS	ordering.corr	forbidden outcome 0/500000 times (156 ms)
+tso	x86_64	ordering		0	PASS	ordering.mp_stream	forbidden outcome 0/5000000 times (90 ms)
+tso	x86_64	ordering		0	PASS	ordering.mp_stream_fenced	forbidden outcome 0/5000000 times (30 ms)
+tso	x86_64	ordering		0	PASS	ordering.lock	0 of 2000000 increments lost (177 ms)
+tso	x86_64	ordering		0	PASS	ordering.lock_fenced	0 of 2000000 increments lost (146 ms)
+tso	x86_64	ordering		0	PASS	ordering.atomic	0 of 2000000 increments lost (35 ms)
+tso	x86_64	ordering		0	INFO	ordering.calibration.overlap	sb store-buffering outcomes 52379: threads do overlap
+tso	i686	ordering		0	INFO	ordering.env	build=i686 wow64_process=i386 native=arm64 wine=11.20 host=Darwin 27.2.0
+tso	i686	ordering		0	INFO	ordering.config	iterations 500000, x86 code, FEX_HARDWARE_TSO=0
+tso	i686	ordering		0	PASS	ordering.mp	forbidden outcome 0/500000 times (148 ms)
+tso	i686	ordering		0	PASS	ordering.mp_fenced	forbidden outcome 0/500000 times (153 ms)
+tso	i686	ordering		0	PASS	ordering.lb	forbidden outcome 0/500000 times (137 ms)
+tso	i686	ordering		0	PASS	ordering.lb_fenced	forbidden outcome 0/500000 times (143 ms)
+tso	i686	ordering		0	PASS	ordering.iriw	forbidden outcome 0/500000 times (265 ms)
+tso	i686	ordering		0	PASS	ordering.iriw_fenced	forbidden outcome 0/500000 times (273 ms)
+tso	i686	ordering		0	INFO	ordering.sb	weak outcome 55477/500000 times (156 ms); allowed by TSO and by ARM (store buffering)
+tso	i686	ordering		0	PASS	ordering.sb_fenced	forbidden outcome 0/500000 times (159 ms)
+tso	i686	ordering		0	PASS	ordering.corr	forbidden outcome 0/500000 times (163 ms)
+tso	i686	ordering		0	PASS	ordering.mp_stream	forbidden outcome 0/5000000 times (19 ms)
+tso	i686	ordering		0	PASS	ordering.mp_stream_fenced	forbidden outcome 0/5000000 times (39 ms)
+tso	i686	ordering		0	PASS	ordering.lock	0 of 2000000 increments lost (185 ms)
+tso	i686	ordering		0	PASS	ordering.lock_fenced	0 of 2000000 increments lost (139 ms)
+tso	i686	ordering		0	PASS	ordering.atomic	0 of 2000000 increments lost (36 ms)
+tso	i686	ordering		0	INFO	ordering.calibration.overlap	sb store-buffering outcomes 55477: threads do overlap
+shutdown	-	shutdown			PASS	shutdown.graceful	wineserver -w returned after 0s: no process outlived the ladder
+shutdown	-	shutdown			PASS	shutdown.kill	wineserver -k: server socket gone, no ladder process left

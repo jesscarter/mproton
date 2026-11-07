@@ -1,0 +1,28 @@
+compatdb: threads-aarch64.exe [aarch64]
+compatdb:   dxgi = dxmt (from /Users/jess/mproton/work/mach9/dist/wine/lib/wine/dxgi/dxmt), built-in
+compatdb:   d3d9 = mtld3d (from /Users/jess/mproton/work/mach9/dist/wine/lib/wine/d3d9/mtld3d), built-in
+compatdb:   wined3d = unset (upstream: the OpenGL renderer, unless WINE_D3D_CONFIG or wined3d's registry settings name another)
+compatdb:   metal_hud = unset (upstream: the MTL_HUD_ variables of the environment the process was started with)
+compatdb:   dll_overrides = mscoree,mshtml= (built-in)
+compatdb:   dpi_aware = true, built-in
+compatdb:   large_address_aware = unset (upstream: the executable's large-address-aware flag)
+compatdb:   gcmouse = true, built-in
+compatdb:   force_nx = true, built-in; no effect in a 64-bit process
+compatdb:   opengl = egl, built-in
+compatdb:   arguments = unset (upstream: the command line the process was started with)
+compatdb:   debug_channels = unset (upstream: the WINEDEBUG the process was started with)
+compatdb:   env FEX_X87REDUCEDPRECISION=1, built-in: set
+LADDER	INFO	threads.env	build=aarch64 wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+LADDER	PASS	threads.tls.static_and_dynamic	32/32 threads kept their own static and TlsAlloc values (expansion slot 64)
+LADDER	PASS	threads.tls.expansion_slots	TlsAlloc beyond 64 slots gave index 64
+LADDER	PASS	threads.tls.fls_callback	FLS destructor ran 32 times for 32 exited threads
+LADDER	PASS	threads.tls.image_callback	TLS directory callback ran DLL_THREAD_ATTACH in 32 of 32 new threads
+LADDER	PASS	threads.locks.counters	critical section 800000, SRW 800000, Interlocked 800000 (want 800000 each)
+LADDER	PASS	threads.locks.condvar	consumed sum 200010000 (want 200010000), in order 1
+LADDER	PASS	threads.apc.sleepex	wait returned 192 (want WAIT_IO_COMPLETION=192), 1 APCs ran on the target thread in order 'a' (want 'a')
+LADDER	PASS	threads.apc.wait_ex	wait returned 192 (want WAIT_IO_COMPLETION=192), 1 APCs ran on the target thread in order 'a' (want 'a')
+LADDER	PASS	threads.apc.nonalertable	wait returned 192 (want WAIT_IO_COMPLETION=192), 5 APCs ran on the target thread in order 'abcde' (want 'abcde'), none during the non-alertable wait
+LADDER	PASS	threads.apc.self	ran before the alertable wait=0, SleepEx(0, TRUE)=192, ran=1
+LADDER	PASS	threads.apc.timer	periodic waitable-timer completion routine ran 3 times in 40 ms
+LADDER	PASS	threads.spawn	500 short threads, 0 wrong exit codes, 88 ms
+LADDER	DONE	threads	pass=12 fail=0 skip=0 info=1

@@ -1,0 +1,25 @@
+compatdb: opengl-arm64ec.exe [x86_64 (arm64ec)]
+compatdb:   dxgi = dxmt (from /Users/jess/mproton/work/mach9/dist/wine/lib/wine/dxgi/dxmt), built-in
+compatdb:   d3d9 = mtld3d (from /Users/jess/mproton/work/mach9/dist/wine/lib/wine/d3d9/mtld3d), built-in
+compatdb:   wined3d = unset (upstream: the OpenGL renderer, unless WINE_D3D_CONFIG or wined3d's registry settings name another)
+compatdb:   metal_hud = unset (upstream: the MTL_HUD_ variables of the environment the process was started with)
+compatdb:   dll_overrides = mscoree,mshtml= (built-in)
+compatdb:   dpi_aware = true, built-in
+compatdb:   large_address_aware = unset (upstream: the executable's large-address-aware flag)
+compatdb:   gcmouse = true, built-in
+compatdb:   force_nx = true, built-in; no effect in a 64-bit process
+compatdb:   opengl = egl, built-in
+compatdb:   arguments = unset (upstream: the command line the process was started with)
+compatdb:   debug_channels = unset (upstream: the WINEDEBUG the process was started with)
+compatdb:   env FEX_X87REDUCEDPRECISION=1, built-in: set
+LADDER	INFO	opengl.env	build=arm64ec wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+LADDER	PASS	opengl.context	window 000000000004003E, pixel format 82, context 0000000000010001
+LADDER	INFO	opengl.renderer	Mesa | zink Vulkan 1.4(Apple M2 (MESA_KOSMICKRISP)) | 4.6 (Compatibility Profile) Mesa 27.0.0-devel (git-4d597245b7)
+LADDER	PASS	opengl.entry_points	0 of the GL 2.0/3.0 functions missing from wglGetProcAddress
+LADDER	PASS	opengl.fbo	64x64 RGBA8 framebuffer object status 8cd5
+LADDER	PASS	opengl.clear	64x64 pixels exact, glClear -> glReadPixels
+LADDER	PASS	opengl.draw_fixed	64x64 pixels exact, immediate-mode quad
+LADDER	PASS	opengl.glsl_build	GLSL 1.10 program linked
+LADDER	PASS	opengl.draw_glsl	64x64 pixels exact, fullscreen GLSL pass
+LADDER	PASS	opengl.gl_error	glGetError after all draws: 0000
+LADDER	DONE	opengl	pass=8 fail=0 skip=0 info=2

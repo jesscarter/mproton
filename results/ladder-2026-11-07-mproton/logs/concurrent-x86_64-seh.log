@@ -1,0 +1,31 @@
+compatdb: seh-x86_64.exe [x86_64 (arm64ec)]
+compatdb:   dxgi = dxmt (from /Users/jess/mproton/work/mach9/dist/wine/lib/wine/dxgi/dxmt), built-in
+compatdb:   d3d9 = mtld3d (from /Users/jess/mproton/work/mach9/dist/wine/lib/wine/d3d9/mtld3d), built-in
+compatdb:   wined3d = unset (upstream: the OpenGL renderer, unless WINE_D3D_CONFIG or wined3d's registry settings name another)
+compatdb:   metal_hud = unset (upstream: the MTL_HUD_ variables of the environment the process was started with)
+compatdb:   dll_overrides = mscoree,mshtml= (built-in)
+compatdb:   dpi_aware = true, built-in
+compatdb:   large_address_aware = unset (upstream: the executable's large-address-aware flag)
+compatdb:   gcmouse = true, built-in
+compatdb:   force_nx = true, built-in; no effect in a 64-bit process
+compatdb:   opengl = egl, built-in
+compatdb:   arguments = unset (upstream: the command line the process was started with)
+compatdb:   debug_channels = unset (upstream: the WINEDEBUG the process was started with)
+compatdb:   env FEX_X87REDUCEDPRECISION=1, built-in: set
+LADDER	INFO	seh.env	build=x86_64 wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+LADDER	PASS	seh.av_read	code=c0000005 info=[0, 0000000000900123] want [0, 0000000000900123], ExceptionAddress=0000000140002890 context pc=0000000140002890 sp=000000000011FD18
+LADDER	PASS	seh.av_write	code=c0000005 info=[1, 0000000000900456] want [1, 0000000000900456], ExceptionAddress=00000001400028A0 context pc=00000001400028A0 sp=000000000011FD18
+LADDER	PASS	seh.av_null_read	code=c0000005 info=[0, 0000000000000000] want [0, 0000000000000000], ExceptionAddress=0000000140002890 context pc=0000000140002890 sp=000000000011FD18
+LADDER	PASS	seh.av_exec_noaccess	code=c0000005 info=[8, 0000000000900200] want [8, 0000000000900200], ExceptionAddress=0000000000900200 context pc=0000000000900200 sp=000000000011FD18
+LADDER	FAIL	seh.div0	caught=0 code=00000000 (want c0000094) address=0000000000000000 pc=0000000000000000
+LADDER	PASS	seh.breakpoint	caught=1 code=80000003
+LADDER	PASS	seh.nested_search	order inner-filter,outer-filter,finally-abnormal,outer-handler (want inner-filter,outer-filter,finally-abnormal,outer-handler)
+LADDER	PASS	seh.nested_rethrow	order inner-caught,outer-filter,outer-handler (want inner-caught,outer-filter,outer-handler)
+LADDER	PASS	seh.finally_normal	order body,finally-normal,
+LADDER	PASS	seh.raise_frames	caught=1 code=e0c0ffee params=3 [1234 ffffffff c0ffee] finally order 8a,6a,4a, (want 8a,6a,4a,)
+LADDER	PASS	seh.raise_continue	caught=0 resumed=1
+LADDER	PASS	seh.veh_fixup	frame handler reached=0, handler calls=1 (want 1), stores landed=1
+LADDER	PASS	seh.veh_order	first-registered handler ran first=1, then frame handler caught=1
+LADDER	PASS	seh.cxx_throw	caught value 42 (want 42), destructors run 9 (want 9)
+LADDER	FAIL	seh.stack_overflow	caught code=00000000 (want c00000fd), thread wait=0 exit=00000000
+LADDER	DONE	seh	pass=13 fail=2 skip=0 info=1

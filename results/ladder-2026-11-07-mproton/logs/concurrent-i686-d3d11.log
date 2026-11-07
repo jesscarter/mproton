@@ -1,0 +1,29 @@
+compatdb: d3d11-i686.exe [i386]
+compatdb:   dxgi = dxmt (from /Users/jess/mproton/work/mach9/dist/wine/lib/wine/dxgi/dxmt), built-in
+compatdb:   d3d9 = mtld3d (from /Users/jess/mproton/work/mach9/dist/wine/lib/wine/d3d9/mtld3d), built-in
+compatdb:   wined3d = unset (upstream: the OpenGL renderer, unless WINE_D3D_CONFIG or wined3d's registry settings name another)
+compatdb:   metal_hud = unset (upstream: the MTL_HUD_ variables of the environment the process was started with)
+compatdb:   dll_overrides = mscoree,mshtml= (built-in)
+compatdb:   dpi_aware = true, built-in
+compatdb:   large_address_aware = unset (upstream: the executable's large-address-aware flag)
+compatdb:   gcmouse = true, built-in
+compatdb:   force_nx = true, built-in
+compatdb:   opengl = egl, built-in
+compatdb:   arguments = unset (upstream: the command line the process was started with)
+compatdb:   debug_channels = unset (upstream: the WINEDEBUG the process was started with)
+compatdb:   env FEX_X87REDUCEDPRECISION=1, built-in: set
+LADDER	INFO	d3d11.env	build=i686 wow64_process=i386 native=arm64 wine=11.20 host=Darwin 27.2.0
+info:  Maximum supported feature level: D3D_FEATURE_LEVEL_11_1
+info:  Using feature level D3D_FEATURE_LEVEL_11_1
+LADDER	PASS	d3d11.device	D3D11CreateDevice 00000000, feature level 11_1
+LADDER	INFO	d3d11.adapter	Apple M2 (vendor 106b device 0000), feature level 11_1
+LADDER	PASS	d3d11.render_target	64x64 RGBA8 render target created
+LADDER	PASS	d3d11.clear	64x64 pixels exact
+LADDER	PASS	d3d11.draw_fullscreen	64x64 pixels exact, SV_VertexID triangle + SV_Position shading
+LADDER	PASS	d3d11.draw_vb_cb	64x64 pixels exact, vertex-buffer quad over the fullscreen pass
+LADDER	PASS	d3d11.update_subresource	64x64 pixels exact
+LADDER	PASS	d3d11.copy_region	64x64 pixels exact, 16x16 box from the render target into an initialised texture
+LADDER	PASS	d3d11.copy_resource	64x64 pixels exact
+LADDER	PASS	d3d11.buffer_copy	1 KiB..3 KiB slice of an initialised buffer copied to staging: 0 words wrong
+LADDER	INFO	d3d11.device_release	final Release returned 0
+LADDER	DONE	d3d11	pass=9 fail=0 skip=0 info=3

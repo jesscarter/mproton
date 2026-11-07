@@ -1,0 +1,3 @@
+LADDER	PASS	server.one_lifetime	the sentinel (aarch64) held one wineserver for every concurrent run
+LADDER	PASS	server.sentinel_stop	sentinel saw C:\ladder-stop and exited
+LADDER	DONE	server	pass=2 fail=0 skip=0 info=0

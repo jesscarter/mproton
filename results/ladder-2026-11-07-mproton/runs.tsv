@@ -1,0 +1,116 @@
+phase	arch	prog	backend	tso	status	exit	seconds	log	rule
+setup	-	prefix			ok	0	0	logs/setup.log	
+serial	aarch64	threads			ok	0	2	logs/serial-aarch64-threads.log	
+serial	aarch64	seh			crash	9	1	logs/serial-aarch64-seh.log	
+serial	aarch64	callbacks			ok	0	4	logs/serial-aarch64-callbacks.log	
+serial	aarch64	memory			ok	0	0	logs/serial-aarch64-memory.log	
+serial	aarch64	ordering			ok	0	2	logs/serial-aarch64-ordering.log	
+serial	aarch64	d3d9	dxvk		ok	0	5	logs/serial-aarch64-d3d9-dxvk.log	exe=d3d9-aarch64.exe;d3d9=dxvk
+serial	aarch64	d3d9	mtld3d		ok	0	1	logs/serial-aarch64-d3d9-mtld3d.log	exe=d3d9-aarch64.exe;d3d9=mtld3d
+serial	aarch64	d3d9	wined3d		ok	0	2	logs/serial-aarch64-d3d9-wined3d.log	exe=d3d9-aarch64.exe;d3d9=wined3d
+serial	aarch64	d3d11	wined3d		ok	0	1	logs/serial-aarch64-d3d11-wined3d.log	exe=d3d11-aarch64.exe;dxgi=wined3d
+serial	aarch64	d3d11	dxmt		ok	0	1	logs/serial-aarch64-d3d11-dxmt.log	exe=d3d11-aarch64.exe;dxgi=dxmt
+serial	aarch64	d3d11	dxvk		ok	0	1	logs/serial-aarch64-d3d11-dxvk.log	exe=d3d11-aarch64.exe;dxgi=dxvk
+serial	aarch64	d3d12	wined3d		ok	0	0	logs/serial-aarch64-d3d12-wined3d.log	exe=d3d12-aarch64.exe;dxgi=wined3d
+serial	aarch64	d3d12	dxmt		ok	0	2	logs/serial-aarch64-d3d12-dxmt.log	exe=d3d12-aarch64.exe;dxgi=dxmt
+serial	aarch64	d3d12	dxvk		ok	0	1	logs/serial-aarch64-d3d12-dxvk.log	exe=d3d12-aarch64.exe;dxgi=dxvk
+serial	aarch64	opengl	egl		ok	0	1	logs/serial-aarch64-opengl-egl.log	exe=opengl-aarch64.exe;opengl=egl
+serial	aarch64	opengl	cgl		ok	0	1	logs/serial-aarch64-opengl-cgl.log	exe=opengl-aarch64.exe;opengl=cgl
+serial	aarch64	vulkan	default		fail	1	0	logs/serial-aarch64-vulkan-default.log	
+serial	arm64ec	threads			ok	0	1	logs/serial-arm64ec-threads.log	
+serial	arm64ec	seh			crash	9	0	logs/serial-arm64ec-seh.log	
+serial	arm64ec	callbacks			ok	0	3	logs/serial-arm64ec-callbacks.log	
+serial	arm64ec	memory			ok	0	2	logs/serial-arm64ec-memory.log	
+serial	arm64ec	ordering			ok	0	3	logs/serial-arm64ec-ordering.log	
+serial	arm64ec	d3d9	dxvk		ok	0	3	logs/serial-arm64ec-d3d9-dxvk.log	exe=d3d9-arm64ec.exe;d3d9=dxvk
+serial	arm64ec	d3d9	mtld3d		ok	0	0	logs/serial-arm64ec-d3d9-mtld3d.log	exe=d3d9-arm64ec.exe;d3d9=mtld3d
+serial	arm64ec	d3d9	wined3d		ok	0	2	logs/serial-arm64ec-d3d9-wined3d.log	exe=d3d9-arm64ec.exe;d3d9=wined3d
+serial	arm64ec	d3d11	wined3d		ok	0	1	logs/serial-arm64ec-d3d11-wined3d.log	exe=d3d11-arm64ec.exe;dxgi=wined3d
+serial	arm64ec	d3d11	dxmt		ok	0	1	logs/serial-arm64ec-d3d11-dxmt.log	exe=d3d11-arm64ec.exe;dxgi=dxmt
+serial	arm64ec	d3d11	dxvk		ok	0	0	logs/serial-arm64ec-d3d11-dxvk.log	exe=d3d11-arm64ec.exe;dxgi=dxvk
+serial	arm64ec	d3d12	wined3d		ok	0	1	logs/serial-arm64ec-d3d12-wined3d.log	exe=d3d12-arm64ec.exe;dxgi=wined3d
+serial	arm64ec	d3d12	dxmt		ok	0	6	logs/serial-arm64ec-d3d12-dxmt.log	exe=d3d12-arm64ec.exe;dxgi=dxmt
+serial	arm64ec	d3d12	dxvk		ok	0	1	logs/serial-arm64ec-d3d12-dxvk.log	exe=d3d12-arm64ec.exe;dxgi=dxvk
+serial	arm64ec	opengl	egl		ok	0	1	logs/serial-arm64ec-opengl-egl.log	exe=opengl-arm64ec.exe;opengl=egl
+serial	arm64ec	opengl	cgl		ok	0	1	logs/serial-arm64ec-opengl-cgl.log	exe=opengl-arm64ec.exe;opengl=cgl
+serial	arm64ec	vulkan	default		fail	1	0	logs/serial-arm64ec-vulkan-default.log	
+serial	x86_64	threads			ok	0	1	logs/serial-x86_64-threads.log	
+serial	x86_64	seh			fail	1	0	logs/serial-x86_64-seh.log	
+serial	x86_64	callbacks			ok	0	4	logs/serial-x86_64-callbacks.log	
+serial	x86_64	memory			ok	0	1	logs/serial-x86_64-memory.log	
+serial	x86_64	ordering			ok	0	3	logs/serial-x86_64-ordering.log	
+serial	x86_64	d3d9	dxvk		ok	0	3	logs/serial-x86_64-d3d9-dxvk.log	exe=d3d9-x86_64.exe;d3d9=dxvk
+serial	x86_64	d3d9	mtld3d		ok	0	1	logs/serial-x86_64-d3d9-mtld3d.log	exe=d3d9-x86_64.exe;d3d9=mtld3d
+serial	x86_64	d3d9	wined3d		ok	0	1	logs/serial-x86_64-d3d9-wined3d.log	exe=d3d9-x86_64.exe;d3d9=wined3d
+serial	x86_64	d3d11	wined3d		ok	0	1	logs/serial-x86_64-d3d11-wined3d.log	exe=d3d11-x86_64.exe;dxgi=wined3d
+serial	x86_64	d3d11	dxmt		ok	0	1	logs/serial-x86_64-d3d11-dxmt.log	exe=d3d11-x86_64.exe;dxgi=dxmt
+serial	x86_64	d3d11	dxvk		ok	0	0	logs/serial-x86_64-d3d11-dxvk.log	exe=d3d11-x86_64.exe;dxgi=dxvk
+serial	x86_64	d3d12	wined3d		ok	0	1	logs/serial-x86_64-d3d12-wined3d.log	exe=d3d12-x86_64.exe;dxgi=wined3d
+serial	x86_64	d3d12	dxmt		ok	0	1	logs/serial-x86_64-d3d12-dxmt.log	exe=d3d12-x86_64.exe;dxgi=dxmt
+serial	x86_64	d3d12	dxvk		ok	0	1	logs/serial-x86_64-d3d12-dxvk.log	exe=d3d12-x86_64.exe;dxgi=dxvk
+serial	x86_64	opengl	egl		ok	0	1	logs/serial-x86_64-opengl-egl.log	exe=opengl-x86_64.exe;opengl=egl
+serial	x86_64	opengl	cgl		ok	0	1	logs/serial-x86_64-opengl-cgl.log	exe=opengl-x86_64.exe;opengl=cgl
+serial	x86_64	vulkan	default		fail	1	1	logs/serial-x86_64-vulkan-default.log	
+serial	i686	threads			ok	0	1	logs/serial-i686-threads.log	
+serial	i686	seh			fail	1	0	logs/serial-i686-seh.log	
+serial	i686	callbacks			ok	0	3	logs/serial-i686-callbacks.log	
+serial	i686	memory			ok	0	1	logs/serial-i686-memory.log	
+serial	i686	ordering			ok	0	3	logs/serial-i686-ordering.log	
+serial	i686	d3d9	dxvk		ok	0	4	logs/serial-i686-d3d9-dxvk.log	exe=d3d9-i686.exe;d3d9=dxvk
+serial	i686	d3d9	mtld3d		ok	0	0	logs/serial-i686-d3d9-mtld3d.log	exe=d3d9-i686.exe;d3d9=mtld3d
+serial	i686	d3d9	wined3d		ok	0	2	logs/serial-i686-d3d9-wined3d.log	exe=d3d9-i686.exe;d3d9=wined3d
+serial	i686	d3d11	wined3d		ok	0	1	logs/serial-i686-d3d11-wined3d.log	exe=d3d11-i686.exe;dxgi=wined3d
+serial	i686	d3d11	dxmt		ok	0	2	logs/serial-i686-d3d11-dxmt.log	exe=d3d11-i686.exe;dxgi=dxmt
+serial	i686	d3d11	dxvk		ok	0	1	logs/serial-i686-d3d11-dxvk.log	exe=d3d11-i686.exe;dxgi=dxvk
+serial	i686	d3d12	wined3d		ok	0	0	logs/serial-i686-d3d12-wined3d.log	exe=d3d12-i686.exe;dxgi=wined3d
+serial	i686	d3d12	dxmt		ok	0	2	logs/serial-i686-d3d12-dxmt.log	exe=d3d12-i686.exe;dxgi=dxmt
+serial	i686	d3d12	dxvk		ok	0	1	logs/serial-i686-d3d12-dxvk.log	exe=d3d12-i686.exe;dxgi=dxvk
+serial	i686	opengl	egl		ok	0	1	logs/serial-i686-opengl-egl.log	exe=opengl-i686.exe;opengl=egl
+serial	i686	opengl	cgl		ok	0	1	logs/serial-i686-opengl-cgl.log	exe=opengl-i686.exe;opengl=cgl
+serial	i686	vulkan	default		fail	1	1	logs/serial-i686-vulkan-default.log	
+concurrent	aarch64	threads			ok	0	1	logs/concurrent-aarch64-threads.log	
+concurrent	aarch64	seh			crash	9	0	logs/concurrent-aarch64-seh.log	
+concurrent	aarch64	callbacks			ok	0	3	logs/concurrent-aarch64-callbacks.log	
+concurrent	aarch64	memory			ok	0	0	logs/concurrent-aarch64-memory.log	
+concurrent	aarch64	ordering			ok	0	21	logs/concurrent-aarch64-ordering.log	
+concurrent	aarch64	d3d9			ok	0	1	logs/concurrent-aarch64-d3d9.log	
+concurrent	aarch64	d3d11			ok	0	1	logs/concurrent-aarch64-d3d11.log	
+concurrent	aarch64	d3d12			ok	0	1	logs/concurrent-aarch64-d3d12.log	
+concurrent	aarch64	opengl			ok	0	1	logs/concurrent-aarch64-opengl.log	
+concurrent	aarch64	vulkan			fail	1	1	logs/concurrent-aarch64-vulkan.log	
+concurrent	arm64ec	threads			ok	0	1	logs/concurrent-arm64ec-threads.log	
+concurrent	arm64ec	seh			crash	9	0	logs/concurrent-arm64ec-seh.log	
+concurrent	arm64ec	callbacks			ok	0	3	logs/concurrent-arm64ec-callbacks.log	
+concurrent	arm64ec	memory			ok	0	1	logs/concurrent-arm64ec-memory.log	
+concurrent	arm64ec	ordering			ok	0	20	logs/concurrent-arm64ec-ordering.log	
+concurrent	arm64ec	d3d9			ok	0	1	logs/concurrent-arm64ec-d3d9.log	
+concurrent	arm64ec	d3d11			ok	0	1	logs/concurrent-arm64ec-d3d11.log	
+concurrent	arm64ec	d3d12			ok	0	1	logs/concurrent-arm64ec-d3d12.log	
+concurrent	arm64ec	opengl			ok	0	1	logs/concurrent-arm64ec-opengl.log	
+concurrent	arm64ec	vulkan			fail	1	0	logs/concurrent-arm64ec-vulkan.log	
+concurrent	x86_64	threads			ok	0	1	logs/concurrent-x86_64-threads.log	
+concurrent	x86_64	seh			fail	1	0	logs/concurrent-x86_64-seh.log	
+concurrent	x86_64	callbacks			ok	0	2	logs/concurrent-x86_64-callbacks.log	
+concurrent	x86_64	memory			ok	0	1	logs/concurrent-x86_64-memory.log	
+concurrent	x86_64	ordering			ok	0	13	logs/concurrent-x86_64-ordering.log	
+concurrent	x86_64	d3d9			ok	0	1	logs/concurrent-x86_64-d3d9.log	
+concurrent	x86_64	d3d11			ok	0	1	logs/concurrent-x86_64-d3d11.log	
+concurrent	x86_64	d3d12			ok	0	1	logs/concurrent-x86_64-d3d12.log	
+concurrent	x86_64	opengl			ok	0	1	logs/concurrent-x86_64-opengl.log	
+concurrent	x86_64	vulkan			fail	1	1	logs/concurrent-x86_64-vulkan.log	
+concurrent	i686	threads			ok	0	1	logs/concurrent-i686-threads.log	
+concurrent	i686	seh			fail	1	1	logs/concurrent-i686-seh.log	
+concurrent	i686	callbacks			ok	0	2	logs/concurrent-i686-callbacks.log	
+concurrent	i686	memory			ok	0	1	logs/concurrent-i686-memory.log	
+concurrent	i686	ordering			ok	0	12	logs/concurrent-i686-ordering.log	
+concurrent	i686	d3d9			ok	0	1	logs/concurrent-i686-d3d9.log	
+concurrent	i686	d3d11			ok	0	1	logs/concurrent-i686-d3d11.log	
+concurrent	i686	d3d12			ok	0	2	logs/concurrent-i686-d3d12.log	
+concurrent	i686	opengl			ok	0	2	logs/concurrent-i686-opengl.log	
+concurrent	i686	vulkan			fail	1	1	logs/concurrent-i686-vulkan.log	
+concurrent	-	server			ok	0	0	logs/concurrent-server.log	
+tso	x86_64	ordering		1	ok	0	2	logs/tso-x86_64-ordering-tso1.log	
+tso	i686	ordering		1	ok	0	3	logs/tso-i686-ordering-tso1.log	
+tso	x86_64	ordering		0	ok	0	3	logs/tso-x86_64-ordering-tso0.log	
+tso	i686	ordering		0	ok	0	3	logs/tso-i686-ordering-tso0.log	
+shutdown	-	shutdown			ok	0	0	logs/shutdown.log	

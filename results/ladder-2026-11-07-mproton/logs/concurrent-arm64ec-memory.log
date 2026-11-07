@@ -1,0 +1,42 @@
+compatdb: memory-arm64ec.exe [x86_64 (arm64ec)]
+compatdb:   dxgi = dxmt (from /Users/jess/mproton/work/mach9/dist/wine/lib/wine/dxgi/dxmt), built-in
+compatdb:   d3d9 = mtld3d (from /Users/jess/mproton/work/mach9/dist/wine/lib/wine/d3d9/mtld3d), built-in
+compatdb:   wined3d = unset (upstream: the OpenGL renderer, unless WINE_D3D_CONFIG or wined3d's registry settings name another)
+compatdb:   metal_hud = unset (upstream: the MTL_HUD_ variables of the environment the process was started with)
+compatdb:   dll_overrides = mscoree,mshtml= (built-in)
+compatdb:   dpi_aware = true, built-in
+compatdb:   large_address_aware = unset (upstream: the executable's large-address-aware flag)
+compatdb:   gcmouse = true, built-in
+compatdb:   force_nx = true, built-in; no effect in a 64-bit process
+compatdb:   opengl = egl, built-in
+compatdb:   arguments = unset (upstream: the command line the process was started with)
+compatdb:   debug_channels = unset (upstream: the WINEDEBUG the process was started with)
+compatdb:   env FEX_X87REDUCEDPRECISION=1, built-in: set
+LADDER	INFO	memory.env	build=arm64ec wow64_process=none native=arm64 wine=11.20 host=Darwin 27.2.0
+LADDER	PASS	memory.sysinfo	page size 4096, allocation granularity 65536
+LADDER	PASS	memory.alloc_granularity	0 of 20 reservations not 64K-aligned (or failed)
+LADDER	PASS	memory.commit_zeroed	fresh commit reads zero
+LADDER	PASS	memory.protect_4k.set	VirtualProtect on single 4K pages ok (0)
+LADDER	PASS	memory.protect_4k.access	each 4K page faults exactly per its own protection
+LADDER	PASS	memory.protect_4k.query	VirtualQuery reports 4K-granular regions
+LADDER	PASS	memory.protect_4k.contents	after protect/unprotect every page kept its data (0 bytes wrong)
+LADDER	PASS	memory.guard_page.read	neighbours 00000000/00000000, first touch 80000001 at +107b (want 80000001 at +107b), second touch 00000000, then unguarded
+LADDER	PASS	memory.guard_page.write	write: first 80000001, second 00000000
+LADDER	PASS	memory.reserve_commit.single_page	reserved c0000005, commit one 4K page ok, it 00000000, neighbours c0000005/c0000005, states 2000/1000(size 1000)/2000
+LADDER	PASS	memory.reserve_commit.decommit	decommitted page faults (c0000005) and recommits zeroed (00)
+LADDER	PASS	memory.write_watch	written pages 1,2,7,13,30,63; reported [1,2,7,13,30,63] at granularity 4096; after reset 0
+LADDER	PASS	memory.placeholder.reserve	VirtualAlloc2(MEM_RESERVE_PLACEHOLDER) ok (0)
+LADDER	PASS	memory.placeholder.split	VirtualFree(MEM_PRESERVE_PLACEHOLDER) split it (0)
+LADDER	PASS	memory.placeholder.replace_alloc	VirtualAlloc2(MEM_REPLACE_PLACEHOLDER) committed into the placeholder
+LADDER	PASS	memory.placeholder.map_view	MapViewOfFile3 into the placeholder aliases a second view
+LADDER	PASS	memory.placeholder.unmap_preserve	after UnmapViewOfFile2(MEM_PRESERVE_PLACEHOLDER) the range is a placeholder again
+LADDER	PASS	memory.section_alias	two views of one section see each other's writes (0 mismatches)
+LADDER	PASS	memory.smc.wx_cycle	2000 rewrites through RW -> RX + FlushInstructionCache, 0 stale results
+LADDER	PASS	memory.smc.rwx_flush	5000 in-place rewrites of RWX code with FlushInstructionCache, 0 stale results
+LADDER	PASS	memory.smc.rwx_noflush	5000 immediate patches without a flush (legal on x86), 0 stale results
+LADDER	PASS	memory.smc.same_page_data	20000 data writes next to live code, 0 wrong results
+LADDER	PASS	memory.smc.realloc	200 release/reallocate cycles at one address (0 moved), 0 stale results
+LADDER	PASS	memory.smc.neighbor_page	RX code page next to a hot RW page: 0 wrong results, write to the RX page c0000005
+LADDER	PASS	memory.smc.cross_thread	500 rewrites on one thread, run on another: 0 stale results (last 71f3)
+LADDER	PASS	memory.big_alloc	reserve 1024 MB, commit and touch 256 MB at its end: ok, 0 bad pages
+LADDER	DONE	memory	pass=26 fail=0 skip=0 info=1
