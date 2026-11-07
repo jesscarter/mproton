@@ -1,0 +1,34 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Thu, 21 Nov 2024 12:26:30 +0100
+Subject: [PATCH] HACK: ntdll: Convert VR_CONFIG_PATH and VR_LOG_PATH
+ environment variables.
+
+CW-Bug-Id: #24510
+(cherry picked from commit b1d568c4f5124ed43c7f17caef3eb7cc3b66e258)
+---
+ dlls/ntdll/unix/env.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/dlls/ntdll/unix/env.c b/dlls/ntdll/unix/env.c
+index e2dde028df0..23208a9f3c5 100644
+--- a/dlls/ntdll/unix/env.c
++++ b/dlls/ntdll/unix/env.c
+@@ -1041,6 +1041,7 @@ static void add_system_dll_path_var( WCHAR **env, SIZE_T *pos, SIZE_T *size )
+  */
+ static void add_dynamic_environment( WCHAR **env, SIZE_T *pos, SIZE_T *size )
+ {
++    const char *var;
+     unsigned int i;
+     char str[22];
+ 
+@@ -1070,6 +1071,9 @@ static void add_dynamic_environment( WCHAR **env, SIZE_T *pos, SIZE_T *size )
+     append_envA( env, pos, size, "WINEUSERLOCALE", user_locale );
+     append_envA( env, pos, size, "SystemDrive", "C:" );
+     append_envA( env, pos, size, "SystemRoot", "C:\\windows" );
++
++    if ((var = getenv( "VR_CONFIG_PATH" ))) add_path_var( env, pos, size, "VR_CONFIG_PATH", var );
++    if ((var = getenv( "VR_LOG_PATH" ))) add_path_var( env, pos, size, "VR_LOG_PATH", var );
+ }
+ 
+ 

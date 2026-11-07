@@ -1,0 +1,280 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?J=C3=B3zef=20Kucia?= <jkucia@codeweavers.com>
+Date: Mon, 23 Jul 2018 19:53:20 +0200
+Subject: [PATCH] amd_ags_x64: Add dll.
+
+This is needed to avoid Wolfenstein 2 showing a driver warning dialog on
+AMD hardware.
+
+(cherry picked from commit 56b3125e7d517fce2eb9b87200af5082e210de65)
+---
+ configure.ac                        |   1 +
+ dlls/amd_ags_x64/Makefile.in        |   9 ++
+ dlls/amd_ags_x64/amd_ags_x64.spec   |  29 +++++
+ dlls/amd_ags_x64/amd_ags_x64_main.c | 193 ++++++++++++++++++++++++++++
+ 4 files changed, 232 insertions(+)
+ create mode 100644 dlls/amd_ags_x64/Makefile.in
+ create mode 100644 dlls/amd_ags_x64/amd_ags_x64.spec
+ create mode 100644 dlls/amd_ags_x64/amd_ags_x64_main.c
+
+diff --git a/configure.ac b/configure.ac
+index cc323e798fe..57c3c83c931 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -2403,6 +2403,7 @@ WINE_CONFIG_MAKEFILE(dlls/advpack)
+ WINE_CONFIG_MAKEFILE(dlls/advpack/tests)
+ WINE_CONFIG_MAKEFILE(dlls/aero.msstyles)
+ WINE_CONFIG_MAKEFILE(dlls/amsi)
++WINE_CONFIG_MAKEFILE(dlls/amd_ags_x64)
+ WINE_CONFIG_MAKEFILE(dlls/amstream)
+ WINE_CONFIG_MAKEFILE(dlls/amstream/tests)
+ WINE_CONFIG_MAKEFILE(dlls/apisetschema)
+diff --git a/dlls/amd_ags_x64/Makefile.in b/dlls/amd_ags_x64/Makefile.in
+new file mode 100644
+index 00000000000..b2c2a28c064
+--- /dev/null
++++ b/dlls/amd_ags_x64/Makefile.in
+@@ -0,0 +1,9 @@
++EXTRADEFS = -DWINE_NO_LONG_TYPES
++MODULE    = amd_ags_x64.dll
++IMPORTS   = vulkan-1
++IMPORTLIB = amd_ags_x64
++
++EXTRADLLFLAGS = -mno-cygwin -Wb,--prefer-native
++
++SOURCES = \
++	amd_ags_x64_main.c
+diff --git a/dlls/amd_ags_x64/amd_ags_x64.spec b/dlls/amd_ags_x64/amd_ags_x64.spec
+new file mode 100644
+index 00000000000..b4da6136a64
+--- /dev/null
++++ b/dlls/amd_ags_x64/amd_ags_x64.spec
+@@ -0,0 +1,29 @@
++1 stdcall agsDeInit(ptr)
++2 stub agsDriverExtensionsDX11_BeginUAVOverlap
++3 stub agsDriverExtensionsDX11_CreateBuffer
++4 stub agsDriverExtensionsDX11_CreateTexture1D
++5 stub agsDriverExtensionsDX11_CreateTexture2D
++6 stub agsDriverExtensionsDX11_CreateTexture3D
++7 stub agsDriverExtensionsDX11_DeInit
++8 stub agsDriverExtensionsDX11_EndUAVOverlap
++9 stub agsDriverExtensionsDX11_GetMaxClipRects
++10 stub agsDriverExtensionsDX11_IASetPrimitiveTopology
++11 stub agsDriverExtensionsDX11_Init
++12 stub agsDriverExtensionsDX11_MultiDrawIndexedInstancedIndirect
++13 stub agsDriverExtensionsDX11_MultiDrawIndexedInstancedIndirectCountIndirect
++14 stub agsDriverExtensionsDX11_MultiDrawInstancedIndirect
++15 stub agsDriverExtensionsDX11_MultiDrawInstancedIndirectCountIndirect
++16 stub agsDriverExtensionsDX11_NotifyResourceBeginAllAccess
++17 stub agsDriverExtensionsDX11_NotifyResourceEndAllAccess
++18 stub agsDriverExtensionsDX11_NotifyResourceEndWrites
++19 stub agsDriverExtensionsDX11_NumPendingAsyncCompileJobs
++20 stub agsDriverExtensionsDX11_SetClipRects
++21 stub agsDriverExtensionsDX11_SetDepthBounds
++22 stub agsDriverExtensionsDX11_SetDiskShaderCacheEnabled
++23 stub agsDriverExtensionsDX11_SetMaxAsyncCompileThreadCount
++24 stub agsDriverExtensionsDX11_SetViewBroadcastMasks
++25 stub agsDriverExtensionsDX12_DeInit
++26 stub agsDriverExtensionsDX12_Init
++27 stub agsGetCrossfireGPUCount
++28 stdcall agsInit(ptr ptr ptr)
++29 stub agsSetDisplayMode
+diff --git a/dlls/amd_ags_x64/amd_ags_x64_main.c b/dlls/amd_ags_x64/amd_ags_x64_main.c
+new file mode 100644
+index 00000000000..e6c0ceae2f1
+--- /dev/null
++++ b/dlls/amd_ags_x64/amd_ags_x64_main.c
+@@ -0,0 +1,193 @@
++#include <stdarg.h>
++#include <stdbool.h>
++
++#include "windef.h"
++#include "winbase.h"
++#include "wine/debug.h"
++
++#include "wine/vulkan.h"
++
++#include "d3d11.h"
++#include "d3d12.h"
++
++#include "amd_ags.h"
++
++WINE_DEFAULT_DEBUG_CHANNEL(amd_ags);
++
++#define heap_realloc realloc
++#define heap_alloc malloc
++#define heap_calloc calloc
++#define heap_free free
++
++struct AGSContext
++{
++    unsigned int device_count;
++    AGSDeviceInfo *devices;
++    VkPhysicalDeviceProperties *properties;
++};
++
++static AGSReturnCode vk_get_physical_device_properties(unsigned int *out_count,
++        VkPhysicalDeviceProperties **out)
++{
++    VkPhysicalDeviceProperties *properties = NULL;
++    VkPhysicalDevice *vk_physical_devices = NULL;
++    VkInstance vk_instance = VK_NULL_HANDLE;
++    VkInstanceCreateInfo create_info;
++    AGSReturnCode ret = AGS_SUCCESS;
++    uint32_t count, i;
++    VkResult vr;
++
++    *out = NULL;
++    *out_count = 0;
++
++    memset(&create_info, 0, sizeof(create_info));
++    create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
++    if ((vr = vkCreateInstance(&create_info, NULL, &vk_instance) < 0))
++    {
++        WARN("Failed to create Vulkan instance, vr %d.\n", vr);
++        goto done;
++    }
++
++    if ((vr = vkEnumeratePhysicalDevices(vk_instance, &count, NULL)) < 0)
++    {
++        WARN("Failed to enumerate devices, vr %d.\n", vr);
++        goto done;
++    }
++
++    if (!(vk_physical_devices = heap_calloc(count, sizeof(*vk_physical_devices))))
++    {
++        WARN("Failed to allocate memory.\n");
++        ret = AGS_OUT_OF_MEMORY;
++        goto done;
++    }
++
++    if ((vr = vkEnumeratePhysicalDevices(vk_instance, &count, vk_physical_devices)) < 0)
++    {
++        WARN("Failed to enumerate devices, vr %d.\n", vr);
++        goto done;
++    }
++
++    if (!(properties = heap_calloc(count, sizeof(*properties))))
++    {
++        WARN("Failed to allocate memory.\n");
++        ret = AGS_OUT_OF_MEMORY;
++        goto done;
++    }
++
++    for (i = 0; i < count; ++i)
++        vkGetPhysicalDeviceProperties(vk_physical_devices[i], &properties[i]);
++
++    *out_count = count;
++    *out = properties;
++
++done:
++    heap_free(vk_physical_devices);
++    if (vk_instance)
++        vkDestroyInstance(vk_instance, NULL);
++    return ret;
++}
++
++static AGSReturnCode init_ags_context(AGSContext *context)
++{
++    AGSReturnCode ret;
++    unsigned int i;
++
++    context->device_count = 0;
++    context->devices = NULL;
++    context->properties = NULL;
++
++    ret = vk_get_physical_device_properties(&context->device_count, &context->properties);
++    if (ret != AGS_SUCCESS || !context->device_count)
++        return ret;
++
++    if (!(context->devices = heap_calloc(context->device_count, sizeof(*context->devices))))
++    {
++        WARN("Failed to allocate memory.\n");
++        heap_free(context->properties);
++        return AGS_OUT_OF_MEMORY;
++    }
++
++    for (i = 0; i < context->device_count; ++i)
++    {
++        const VkPhysicalDeviceProperties *vk_properties = &context->properties[i];
++        AGSDeviceInfo *device = &context->devices[i];
++
++        device->adapterString = vk_properties->deviceName;
++        device->vendorId = vk_properties->vendorID;
++        device->deviceId = vk_properties->deviceID;
++
++        if (device->vendorId == 0x1002)
++            device->architectureVersion = ArchitectureVersion_GCN;
++
++        if (!i)
++            device->isPrimaryDevice = 1;
++    }
++
++    return AGS_SUCCESS;
++}
++
++AGSReturnCode WINAPI agsInit(AGSContext **context, const AGSConfiguration *config, AGSGPUInfo *gpu_info)
++{
++    struct AGSContext *object;
++    AGSReturnCode ret;
++
++    TRACE("context %p, config %p, gpu_info %p.\n", context, config, gpu_info);
++
++    if (!context || !gpu_info)
++        return AGS_INVALID_ARGS;
++
++    if (config)
++        FIXME("Ignoring config %p.\n", config);
++
++    if (!(object = heap_alloc(sizeof(*object))))
++        return AGS_OUT_OF_MEMORY;
++
++    if ((ret = init_ags_context(object)) != AGS_SUCCESS)
++    {
++        heap_free(object);
++        return ret;
++    }
++
++    memset(gpu_info, 0, sizeof(*gpu_info));
++    gpu_info->agsVersionMajor = AMD_AGS_VERSION_MAJOR;
++    gpu_info->agsVersionMinor = AMD_AGS_VERSION_MINOR;
++    gpu_info->agsVersionPatch = AMD_AGS_VERSION_PATCH;
++    gpu_info->driverVersion = "18.10.16-180516a-328911C-RadeonSoftwareAdrenalin";
++    gpu_info->radeonSoftwareVersion  = "18.5.1";
++    gpu_info->numDevices = object->device_count;
++    gpu_info->devices = object->devices;
++
++    TRACE("Created context %p.\n", object);
++
++    *context = object;
++
++    return AGS_SUCCESS;
++}
++
++AGSReturnCode WINAPI agsDeInit(AGSContext *context)
++{
++    TRACE("context %p.\n", context);
++
++    if (context)
++    {
++        heap_free(context->properties);
++        heap_free(context->devices);
++        heap_free(context);
++    }
++
++    return AGS_SUCCESS;
++}
++
++BOOL WINAPI DllMain(HINSTANCE instance, DWORD reason, void *reserved)
++{
++    TRACE("%p, %u, %p.\n", instance, reason, reserved);
++
++    switch (reason)
++    {
++        case DLL_PROCESS_ATTACH:
++            DisableThreadLibraryCalls(instance);
++            break;
++    }
++
++    return TRUE;
++}

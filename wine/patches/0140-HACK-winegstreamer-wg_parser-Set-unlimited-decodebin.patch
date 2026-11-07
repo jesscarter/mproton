@@ -1,0 +1,31 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Wed, 15 Jun 2022 19:12:54 +0200
+Subject: [PATCH] HACK: winegstreamer/wg_parser: Set unlimited decodebin
+ buffered size.
+
+Fixes problems with Persona 4 while keeping the memory usage lower.
+
+CW-Bug-Id: #18799
+CW-Bug-Id: #18994
+CW-Bug-Id: #20182
+CW-Bug-Id: #20363
+CW-Bug-Id: #20905
+CW-Bug-Id: #20980
+(cherry picked from commit 2f41a1d0fc35e90e8e814678d5bea2ccece5a991)
+---
+ dlls/winegstreamer/wg_parser.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/dlls/winegstreamer/wg_parser.c b/dlls/winegstreamer/wg_parser.c
+index 5b80960db3e..efce9bf69f4 100644
+--- a/dlls/winegstreamer/wg_parser.c
++++ b/dlls/winegstreamer/wg_parser.c
+@@ -1977,6 +1977,7 @@ static BOOL decodebin_parser_init_gst(struct wg_parser *parser)
+     gst_bin_add(GST_BIN(parser->container), element);
+     parser->decodebin = element;
+ 
++    g_object_set(element, "max-size-bytes", G_MAXUINT, NULL);
+     g_signal_connect(element, "pad-added", G_CALLBACK(pad_added_cb), parser);
+     g_signal_connect(element, "pad-removed", G_CALLBACK(pad_removed_cb), parser);
+     g_signal_connect(element, "autoplug-continue", G_CALLBACK(autoplug_continue_cb), parser);

@@ -1,0 +1,89 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: mproton <mproton@localhost>
+Date: Sat, 7 Nov 2026 02:36:10 +0000
+Subject: [PATCH] amd_ags_x64: Build the unixlib without libdrm_amdgpu.
+
+Proton's amd_ags_x64 unixlib includes <xf86drm.h>, <amdgpu_drm.h> and
+<amdgpu.h> unconditionally, so it does not build where libdrm is missing:
+always on macOS, and on Linux hosts without libdrm-dev. configure already
+checks for both headers (HAVE_XF86DRM_H, HAVE_AMDGPU_DRM_H); use those and
+build stub init/get_device_info entry points otherwise. The PE side then
+treats the unixlib as unavailable, as it already does when init fails.
+
+Also pass DRMAMDGPU_CFLAGS, which holds the libdrm include directory that
+<amdgpu.h> needs.
+
+mproton: darwin build blocker 4 in docs/wine-patch-triage.md.
+---
+ dlls/amd_ags_x64/Makefile.in |  2 +-
+ dlls/amd_ags_x64/unixlib.c   | 22 ++++++++++++++++++++++
+ 2 files changed, 23 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/amd_ags_x64/Makefile.in b/dlls/amd_ags_x64/Makefile.in
+index 8eb4438e912..250e9f91557 100644
+--- a/dlls/amd_ags_x64/Makefile.in
++++ b/dlls/amd_ags_x64/Makefile.in
+@@ -1,6 +1,6 @@
+ MODULE    = amd_ags_x64.dll
+ UNIXLIB   = amd_ags_x64.so
+-UNIX_CFLAGS = $(DRM_CFLAGS)
++UNIX_CFLAGS = $(DRM_CFLAGS) $(DRMAMDGPU_CFLAGS)
+ UNIX_LIBS = $(DRM_LIBS) $(DRMAMDGPU_LIBS)
+ IMPORTS   = version vulkan-1 user32
+ IMPORTLIB = amd_ags_x64
+diff --git a/dlls/amd_ags_x64/unixlib.c b/dlls/amd_ags_x64/unixlib.c
+index d34a162b55c..d0538ba8e1a 100644
+--- a/dlls/amd_ags_x64/unixlib.c
++++ b/dlls/amd_ags_x64/unixlib.c
+@@ -25,15 +25,19 @@
+ #include "config.h"
+ 
+ #include <stdarg.h>
++#include <stdint.h>
+ #include <stdlib.h>
+ #include <dlfcn.h>
+ #include <unistd.h>
+ #include <fcntl.h>
+ #include <errno.h>
+ 
++#if defined(HAVE_XF86DRM_H) && defined(HAVE_AMDGPU_DRM_H)
++#define AGS_HAVE_LIBDRM_AMDGPU
+ #include <xf86drm.h>
+ #include <amdgpu_drm.h>
+ #include <amdgpu.h>
++#endif
+ 
+ #include "ntstatus.h"
+ #define WIN32_NO_STATUS
+@@ -46,6 +50,8 @@
+ 
+ WINE_DEFAULT_DEBUG_CHANNEL(amd_ags);
+ 
++#ifdef AGS_HAVE_LIBDRM_AMDGPU
++
+ #define MAX_DEVICE_COUNT 64
+ 
+ static unsigned int device_count;
+@@ -276,6 +282,22 @@ static NTSTATUS get_device_info( void *args )
+     return STATUS_NOT_FOUND;
+ }
+ 
++#else  /* AGS_HAVE_LIBDRM_AMDGPU */
++
++/* No libdrm_amdgpu (e.g. macOS): the PE side then reports no AMD GPU details. */
++static NTSTATUS init( void *args )
++{
++    WARN( "built without libdrm_amdgpu, no device info available.\n" );
++    return STATUS_NOT_SUPPORTED;
++}
++
++static NTSTATUS get_device_info( void *args )
++{
++    return STATUS_NOT_FOUND;
++}
++
++#endif  /* AGS_HAVE_LIBDRM_AMDGPU */
++
+ const unixlib_entry_t __wine_unix_call_funcs[] =
+ {
+     init,

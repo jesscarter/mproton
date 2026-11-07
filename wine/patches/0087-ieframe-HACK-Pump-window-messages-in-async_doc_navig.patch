@@ -1,0 +1,56 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Thu, 19 Dec 2024 14:26:43 -0600
+Subject: [PATCH] ieframe: HACK: Pump window messages in async_doc_navigate()
+ for Marvel Rivals.
+
+CW-Bug-Id: #24590
+(cherry picked from commit 5aad251c8168190150171b9b43f4e846060acc19)
+---
+ dlls/ieframe/navigate.c | 26 ++++++++++++++++++++++++++
+ 1 file changed, 26 insertions(+)
+
+diff --git a/dlls/ieframe/navigate.c b/dlls/ieframe/navigate.c
+index c6a4a9196f5..0d7cf61fe30 100644
+--- a/dlls/ieframe/navigate.c
++++ b/dlls/ieframe/navigate.c
+@@ -852,6 +852,31 @@ static void doc_navigate_proc(DocHost *This, task_header_t *t)
+     }
+ }
+ 
++static void hack_pump_messages(void)
++{
++    static int enabled = -1;
++    MSG msg;
++
++    if (enabled == -1)
++    {
++        const char *sgi = getenv("SteamGameId");
++
++        enabled = sgi && !strcmp(sgi, "2767030");
++        if (enabled)
++            ERR("HACK: injecting PeekMessage loop in async_doc_navigate.\n");
++    }
++
++    if (!enabled)
++        return;
++
++    while (PeekMessageW(&msg, NULL, 0, 0, PM_REMOVE))
++    {
++        TRACE("dispatching.\n");
++        DispatchMessageW(&msg);
++    }
++    TRACE("no more messages.\n");
++}
++
+ static HRESULT async_doc_navigate(DocHost *This, LPCWSTR url, LPCWSTR headers, PBYTE post_data, ULONG post_data_size,
+         BOOL async_notif)
+ {
+@@ -900,6 +925,7 @@ static HRESULT async_doc_navigate(DocHost *This, LPCWSTR url, LPCWSTR headers, P
+ 
+     task->async_notif = async_notif;
+     abort_dochost_tasks(This, doc_navigate_proc);
++    hack_pump_messages();
+     push_dochost_task(This, &task->header, doc_navigate_proc, doc_navigate_task_destr, FALSE);
+     return S_OK;
+ }

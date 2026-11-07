@@ -1,0 +1,43 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Thu, 20 Feb 2025 15:09:01 +0100
+Subject: [PATCH] HACK: winegstreamer/video_decoder: Fake decoder input format
+ for KiriKiri games.
+
+CW-Bug-Id: #21303
+CW-Bug-Id: #21304
+CW-Bug-Id: #23630
+CW-Bug-Id: #24374
+CW-Bug-Id: #24857
+(cherry picked from commit 6eaebe89fff740839679842d009cfabdb4769c06)
+---
+ dlls/winegstreamer/video_decoder.c | 16 ++++++++++++++++
+ 1 file changed, 16 insertions(+)
+
+diff --git a/dlls/winegstreamer/video_decoder.c b/dlls/winegstreamer/video_decoder.c
+index f0734a7e04d..29d0e218e16 100644
+--- a/dlls/winegstreamer/video_decoder.c
++++ b/dlls/winegstreamer/video_decoder.c
+@@ -1266,6 +1266,22 @@ static HRESULT WINAPI media_object_SetInputType(IMediaObject *iface, DWORD index
+         decoder->wg_transform = 0;
+     }
+ 
++{
++    const char *sgi = getenv("SteamGameId");
++    if (sgi && (0
++        || !strcmp(sgi, "802870")
++        || !strcmp(sgi, "1083650")
++        || !strcmp(sgi, "1097880")
++        || !strcmp(sgi, "1230140")
++        || !strcmp(sgi, "2515070")
++    ))
++    {
++        VIDEOINFOHEADER *vih = (VIDEOINFOHEADER *)decoder->dmo_input_type.pbFormat;
++        decoder->dmo_input_type.subtype = MFVideoFormat_RGB24;
++        vih->bmiHeader.biCompression = BI_RGB;
++    }
++}
++
+     return S_OK;
+ }
+ 

@@ -1,0 +1,36 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Wed, 4 Feb 2026 11:18:43 +0100
+Subject: [PATCH] qasf/dmowrapper: Break from process_output loop when no
+ samples are available.
+
+CW-Bug-Id: #26515
+(cherry picked from commit b655bd02c026d259b28503a58ff5180befba9d8b)
+---
+ dlls/qasf/dmowrapper.c | 7 +++----
+ 1 file changed, 3 insertions(+), 4 deletions(-)
+
+diff --git a/dlls/qasf/dmowrapper.c b/dlls/qasf/dmowrapper.c
+index ef6409181ed..ab7b2e85ef7 100644
+--- a/dlls/qasf/dmowrapper.c
++++ b/dlls/qasf/dmowrapper.c
+@@ -276,16 +276,15 @@ static HRESULT process_output(struct dmo_wrapper *filter, IMediaObject *dmo)
+ 
+     do
+     {
+-        HRESULT process_hr;
+         more_data = FALSE;
+ 
+         if (FAILED(hr = get_output_samples(filter, dmo)))
+             return hr;
+ 
+-        process_hr = IMediaObject_ProcessOutput(dmo, DMO_PROCESS_OUTPUT_DISCARD_WHEN_NO_BUFFER,
++        hr = IMediaObject_ProcessOutput(dmo, DMO_PROCESS_OUTPUT_DISCARD_WHEN_NO_BUFFER,
+                 filter->source_count, buffers, &status);
+-        TRACE("ProcessOutput() returned %#lx.\n", process_hr);
+-        if (FAILED(process_hr))
++        TRACE("ProcessOutput() returned %#lx.\n", hr);
++        if (hr != S_OK)
+         {
+             release_output_samples(filter);
+             break;

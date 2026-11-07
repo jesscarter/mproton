@@ -1,0 +1,74 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Tue, 14 Jan 2025 11:44:00 +0100
+Subject: [PATCH] HACK: mfplat: Use the MP4 bytestream handler as a fallback.
+
+Instead of falling back directly to GStreamer media source, giving a
+chance to winedmo.
+
+This fixes Twisted Sails video playback, as it plays a MP4 file with
+a ".resource" extension, no MIME type, and doesn't set the
+MF_RESOLUTION_CONTENT_DOES_NOT_HAVE_TO_MATCH_EXTENSION_OR_MIME_TYPE
+flag on resolver creation.
+
+This is a hack as it probably is something wrong with the resolver
+creation, which should likely find the MP4 bytestream handler on its
+own, even if that flag isn't set, but it will also make sure the MF
+pipelines are used all the time as default, similar to Proton 9 NMS.
+
+CW-Bug-Id: #24673
+(cherry picked from commit 7b6ca28ab60aef0103df7fbfa593efd64062c53d)
+---
+ dlls/mfplat/main.c | 12 +++++++-----
+ 1 file changed, 7 insertions(+), 5 deletions(-)
+
+diff --git a/dlls/mfplat/main.c b/dlls/mfplat/main.c
+index e60063f7577..d1e3cbae5a5 100644
+--- a/dlls/mfplat/main.c
++++ b/dlls/mfplat/main.c
+@@ -43,6 +43,7 @@
+ #include "strsafe.h"
+ #undef INITGUID
+ #include "evr.h"
++#include "wine/mfinternal.h"
+ /* mfd3d12 guids are not included in mfuuid */
+ #define INITGUID
+ #undef EXTERN_GUID
+@@ -6289,10 +6290,9 @@ static HRESULT resolver_get_bytestream_url_hint(IMFByteStream *stream, WCHAR con
+     return S_OK;
+ }
+ 
+-static HRESULT resolver_create_gstreamer_handler(IMFByteStreamHandler **handler)
++static HRESULT resolver_create_default_handler(IMFByteStreamHandler **handler)
+ {
+-    static const GUID CLSID_GStreamerByteStreamHandler = {0x317df618, 0x5e5a, 0x468a, {0x9f, 0x15, 0xd8, 0x27, 0xa9, 0xa0, 0x81, 0x62}};
+-    return CoCreateInstance(&CLSID_GStreamerByteStreamHandler, NULL, CLSCTX_INPROC_SERVER, &IID_IMFByteStreamHandler, (void **)handler);
++    return CoCreateInstance(&CLSID_MPEG4ByteStreamHandlerPlugin, NULL, CLSCTX_INPROC_SERVER, &IID_IMFByteStreamHandler, (void **)handler);
+ }
+ 
+ static HRESULT resolver_get_bytestream_handler(IMFByteStream *stream, const WCHAR *url, DWORD flags,
+@@ -6328,12 +6328,14 @@ static HRESULT resolver_get_bytestream_handler(IMFByteStream *stream, const WCHA
+        this handler for all possible types.
+      */
+ 
++    TRACE( "url_ext %s mimeW %s\n", debugstr_w(url_ext), debugstr_w(mimeW) );
++
+     if (url_ext || mimeW)
+     {
+         hr = resolver_create_bytestream_handler(stream, flags, mimeW, url_ext, handler);
+ 
+         if (FAILED(hr))
+-            hr = resolver_create_gstreamer_handler(handler);
++            hr = resolver_create_default_handler(handler);
+     }
+ 
+     CoTaskMemFree(mimeW);
+@@ -6351,7 +6353,7 @@ static HRESULT resolver_get_bytestream_handler(IMFByteStream *stream, const WCHA
+     hr = resolver_create_bytestream_handler(stream, flags, NULL, url_ext, handler);
+ 
+     if (FAILED(hr))
+-        hr = resolver_create_gstreamer_handler(handler);
++        hr = resolver_create_default_handler(handler);
+ 
+     return hr;
+ }

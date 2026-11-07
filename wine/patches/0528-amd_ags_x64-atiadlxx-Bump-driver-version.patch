@@ -1,0 +1,49 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Mon, 14 Aug 2023 16:41:03 -0600
+Subject: [PATCH] amd_ags_x64, atiadlxx: Bump driver version.
+
+(cherry picked from commit e03fcc04200403429e493944a88dc35707177fb9)
+---
+ dlls/amd_ags_x64/amd_ags_x64_main.c | 4 ++--
+ dlls/atiadlxx/atiadlxx_main.c       | 6 +++---
+ 2 files changed, 5 insertions(+), 5 deletions(-)
+
+diff --git a/dlls/amd_ags_x64/amd_ags_x64_main.c b/dlls/amd_ags_x64/amd_ags_x64_main.c
+index 0736a2ea16b..d3595f23164 100644
+--- a/dlls/amd_ags_x64/amd_ags_x64_main.c
++++ b/dlls/amd_ags_x64/amd_ags_x64_main.c
+@@ -31,8 +31,8 @@ WINE_DEFAULT_DEBUG_CHANNEL(amd_ags);
+ #define heap_calloc calloc
+ #define heap_free free
+ 
+-static const char driver_version[] = "23.10.01.45-230626a-393367C-AMD-Software-Adrenalin-Edition";
+-static const char radeon_version[] = "23.7.1";
++static const char driver_version[] = "23.10.23.02-230720a-394204C-AMD-Software-Adrenalin-Edition";
++static const char radeon_version[] = "23.8.1";
+ 
+ enum amd_ags_version
+ {
+diff --git a/dlls/atiadlxx/atiadlxx_main.c b/dlls/atiadlxx/atiadlxx_main.c
+index 7104bcfa723..8c52dbdc601 100644
+--- a/dlls/atiadlxx/atiadlxx_main.c
++++ b/dlls/atiadlxx/atiadlxx_main.c
+@@ -172,15 +172,15 @@ typedef struct ADLDisplayMap
+ } ADLDisplayMap, *LPADLDisplayMap;
+ 
+ static const ADLVersionsInfo version = {
+-    "23.10.01.45-230626a-393367C-AMD-Software-Adrenalin-Edition",
++    "23.10.23.02-230720a-394204C-AMD-Software-Adrenalin-Edition",
+     "",
+     "http://support.amd.com/drivers/xml/driver_09_us.xml",
+ };
+ 
+ static const ADLVersionsInfoX2 version2 = {
+-    "23.10.01.45-230626a-393367C-AMD-Software-Adrenalin-Edition",
++    "23.10.23.02-230720a-394204C-AMD-Software-Adrenalin-Edition",
+     "",
+-    "23.7.1",
++    "23.8.1",
+     "http://support.amd.com/drivers/xml/driver_09_us.xml",
+ };
+ 

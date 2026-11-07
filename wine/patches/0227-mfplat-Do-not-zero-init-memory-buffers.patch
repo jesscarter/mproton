@@ -1,0 +1,26 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Conor McCarthy <cmccarthy@codeweavers.com>
+Date: Tue, 4 Mar 2025 17:39:20 +1000
+Subject: [PATCH] mfplat: Do not zero-init memory buffers.
+
+This takes significant time for videos with a large frame size, which
+can delay audio sampling enough to cause samples to be dropped.
+
+CW-Bug-Id: #24914
+(cherry picked from commit 850085cb5e010a041307a7b1c3b0aeded1ed3447)
+---
+ dlls/mfplat/buffer.c | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/dlls/mfplat/buffer.c b/dlls/mfplat/buffer.c
+index 5d52dca51fe..39d482f3211 100644
+--- a/dlls/mfplat/buffer.c
++++ b/dlls/mfplat/buffer.c
+@@ -1821,7 +1821,6 @@ static HRESULT memory_buffer_init(struct buffer *buffer, DWORD max_length, DWORD
+ 
+     if (!(buffer->data = _aligned_malloc(max_length, alignment)))
+         return E_OUTOFMEMORY;
+-    memset(buffer->data, 0, max_length);
+ 
+     buffer->IMFMediaBuffer_iface.lpVtbl = vtbl;
+     buffer->refcount = 1;

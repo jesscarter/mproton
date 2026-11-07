@@ -1,0 +1,25 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arkadiusz Hiler <ahiler@codeweavers.com>
+Date: Thu, 23 Nov 2023 10:25:57 +0200
+Subject: [PATCH] winegstreamer: Support WMA with 5.1 and 7.1 audio.
+
+(cherry picked from commit 6cf46bddf4dccc9a1f989368688d789940aceee4)
+---
+ dlls/winegstreamer/mfplat.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/dlls/winegstreamer/mfplat.c b/dlls/winegstreamer/mfplat.c
+index 65a1079155e..094e19d2c75 100644
+--- a/dlls/winegstreamer/mfplat.c
++++ b/dlls/winegstreamer/mfplat.c
+@@ -490,6 +490,10 @@ static void mf_media_type_to_wg_format_audio(IMFMediaType *type, const GUID *sub
+             channel_mask = KSAUDIO_SPEAKER_MONO;
+         else if (channels == 2)
+             channel_mask = KSAUDIO_SPEAKER_STEREO;
++        else if (channels == 6)
++            channel_mask = KSAUDIO_SPEAKER_5POINT1;
++        else if (channels == 8)
++            channel_mask = KSAUDIO_SPEAKER_7POINT1;
+         else
+         {
+             FIXME("Channel mask is not set.\n");

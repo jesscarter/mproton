@@ -1,0 +1,269 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Bernhard=20K=C3=B6lbl?= <besentv@gmail.com>
+Date: Mon, 13 Feb 2023 00:17:50 +0100
+Subject: [PATCH] windows.media.speech: Add unixlib stub.
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Signed-off-by: Bernhard Kölbl <besentv@gmail.com>
+CW-Bug-Id: #20134
+(cherry picked from commit 3f902eff049665e89cff023f0f6d611f630ecb10)
+---
+ dlls/windows.media.speech/Makefile.in |   2 +
+ dlls/windows.media.speech/main.c      |  26 ++++++
+ dlls/windows.media.speech/private.h   |   4 +
+ dlls/windows.media.speech/unixlib.c   | 125 ++++++++++++++++++++++++++
+ dlls/windows.media.speech/unixlib.h   |  39 ++++++++
+ 5 files changed, 196 insertions(+)
+ create mode 100644 dlls/windows.media.speech/unixlib.c
+ create mode 100644 dlls/windows.media.speech/unixlib.h
+
+diff --git a/dlls/windows.media.speech/Makefile.in b/dlls/windows.media.speech/Makefile.in
+index e21fc2162c2..52e82c79006 100644
+--- a/dlls/windows.media.speech/Makefile.in
++++ b/dlls/windows.media.speech/Makefile.in
+@@ -1,4 +1,5 @@
+ MODULE = windows.media.speech.dll
++UNIXLIB = windows.media.speech.so
+ IMPORTS = combase uuid
+ 
+ SOURCES = \
+@@ -10,4 +11,5 @@ SOURCES = \
+ 	main.c \
+ 	recognizer.c \
+ 	synthesizer.c \
++	unixlib.c \
+ 	vector.c
+diff --git a/dlls/windows.media.speech/main.c b/dlls/windows.media.speech/main.c
+index e772a791588..d53e1599eb8 100644
+--- a/dlls/windows.media.speech/main.c
++++ b/dlls/windows.media.speech/main.c
+@@ -20,10 +20,36 @@
+ #include "initguid.h"
+ #include "private.h"
+ 
++#include "unixlib.h"
++
+ #include "wine/debug.h"
+ 
+ WINE_DEFAULT_DEBUG_CHANNEL(speech);
+ 
++BOOL WINAPI DllMain( HINSTANCE instance, DWORD reason, void *reserved )
++{
++    NTSTATUS status;
++
++    switch (reason)
++    {
++    case DLL_PROCESS_ATTACH:
++        DisableThreadLibraryCalls(instance);
++
++        if ((status = __wine_init_unix_call()))
++            ERR("loading the unixlib failed with status %#lx.\n", status);
++
++        if ((status = WINE_UNIX_CALL(unix_process_attach, NULL)))
++            WARN("initializing the unixlib failed with status %#lx.\n", status);
++
++        break;
++    case DLL_PROCESS_DETACH:
++        WINE_UNIX_CALL(unix_process_detach, NULL);
++        break;
++    }
++
++    return TRUE;
++}
++
+ HRESULT WINAPI DllGetClassObject(REFCLSID clsid, REFIID riid, void **out)
+ {
+     FIXME("clsid %s, riid %s, out %p stub!\n", debugstr_guid(clsid), debugstr_guid(riid), out);
+diff --git a/dlls/windows.media.speech/private.h b/dlls/windows.media.speech/private.h
+index e7921370f11..e645e6e3428 100644
+--- a/dlls/windows.media.speech/private.h
++++ b/dlls/windows.media.speech/private.h
+@@ -22,6 +22,10 @@
+ 
+ #include <stdarg.h>
+ 
++#include "ntstatus.h"
++#define WIN32_NO_STATUS
++#include "winerror.h"
++#include "winternl.h"
+ #define COBJMACROS
+ #include "corerror.h"
+ #include "windef.h"
+diff --git a/dlls/windows.media.speech/unixlib.c b/dlls/windows.media.speech/unixlib.c
+new file mode 100644
+index 00000000000..6a9dac6f067
+--- /dev/null
++++ b/dlls/windows.media.speech/unixlib.c
+@@ -0,0 +1,125 @@
++/*
++ * Unixlib for Windows.Media.Speech
++ *
++ * Copyright 2023 Bernhard Kölbl for CodeWeavers
++ *
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation; either
++ * version 2.1 of the License, or (at your option) any later version.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with this library; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
++ */
++
++#if 0
++#pragma makedep unix
++#endif
++
++#include "config.h"
++
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++#include <stdarg.h>
++#include <dlfcn.h>
++
++#ifdef SONAME_LIBVOSK
++#pragma GCC diagnostic push
++#pragma GCC diagnostic ignored "-Wstrict-prototypes"
++#include <vosk_api.h>
++#pragma GCC diagnostic pop
++#endif
++
++#include "ntstatus.h"
++#define WIN32_NO_STATUS
++#include "winerror.h"
++#include "winternl.h"
++
++#include "wine/debug.h"
++
++#include "unixlib.h"
++
++WINE_DEFAULT_DEBUG_CHANNEL(speech);
++#ifdef SONAME_LIBVOSK
++WINE_DECLARE_DEBUG_CHANNEL(winediag);
++
++static void *vosk_handle;
++#define MAKE_FUNCPTR( f ) static typeof(f) * p_##f
++MAKE_FUNCPTR(vosk_model_new);
++MAKE_FUNCPTR(vosk_model_free);
++MAKE_FUNCPTR(vosk_recognizer_new);
++MAKE_FUNCPTR(vosk_recognizer_free);
++#undef MAKE_FUNCPTR
++
++static NTSTATUS process_attach( void *args )
++{
++    if (!(vosk_handle = dlopen(SONAME_LIBVOSK, RTLD_NOW)))
++    {
++        ERR_(winediag)("Wine is unable to load the Unix side dependencies for speech recognition. "
++                       "Make sure Vosk is installed and up to date on your system and try again.\n");
++        return STATUS_DLL_NOT_FOUND;
++    }
++
++#define LOAD_FUNCPTR( f ) \
++    if (!(p_##f = dlsym(vosk_handle, #f))) \
++    { \
++        ERR("failed to load %s\n", #f); \
++        goto error; \
++    }
++    LOAD_FUNCPTR(vosk_model_new)
++    LOAD_FUNCPTR(vosk_model_free)
++    LOAD_FUNCPTR(vosk_recognizer_new)
++    LOAD_FUNCPTR(vosk_recognizer_free)
++#undef LOAD_FUNCPTR
++
++    return STATUS_SUCCESS;
++
++error:
++    dlclose(vosk_handle);
++    vosk_handle = NULL;
++    return STATUS_DLL_NOT_FOUND;
++}
++
++static NTSTATUS process_detach( void *args )
++{
++    if (vosk_handle)
++    {
++        dlclose(vosk_handle);
++        vosk_handle = NULL;
++    }
++    return STATUS_SUCCESS;
++}
++
++#else /* SONAME_LIBVOSK */
++
++#define MAKE_UNSUPPORTED_FUNC( f ) \
++    static NTSTATUS f( void *args ) \
++    { \
++        ERR("wine was compiled without Vosk support. Speech recognition won't work.\n"); \
++        return STATUS_NOT_SUPPORTED; \
++    }
++
++MAKE_UNSUPPORTED_FUNC(process_attach)
++MAKE_UNSUPPORTED_FUNC(process_detach)
++#undef MAKE_UNSUPPORTED_FUNC
++
++#endif /* SONAME_LIBVOSK */
++
++const unixlib_entry_t __wine_unix_call_funcs[] =
++{
++    process_attach,
++    process_detach,
++};
++
++const unixlib_entry_t __wine_unix_call_wow64_funcs[] =
++{
++    process_attach,
++    process_detach,
++};
+diff --git a/dlls/windows.media.speech/unixlib.h b/dlls/windows.media.speech/unixlib.h
+new file mode 100644
+index 00000000000..6c337e54511
+--- /dev/null
++++ b/dlls/windows.media.speech/unixlib.h
+@@ -0,0 +1,39 @@
++/*
++ * Unix library interface for Windows.Media.Speech
++ *
++ * Copyright 2023 Bernhard Kölbl for CodeWeavers
++ *
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation; either
++ * version 2.1 of the License, or (at your option) any later version.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with this library; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
++ */
++
++#ifndef __WINE_WINDOWS_MEDIA_SPEECH_UNIXLIB_H
++#define __WINE_WINDOWS_MEDIA_SPEECH_UNIXLIB_H
++
++#include <stdbool.h>
++#include <stdint.h>
++
++#include "windef.h"
++#include "winternl.h"
++#include "wtypes.h"
++
++#include "wine/unixlib.h"
++
++enum unix_funcs
++{
++    unix_process_attach,
++    unix_process_detach,
++};
++
++#endif

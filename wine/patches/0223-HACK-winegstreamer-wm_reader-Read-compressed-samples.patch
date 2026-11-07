@@ -1,0 +1,37 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Thu, 20 Feb 2025 14:45:13 +0100
+Subject: [PATCH] HACK: winegstreamer/wm_reader: Read compressed samples for
+ KiriKiri games.
+
+CW-Bug-Id: #21303
+CW-Bug-Id: #21304
+CW-Bug-Id: #23630
+CW-Bug-Id: #24374
+CW-Bug-Id: #24857
+(cherry picked from commit c3247633479ee5f69de3825364dbd1745b8a76f1)
+---
+ dlls/winegstreamer/wm_reader.c | 10 +++++++++-
+ 1 file changed, 9 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/winegstreamer/wm_reader.c b/dlls/winegstreamer/wm_reader.c
+index ead67dd78ea..d8d95fa36da 100644
+--- a/dlls/winegstreamer/wm_reader.c
++++ b/dlls/winegstreamer/wm_reader.c
+@@ -2607,7 +2607,15 @@ static HRESULT WINAPI reader_SetReadStreamSamples(IWMSyncReader2 *iface, WORD st
+ 
+     {
+         const char *sgi = getenv("SteamGameId");
+-        if (sgi && !strcmp(sgi, "638160")) compressed = FALSE;
++        if (sgi && (0
++            || !strcmp(sgi, "638160")
++            || !strcmp(sgi, "802870")
++            || !strcmp(sgi, "1083650")
++            || !strcmp(sgi, "1097880")
++            || !strcmp(sgi, "1230140")
++            || !strcmp(sgi, "2515070")
++            ))
++            compressed = FALSE;
+     }
+ 
+     if (stream->demux_compressed != compressed)

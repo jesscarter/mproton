@@ -1,0 +1,186 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Joshua Ashton <joshua@froggi.es>
+Date: Sat, 26 Aug 2023 15:02:15 +0100
+Subject: [PATCH] amd_ags_x64: Implement agsSetDisplayMode
+
+Gets HDR working with Elden Ring.
+
+With minor changes by Paul Gofman:
+ - update for prior changes (create dxgi factory when needed);
+ - still return success if anything goes wrong with getting dxgi custom
+   interface;
+ - add a trace with chromacity;
+ - remove '!' in trace messages.
+
+CW-Bug-Id: #22677
+(cherry picked from commit d35ce0342713d9a47fddd4baeede404fbcc6ef53)
+---
+ dlls/amd_ags_x64/amd_ags_x64_main.c  | 97 +++++++++++++++++++++++++++-
+ dlls/amd_ags_x64/dxvk_interfaces.idl | 35 ++++++++++
+ 2 files changed, 130 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/amd_ags_x64/amd_ags_x64_main.c b/dlls/amd_ags_x64/amd_ags_x64_main.c
+index 57b2e7421ec..cd38e55a1cd 100644
+--- a/dlls/amd_ags_x64/amd_ags_x64_main.c
++++ b/dlls/amd_ags_x64/amd_ags_x64_main.c
+@@ -782,15 +782,108 @@ AGSReturnCode WINAPI agsDeInitialize(AGSContext *context)
+     return AGS_SUCCESS;
+ }
+ 
++static DXGI_COLOR_SPACE_TYPE convert_ags_colorspace_506(AGSDisplaySettings_Mode_506 mode)
++{
++    switch (mode)
++    {
++        default:
++            ERR("Unknown color space in AGS: %d.\n", mode);
++        /* fallthrough */
++        case Mode_506_SDR:
++            TRACE("Setting Mode_506_SDR.\n");
++            return DXGI_COLOR_SPACE_RGB_FULL_G22_NONE_P709;
++        case Mode_506_PQ:
++            TRACE("Setting Mode_506_PQ.\n");
++            return DXGI_COLOR_SPACE_RGB_FULL_G2084_NONE_P2020;
++        case Mode_506_scRGB:
++            TRACE("Setting Mode_506_scRGB.\n");
++            return DXGI_COLOR_SPACE_RGB_FULL_G10_NONE_P709;
++    }
++}
++
++static DXGI_COLOR_SPACE_TYPE convert_ags_colorspace_600(AGSDisplaySettings_Mode_600 mode)
++{
++    switch (mode)
++    {
++        default:
++            ERR("Unknown color space in AGS: %d\n", mode);
++        /* fallthrough */
++        case Mode_600_SDR:
++            TRACE("Setting Mode_600_SDR.\n");
++            return DXGI_COLOR_SPACE_RGB_FULL_G22_NONE_P709;
++        case Mode_600_HDR10_PQ:
++            TRACE("Setting Mode_600_HDR10_PQ.\n");
++            return DXGI_COLOR_SPACE_RGB_FULL_G2084_NONE_P2020;
++        case Mode_600_HDR10_scRGB:
++            TRACE("Setting Mode_600_HDR10_scRGB.\n");
++            return DXGI_COLOR_SPACE_RGB_FULL_G10_NONE_P709;
++    }
++}
++
++static DXGI_HDR_METADATA_HDR10 convert_ags_metadata(const AGSDisplaySettings_600 *settings)
++{
++    DXGI_HDR_METADATA_HDR10 metadata;
++    metadata.RedPrimary[0] = settings->chromaticityRedX * 50000;
++    metadata.RedPrimary[1] = settings->chromaticityRedY * 50000;
++    metadata.GreenPrimary[0] = settings->chromaticityGreenX * 50000;
++    metadata.GreenPrimary[1] = settings->chromaticityGreenY * 50000;
++    metadata.BluePrimary[0] = settings->chromaticityBlueX * 50000;
++    metadata.BluePrimary[1] = settings->chromaticityBlueY * 50000;
++    metadata.WhitePoint[0] = settings->chromaticityWhitePointX * 50000;
++    metadata.WhitePoint[1] = settings->chromaticityWhitePointY * 50000;
++    metadata.MaxMasteringLuminance = settings->maxLuminance;
++    metadata.MinMasteringLuminance = settings->minLuminance / 0.0001f;
++    metadata.MaxContentLightLevel = settings->maxContentLightLevel;
++    metadata.MaxFrameAverageLightLevel = settings->maxFrameAverageLightLevel;
++    return metadata;
++}
++
+ AGSReturnCode WINAPI agsSetDisplayMode(AGSContext *context, int device_index, int display_index, const AGSDisplaySettings *settings)
+ {
+-    FIXME("context %p device_index %d display_index %d settings %p stub!\n", context, device_index,
++    const AGSDisplaySettings_506 *settings506 = &settings->agsDisplaySettings506;
++    const AGSDisplaySettings_600 *settings600 = &settings->agsDisplaySettings600;
++    IDXGIVkInteropFactory1 *dxgi_interop = NULL;
++    DXGI_COLOR_SPACE_TYPE colorspace;
++    DXGI_HDR_METADATA_HDR10 metadata;
++    AGSReturnCode ret = AGS_SUCCESS;
++    IDXGIFactory1 *dxgi_factory;
++    HMODULE hdxgi;
++
++    TRACE("context %p device_index %d display_index %d settings %p\n", context, device_index,
+           display_index, settings);
+ 
+     if (!context)
+         return AGS_INVALID_ARGS;
+ 
+-    return AGS_SUCCESS;
++    create_dxgi_factory(&hdxgi, &dxgi_factory);
++    if (!dxgi_factory)
++        goto done;
++
++    if (FAILED(IDXGIFactory1_QueryInterface(dxgi_factory, &IID_IDXGIVkInteropFactory1, (void**)&dxgi_interop)))
++    {
++        WARN("Failed to get IDXGIVkInteropFactory1.\n");
++        goto done;
++    }
++
++    colorspace = context->version < AMD_AGS_VERSION_5_1_1
++        ? convert_ags_colorspace_506(settings506->mode)
++        : convert_ags_colorspace_600(settings600->mode);
++    /* Settings 506, 511 and 600 are identical aside from enum order + use
++     * of bitfield flags we do not use. */
++    metadata = convert_ags_metadata(settings600);
++
++    TRACE("chromacity: (%.6lf, %.6lf) (%.6lf, %.6lf) (%.6lf, %.6lf).\n", settings600->chromaticityRedX,
++            settings600->chromaticityRedY, settings600->chromaticityGreenX, settings600->chromaticityGreenY,
++            settings600->chromaticityBlueX, settings600->chromaticityBlueY);
++
++    if (FAILED(IDXGIVkInteropFactory1_SetGlobalHDRState(dxgi_interop, colorspace, &metadata)))
++        ret = AGS_DX_FAILURE;
++
++done:
++    if (dxgi_interop)
++        IDXGIVkInteropFactory1_Release(dxgi_interop);
++    release_dxgi_factory(hdxgi, dxgi_factory);
++    return ret;
+ }
+ 
+ AGSReturnCode WINAPI agsGetCrossfireGPUCount(AGSContext *context, int *gpu_count)
+diff --git a/dlls/amd_ags_x64/dxvk_interfaces.idl b/dlls/amd_ags_x64/dxvk_interfaces.idl
+index c632d926fb2..110cdb94896 100644
+--- a/dlls/amd_ags_x64/dxvk_interfaces.idl
++++ b/dlls/amd_ags_x64/dxvk_interfaces.idl
+@@ -17,6 +17,11 @@
+  */
+ 
+ import "d3d11.idl";
++import "dxgi1_6.idl";
++
++typedef struct VkInstance_T *VkInstance;
++typedef void (__stdcall *PFN_vkVoidFunction)(void);
++typedef PFN_vkVoidFunction (__stdcall *PFN_vkGetInstanceProcAddr)(VkInstance instance, const char* pName);
+ 
+ typedef enum D3D11_VK_EXTENSION
+ {
+@@ -114,3 +119,33 @@ interface ID3D11VkExtContext1 : ID3D11VkExtContext
+             [in] const void *params, [in] UINT32 param_size, [in] void * const *read_resources,
+             [in] UINT32 read_resource_count, [in] void* const *write_resources, [in] UINT32 write_resources_count);
+ }
++
++[
++    object,
++    uuid(4c5e1b0d-b0c8-4131-bfd8-9b2476f7f408),
++    local,
++    pointer_default(unique)
++]
++interface IDXGIVkInteropFactory : IUnknown
++{
++    void GetVulkanInstance(
++          [out] VkInstance *pInstance,
++          [out] PFN_vkGetInstanceProcAddr *ppfnVkGetInstanceProcAddr);
++}
++
++[
++    object,
++    uuid(2a289dbd-2d0a-4a51-89f7-f2adce465cd6),
++    local,
++    pointer_default(unique)
++]
++interface IDXGIVkInteropFactory1 : IDXGIVkInteropFactory
++{
++  HRESULT GetGlobalHDRState(
++          [out] DXGI_COLOR_SPACE_TYPE   *pOutColorSpace,
++          [out] DXGI_HDR_METADATA_HDR10 *ppOutMetadata) = 0;
++
++  HRESULT SetGlobalHDRState(
++          [in] DXGI_COLOR_SPACE_TYPE    ColorSpace,
++    [in] const DXGI_HDR_METADATA_HDR10 *pMetadata) = 0;
++}

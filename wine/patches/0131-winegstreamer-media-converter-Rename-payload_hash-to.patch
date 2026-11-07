@@ -1,0 +1,433 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Thu, 5 Dec 2024 10:54:15 +0100
+Subject: [PATCH] winegstreamer/media-converter: Rename payload_hash to
+ fozdb_hash.
+
+(cherry picked from commit 4404a889d18c9d899eeb716b50f50b97abd474ee)
+---
+ .../winegstreamer/media-converter/audioconv.c | 24 +++++++-------
+ .../winegstreamer/media-converter/fossilize.c | 32 +++++++++----------
+ .../media-converter/media-converter.h         | 25 +++++++++------
+ .../winegstreamer/media-converter/videoconv.c | 28 ++++++++--------
+ 4 files changed, 58 insertions(+), 51 deletions(-)
+
+diff --git a/dlls/winegstreamer/media-converter/audioconv.c b/dlls/winegstreamer/media-converter/audioconv.c
+index 462cec16a8a..5acce9a7915 100644
+--- a/dlls/winegstreamer/media-converter/audioconv.c
++++ b/dlls/winegstreamer/media-converter/audioconv.c
+@@ -162,7 +162,7 @@ typedef enum
+ 
+ struct buffer_entry
+ {
+-    struct payload_hash hash;
++    struct fozdb_hash hash;
+     GstBuffer *buffer;
+ };
+ 
+@@ -182,7 +182,7 @@ struct need_transcode_head
+ struct stream_state
+ {
+     struct murmur3_128_state hash_state;
+-    struct payload_hash current_hash;
++    struct fozdb_hash current_hash;
+     GList *buffers;      /* Entry type: struct buffer_entry. */
+     GList *loop_buffers; /* Entry type: struct buffer_entry. */
+     struct need_transcode_head *codec_info;
+@@ -235,7 +235,7 @@ static GstStaticPadTemplate audio_conv_src_template = GST_STATIC_PAD_TEMPLATE("s
+ 
+ static struct dump_fozdb dump_fozdb = {PTHREAD_MUTEX_INITIALIZER, NULL, false};
+ 
+-static struct buffer_entry *buffer_entry_create(struct payload_hash *hash, GstBuffer *buffer)
++static struct buffer_entry *buffer_entry_create(struct fozdb_hash *hash, GstBuffer *buffer)
+ {
+     struct buffer_entry *entry = calloc(1, sizeof(*entry));
+     entry->hash = *hash;
+@@ -255,7 +255,7 @@ static bool dumping_disabled(void)
+     return option_enabled("MEDIACONV_AUDIO_DONT_DUMP");
+ }
+ 
+-static bool hash_data(const uint8_t *data, size_t size, struct murmur3_128_state *hash_state, struct payload_hash *hash)
++static bool hash_data(const uint8_t *data, size_t size, struct murmur3_128_state *hash_state, struct fozdb_hash *hash)
+ {
+     struct bytes_reader reader;
+     bytes_reader_init(&reader, data, size);
+@@ -270,7 +270,7 @@ static int dump_fozdb_open_audio(bool create)
+ static void dump_fozdb_discard_transcoded(void)
+ {
+     GList *chunks_to_discard = NULL, *chunks_to_keep = NULL, *chunks = NULL, *list_iter;
+-    struct payload_hash chunk_id, *stream_id;
++    struct fozdb_hash chunk_id, *stream_id;
+     struct fozdb *read_fozdb;
+     char *read_fozdb_path;
+     GHashTableIter iter;
+@@ -317,7 +317,7 @@ static void dump_fozdb_discard_transcoded(void)
+ 
+                 for (i = 0; i < read_size / sizeof(chunk_id); ++i)
+                 {
+-                    payload_hash_from_bytes(&chunk_id, buffer + i * sizeof(chunk_id));
++                    fozdb_hash_from_bytes(&chunk_id, buffer + i * sizeof(chunk_id));
+                     if (!fozdb_has_entry(read_fozdb, AUDIO_CONV_FOZ_TAG_PTNADATA, &chunk_id))
+                     {
+                         has_all = false;
+@@ -517,8 +517,8 @@ static void stream_state_reset(struct stream_state *state)
+     state->needs_dump = false;
+ }
+ 
+-static loop_state stream_state_record_buffer(struct stream_state *state, struct payload_hash *buffer_hash,
+-        struct payload_hash *loop_hash, GstBuffer *buffer, struct need_transcode_head *codec_info)
++static loop_state stream_state_record_buffer(struct stream_state *state, struct fozdb_hash *buffer_hash,
++        struct fozdb_hash *loop_hash, GstBuffer *buffer, struct need_transcode_head *codec_info)
+ {
+     if (!state->codec_info && codec_info)
+         state->codec_info = need_transcode_head_dup(codec_info);
+@@ -553,7 +553,7 @@ static loop_state stream_state_record_buffer(struct stream_state *state, struct
+     return NO_LOOP;
+ }
+ 
+-static bool stream_state_is_stream_subset(struct stream_state *state, struct fozdb *db, struct payload_hash *stream_id)
++static bool stream_state_is_stream_subset(struct stream_state *state, struct fozdb *db, struct fozdb_hash *stream_id)
+ {
+     uint64_t offset = 0;
+     GList *list_iter;
+@@ -561,7 +561,7 @@ static bool stream_state_is_stream_subset(struct stream_state *state, struct foz
+     for (list_iter = state->buffers; list_iter; list_iter = list_iter->next)
+     {
+         struct buffer_entry *entry = list_iter->data;
+-        struct payload_hash buffer_id;
++        struct fozdb_hash buffer_id;
+         size_t read_size;
+ 
+         if ((fozdb_read_entry_data(db, AUDIO_CONV_FOZ_TAG_STREAM, stream_id,
+@@ -610,7 +610,7 @@ static int stream_state_write_to_foz(struct stream_state *state)
+     if (!found)
+     {
+         /* Are there any recorded streams of which this stream is a subset? */
+-        struct payload_hash *stream_id;
++        struct fozdb_hash *stream_id;
+         GHashTableIter stream_ids;
+ 
+         fozdb_iter_tag(dump_fozdb.fozdb, AUDIO_CONV_FOZ_TAG_STREAM, &stream_ids);
+@@ -727,7 +727,7 @@ static void audio_conv_state_reset(struct audio_conv_state *state)
+ static int audio_conv_state_open_transcode_file(struct audio_conv_state *state, GstBuffer *buffer,
+         uint8_t **out_data, size_t *out_size)
+ {
+-    struct payload_hash hash, loop_hash;
++    struct fozdb_hash hash, loop_hash;
+     uint32_t transcoded_size;
+     const char *blank_audio;
+     bool try_loop, hash_ok;
+diff --git a/dlls/winegstreamer/media-converter/fossilize.c b/dlls/winegstreamer/media-converter/fossilize.c
+index 057825ad5b5..44a9cbf7c65 100644
+--- a/dlls/winegstreamer/media-converter/fossilize.c
++++ b/dlls/winegstreamer/media-converter/fossilize.c
+@@ -96,24 +96,24 @@ struct payload_header
+ 
+ struct payload_entry
+ {
+-    struct payload_hash hash;
++    struct fozdb_hash hash;
+     struct payload_header header;
+     uint64_t offset;
+ };
+ 
+ static guint hash_func(gconstpointer key)
+ {
+-    const struct payload_hash *payload_hash = key;
++    const struct fozdb_hash *fozdb_hash = key;
+ 
+-    return payload_hash->hash[0]
+-            ^ payload_hash->hash[1]
+-            ^ payload_hash->hash[2]
+-            ^ payload_hash->hash[3];
++    return fozdb_hash->hash[0]
++            ^ fozdb_hash->hash[1]
++            ^ fozdb_hash->hash[2]
++            ^ fozdb_hash->hash[3];
+ }
+ 
+ static gboolean hash_equal(gconstpointer a, gconstpointer b)
+ {
+-    return memcmp(a, b, sizeof(struct payload_hash)) == 0;
++    return memcmp(a, b, sizeof(struct fozdb_hash)) == 0;
+ }
+ 
+ static bool tag_from_ascii_bytes(uint32_t *tag, const uint8_t *ascii_bytes)
+@@ -132,7 +132,7 @@ static bool tag_from_ascii_bytes(uint32_t *tag, const uint8_t *ascii_bytes)
+     return true;
+ }
+ 
+-static bool hash_from_ascii_bytes(struct payload_hash *hash, const uint8_t *ascii_bytes)
++static bool hash_from_ascii_bytes(struct fozdb_hash *hash, const uint8_t *ascii_bytes)
+ {
+     unsigned int i;
+ 
+@@ -162,7 +162,7 @@ static void tag_to_ascii_bytes(uint32_t tag, uint8_t *ascii_bytes)
+     memcpy(ascii_bytes, buffer, sizeof(tag) * 2);
+ }
+ 
+-static void hash_to_ascii_bytes(const struct payload_hash *hash, uint8_t *ascii_bytes)
++static void hash_to_ascii_bytes(const struct fozdb_hash *hash, uint8_t *ascii_bytes)
+ {
+     char buffer[sizeof(*hash) * 2 + 1];
+     sprintf(buffer, "%08x%08x%08x%08x", hash->hash[3], hash->hash[2], hash->hash[1], hash->hash[0]);
+@@ -201,10 +201,10 @@ static int fozdb_read_file_header(struct fozdb *db)
+ }
+ 
+ static int fozdb_read_entry_tag_hash_header(struct fozdb *db,
+-        uint32_t *out_tag, struct payload_hash *out_hash, struct payload_header *out_header)
++        uint32_t *out_tag, struct fozdb_hash *out_hash, struct payload_header *out_header)
+ {
+     uint8_t entry_name_and_header[ENTRY_NAME_SIZE + sizeof(struct payload_header)];
+-    struct payload_hash hash;
++    struct fozdb_hash hash;
+     uint32_t tag;
+ 
+     if (!complete_read(db->file, entry_name_and_header, sizeof(entry_name_and_header)))
+@@ -254,7 +254,7 @@ static bool fozdb_seek_to_next_entry(struct fozdb *db, struct payload_header *he
+     return true;
+ }
+ 
+-static bool fozdb_write_entry_name(struct fozdb *db, uint32_t tag, struct payload_hash *hash)
++static bool fozdb_write_entry_name(struct fozdb *db, uint32_t tag, struct fozdb_hash *hash)
+ {
+     uint8_t entry_name[ENTRY_NAME_SIZE];
+ 
+@@ -473,14 +473,14 @@ int fozdb_prepare(struct fozdb *db)
+     return CONV_OK;
+ }
+ 
+-bool fozdb_has_entry(struct fozdb *db, uint32_t tag, struct payload_hash *hash)
++bool fozdb_has_entry(struct fozdb *db, uint32_t tag, struct fozdb_hash *hash)
+ {
+     if (tag >= db->num_tags)
+         return false;
+     return g_hash_table_contains(db->seen_blobs[tag], hash);
+ }
+ 
+-int fozdb_entry_size(struct fozdb *db, uint32_t tag, struct payload_hash *hash, uint32_t *size)
++int fozdb_entry_size(struct fozdb *db, uint32_t tag, struct fozdb_hash *hash, uint32_t *size)
+ {
+     struct payload_entry *entry;
+ 
+@@ -504,7 +504,7 @@ void fozdb_iter_tag(struct fozdb *db, uint32_t tag, GHashTableIter *iter)
+     g_hash_table_iter_init(iter, db->seen_blobs[tag]);
+ }
+ 
+-int fozdb_read_entry_data(struct fozdb *db, uint32_t tag, struct payload_hash *hash,
++int fozdb_read_entry_data(struct fozdb *db, uint32_t tag, struct fozdb_hash *hash,
+         uint64_t offset, uint8_t *buffer, size_t size, size_t *read_size, bool with_crc)
+ {
+     struct payload_entry *entry;
+@@ -544,7 +544,7 @@ int fozdb_read_entry_data(struct fozdb *db, uint32_t tag, struct payload_hash *h
+     return CONV_OK;
+ }
+ 
+-int fozdb_write_entry(struct fozdb *db, uint32_t tag, struct payload_hash *hash,
++int fozdb_write_entry(struct fozdb *db, uint32_t tag, struct fozdb_hash *hash,
+         void *data_src, data_read_callback read_callback, bool with_crc)
+ {
+     struct payload_header header;
+diff --git a/dlls/winegstreamer/media-converter/media-converter.h b/dlls/winegstreamer/media-converter/media-converter.h
+index 8cd4b31344a..d737040ad15 100644
+--- a/dlls/winegstreamer/media-converter/media-converter.h
++++ b/dlls/winegstreamer/media-converter/media-converter.h
+@@ -90,15 +90,22 @@ struct gst_buffer_reader
+     size_t offset;
+ };
+ 
+-struct payload_hash
++struct fozdb_hash
+ {
+     uint32_t hash[4];
+ };
+ 
++#define debugstr_fozdb_hash( hash ) debugstr_fozdb_hash_( (char[35]){0}, hash )
++static inline const char *debugstr_fozdb_hash_( char *buffer, const struct fozdb_hash *hash )
++{
++    sprintf( buffer, "0x%08x%08x%08x%08x", hash->hash[3], hash->hash[2], hash->hash[1], hash->hash[0] );
++    return buffer;
++}
++
+ struct entry_name
+ {
+     uint32_t tag;
+-    struct payload_hash hash;
++    struct fozdb_hash hash;
+ };
+ 
+ struct dump_fozdb
+@@ -157,12 +164,12 @@ extern bool murmur3_x86_128(void *data_src, data_read_callback read_callback, ui
+ extern int fozdb_create(const char *file_name, int open_flags, bool read_only, uint32_t num_tags, struct fozdb **out);
+ extern void fozdb_release(struct fozdb *db);
+ extern int fozdb_prepare(struct fozdb *db);
+-extern bool fozdb_has_entry(struct fozdb *db, uint32_t tag, struct payload_hash *hash);
+-extern int fozdb_entry_size(struct fozdb *db, uint32_t tag, struct payload_hash *hash, uint32_t *size);
++extern bool fozdb_has_entry(struct fozdb *db, uint32_t tag, struct fozdb_hash *hash);
++extern int fozdb_entry_size(struct fozdb *db, uint32_t tag, struct fozdb_hash *hash, uint32_t *size);
+ extern void fozdb_iter_tag(struct fozdb *db, uint32_t tag, GHashTableIter *iter);
+-extern int fozdb_read_entry_data(struct fozdb *db, uint32_t tag, struct payload_hash *hash,
++extern int fozdb_read_entry_data(struct fozdb *db, uint32_t tag, struct fozdb_hash *hash,
+         uint64_t offset, uint8_t *buffer, size_t size, size_t *read_size, bool with_crc);
+-extern int fozdb_write_entry(struct fozdb *db, uint32_t tag, struct payload_hash *hash,
++extern int fozdb_write_entry(struct fozdb *db, uint32_t tag, struct fozdb_hash *hash,
+         void *data_src, data_read_callback read_callback, bool with_crc);
+ extern int fozdb_discard_entries(struct fozdb *db, GList *to_discard_entries);
+ 
+@@ -181,7 +188,7 @@ static inline bool discarding_disabled(void)
+     return option_enabled("MEDIACONV_DONT_DISCARD");
+ }
+ 
+-static inline const char *format_hash(struct payload_hash *hash)
++static inline const char *format_hash(struct fozdb_hash *hash)
+ {
+     int hash_str_size = 2 + sizeof(*hash) * 2 + 1;
+     static char buffer[1024] = {};
+@@ -258,7 +265,7 @@ static inline bool file_exists(const char *file_path)
+     return access(file_path, F_OK) == 0;
+ }
+ 
+-static inline struct entry_name *entry_name_create(uint32_t tag, struct payload_hash *hash)
++static inline struct entry_name *entry_name_create(uint32_t tag, struct fozdb_hash *hash)
+ {
+     struct entry_name *entry = calloc(1, sizeof(*entry));
+     entry->tag = tag;
+@@ -279,7 +286,7 @@ static inline uint32_t bytes_to_uint32(const uint8_t *bytes)
+             | ((uint32_t)bytes[3] << 24);
+ }
+ 
+-static inline void payload_hash_from_bytes(struct payload_hash *hash, uint8_t *bytes)
++static inline void fozdb_hash_from_bytes(struct fozdb_hash *hash, uint8_t *bytes)
+ {
+     hash->hash[0] = bytes_to_uint32(bytes + 0);
+     hash->hash[1] = bytes_to_uint32(bytes + 4);
+diff --git a/dlls/winegstreamer/media-converter/videoconv.c b/dlls/winegstreamer/media-converter/videoconv.c
+index d45e2d8be8a..b91e0e27d8c 100644
+--- a/dlls/winegstreamer/media-converter/videoconv.c
++++ b/dlls/winegstreamer/media-converter/videoconv.c
+@@ -99,7 +99,7 @@ enum video_conv_state_flags
+ 
+ struct video_conv_state
+ {
+-    struct payload_hash transcode_hash;
++    struct fozdb_hash transcode_hash;
+     struct fozdb *read_fozdb;
+     int blank_file;
+     uint64_t upstream_duration;
+@@ -149,7 +149,7 @@ void hashes_reader_init(struct hashes_reader *reader, GList *hashes)
+ 
+ static int hashes_reader_read(void *reader, uint8_t *buffer, size_t size, size_t *read_size)
+ {
+-    struct payload_hash *hash = (struct payload_hash *)buffer;
++    struct fozdb_hash *hash = (struct fozdb_hash *)buffer;
+     struct hashes_reader *hashes_reader = reader;
+ 
+     if (!size)
+@@ -161,7 +161,7 @@ static int hashes_reader_read(void *reader, uint8_t *buffer, size_t size, size_t
+     if (!hashes_reader->current_hash)
+         return CONV_ERROR_DATA_END;
+ 
+-    *hash = *(struct payload_hash *)(hashes_reader->current_hash->data);
++    *hash = *(struct fozdb_hash *)(hashes_reader->current_hash->data);
+     hashes_reader->current_hash = hashes_reader->current_hash->next;
+ 
+     *read_size = sizeof(*hash);
+@@ -176,7 +176,7 @@ static int dump_fozdb_open_video(bool create)
+ static void dump_fozdb_discard_transcoded(void)
+ {
+     GList *to_discard_chunks = NULL;
+-    struct payload_hash *stream_id;
++    struct fozdb_hash *stream_id;
+     struct fozdb *read_fozdb;
+     char *read_fozdb_path;
+     GHashTableIter iter;
+@@ -209,7 +209,7 @@ static void dump_fozdb_discard_transcoded(void)
+     fozdb_iter_tag(dump_fozdb.fozdb, VIDEO_CONV_FOZ_TAG_STREAM, &iter);
+     while (g_hash_table_iter_next(&iter, (void **)&stream_id, NULL))
+     {
+-        struct payload_hash chunk_id;
++        struct fozdb_hash chunk_id;
+         uint32_t chunks_size, i;
+         size_t read_size;
+ 
+@@ -223,7 +223,7 @@ static void dump_fozdb_discard_transcoded(void)
+                 {
+                     for (i = 0; i < read_size / sizeof(chunk_id); ++i)
+                     {
+-                        payload_hash_from_bytes(&chunk_id, buffer + i * sizeof(chunk_id));
++                        fozdb_hash_from_bytes(&chunk_id, buffer + i * sizeof(chunk_id));
+                         to_discard_chunks = g_list_append(to_discard_chunks,
+                                 entry_name_create(VIDEO_CONV_FOZ_TAG_VIDEODATA, &chunk_id));
+                     }
+@@ -396,7 +396,7 @@ static void video_conv_state_release(struct video_conv_state *state)
+ }
+ 
+ /* Return true if the file is transcoded, false if not. */
+-bool video_conv_state_begin_transcode(struct video_conv_state *state, struct payload_hash *hash)
++bool video_conv_state_begin_transcode(struct video_conv_state *state, struct fozdb_hash *hash)
+ {
+     GST_DEBUG("state %p, hash %s.", state, format_hash(hash));
+ 
+@@ -582,7 +582,7 @@ static bool video_conv_get_downstream_range(VideoConv *conv, uint64_t offset, ui
+     return true;
+ }
+ 
+-static bool video_conv_hash_upstream_data(VideoConv *conv, struct payload_hash *hash)
++static bool video_conv_hash_upstream_data(VideoConv *conv, struct fozdb_hash *hash)
+ {
+     bool ret = false;
+ 
+@@ -613,7 +613,7 @@ static int video_conv_dump_upstream_chunk(VideoConv *conv, const void *buffer, s
+         GList **chunk_hashes)
+ {
+     struct bytes_reader bytes_reader;
+-    struct payload_hash *chunk_hash;
++    struct fozdb_hash *chunk_hash;
+ 
+     bytes_reader_init(&bytes_reader, buffer, read_size);
+     chunk_hash = calloc(1, sizeof(*chunk_hash));
+@@ -625,7 +625,7 @@ static int video_conv_dump_upstream_chunk(VideoConv *conv, const void *buffer, s
+             &bytes_reader, bytes_reader_read, true);
+ }
+ 
+-static int video_conv_dump_upstream_data(VideoConv *conv, struct payload_hash *hash)
++static int video_conv_dump_upstream_data(VideoConv *conv, struct fozdb_hash *hash)
+ {
+     struct hashes_reader chunk_hashes_reader;
+     struct pad_reader *pad_reader = NULL;
+@@ -683,7 +683,7 @@ done:
+ static void video_conv_init_transcode(VideoConv *conv)
+ {
+     struct video_conv_state *state = conv->state;
+-    struct payload_hash hash;
++    struct fozdb_hash hash;
+     int ret;
+ 
+     if (state->state_flags & VIDEO_CONV_HAS_TRANSCODED)
+@@ -725,7 +725,7 @@ static uint32_t video_conv_get_state_flags(VideoConv *conv)
+     return state_flags;
+ }
+ 
+-static gboolean video_conv_push_stream_start(VideoConv *conv, struct payload_hash *hash)
++static gboolean video_conv_push_stream_start(VideoConv *conv, struct fozdb_hash *hash)
+ {
+     struct video_conv_state *state;
+ 
+@@ -802,7 +802,7 @@ static gboolean video_conv_sink_event_caps(VideoConv *conv, GstEvent *event)
+ static gboolean video_conv_sink_event_eos(VideoConv *conv, GstEvent *event)
+ {
+     struct video_conv_state *state;
+-    struct payload_hash hash;
++    struct fozdb_hash hash;
+     uint32_t transcode_tag;
+     uint32_t state_flags;
+     int ret;
+@@ -1178,7 +1178,7 @@ static gboolean video_conv_src_active_mode(GstPad *pad, GstObject *parent, GstPa
+ {
+     VideoConv *conv = VIDEO_CONV(parent);
+     struct video_conv_state *state;
+-    struct payload_hash hash;
++    struct fozdb_hash hash;
+     uint32_t state_flags;
+ 
+     GST_DEBUG_OBJECT(pad, "mode %s, active %d.", gst_pad_mode_get_name(mode), active);

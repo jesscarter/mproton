@@ -1,0 +1,27 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Conor McCarthy <cmccarthy@codeweavers.com>
+Date: Tue, 10 Dec 2024 00:23:16 +1000
+Subject: [PATCH] mf: Do not set the topo status if a source has been shut
+ down.
+
+The status must remain MF_TOPOSTATUS_INVALID because the topology is
+invalid and must be handled as such in session_start().
+
+(cherry picked from commit 7f480ee8602221565368c7569f8c50d04ceaa605)
+---
+ dlls/mf/session.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/dlls/mf/session.c b/dlls/mf/session.c
+index 2546a9b4b68..93c5f1298e8 100644
+--- a/dlls/mf/session.c
++++ b/dlls/mf/session.c
+@@ -541,7 +541,7 @@ static void session_set_topo_status(struct media_session *session, HRESULT statu
+     IMFMediaEvent *event;
+     PROPVARIANT param;
+ 
+-    if (topo_status == MF_TOPOSTATUS_INVALID)
++    if (topo_status == MF_TOPOSTATUS_INVALID || status == MF_E_SHUTDOWN)
+         return;
+ 
+     if (list_empty(&session->topologies))

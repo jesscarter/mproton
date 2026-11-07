@@ -1,0 +1,81 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Thu, 5 Dec 2024 15:00:43 +0100
+Subject: [PATCH] HACK: winegstreamer/video_decoder: Support decoding theora
+ video.
+
+(cherry picked from commit d37faddcdbc72c9c489b9107fbeda9f70f5b49e8)
+---
+ dlls/winegstreamer/mfplat.c        |  1 +
+ dlls/winegstreamer/video_decoder.c |  2 ++
+ dlls/winegstreamer/wg_media_type.c | 11 +++++++++++
+ 3 files changed, 14 insertions(+)
+
+diff --git a/dlls/winegstreamer/mfplat.c b/dlls/winegstreamer/mfplat.c
+index 86a3d7598ab..7ae86e49be1 100644
+--- a/dlls/winegstreamer/mfplat.c
++++ b/dlls/winegstreamer/mfplat.c
+@@ -44,6 +44,7 @@ DEFINE_MEDIATYPE_GUID(MFVideoFormat_VC1S,MAKEFOURCC('V','C','1','S'));
+ DEFINE_MEDIATYPE_GUID(MFVideoFormat_IV50,MAKEFOURCC('I','V','5','0'));
+ DEFINE_MEDIATYPE_GUID(MFVideoFormat_ABGR32,D3DFMT_A8B8G8R8);
+ DEFINE_GUID(MEDIASUBTYPE_WMV_Unknown, 0x7ce12ca9,0xbfbf,0x43d9,0x9d,0x00,0x82,0xb8,0xed,0x54,0x31,0x6b);
++DEFINE_MEDIATYPE_GUID(MFVideoFormat_theora,MAKEFOURCC('t','h','e','o'));
+ 
+ struct class_factory
+ {
+diff --git a/dlls/winegstreamer/video_decoder.c b/dlls/winegstreamer/video_decoder.c
+index 0d7224c80f2..32f8a9276b0 100644
+--- a/dlls/winegstreamer/video_decoder.c
++++ b/dlls/winegstreamer/video_decoder.c
+@@ -1798,6 +1798,7 @@ HRESULT WINAPI winegstreamer_create_video_decoder(IMFTransform **out)
+ 
+ extern const GUID MEDIASUBTYPE_VC1S;
+ extern const GUID MEDIASUBTYPE_WMV_Unknown;
++extern const GUID MFVideoFormat_theora;
+ static const GUID *const wmv_decoder_input_types[] =
+ {
+     &MEDIASUBTYPE_WMV1,
+@@ -1809,6 +1810,7 @@ static const GUID *const wmv_decoder_input_types[] =
+     &MEDIASUBTYPE_WVC1,
+     &MEDIASUBTYPE_WMV3,
+     &MEDIASUBTYPE_VC1S,
++    &MFVideoFormat_theora,
+ };
+ static const GUID *const wmv_decoder_output_types[] =
+ {
+diff --git a/dlls/winegstreamer/wg_media_type.c b/dlls/winegstreamer/wg_media_type.c
+index 5fb54c01e09..2817b11ec82 100644
+--- a/dlls/winegstreamer/wg_media_type.c
++++ b/dlls/winegstreamer/wg_media_type.c
+@@ -62,6 +62,7 @@ DEFINE_MEDIATYPE_GUID(MFVideoFormat_CVID,MAKEFOURCC('c','v','i','d'));
+ DEFINE_MEDIATYPE_GUID(MFVideoFormat_IV50,MAKEFOURCC('I','V','5','0'));
+ DEFINE_MEDIATYPE_GUID(MFVideoFormat_VC1S,MAKEFOURCC('V','C','1','S'));
+ DEFINE_MEDIATYPE_GUID(MFVideoFormat_ABGR32,D3DFMT_A8B8G8R8);
++DEFINE_MEDIATYPE_GUID(MFVideoFormat_theora,MAKEFOURCC('t','h','e','o'));
+ 
+ static void init_caps_codec_data(GstCaps *caps, const void *codec_data, int codec_data_size)
+ {
+@@ -348,6 +349,14 @@ static void init_caps_from_video_mpeg(GstCaps *caps, const struct mpeg_video_for
+     gst_caps_set_simple(caps, "parsed", G_TYPE_BOOLEAN, TRUE, NULL);
+ }
+ 
++static void init_caps_from_video_theora(GstCaps *caps, const MFVIDEOFORMAT *format, UINT format_size)
++{
++    init_caps_codec_data(caps, format + 1, format_size - sizeof(*format));
++
++    gst_structure_remove_field(gst_caps_get_structure(caps, 0), "format");
++    gst_structure_set_name(gst_caps_get_structure(caps, 0), "video/x-theora");
++}
++
+ static void init_caps_from_video_subtype(GstCaps *caps, const GUID *subtype, const void *format, UINT format_size)
+ {
+     if (IsEqualGUID(subtype, &MFVideoFormat_CVID))
+@@ -368,6 +377,8 @@ static void init_caps_from_video_subtype(GstCaps *caps, const GUID *subtype, con
+         return init_caps_from_video_indeo(caps, format, format_size);
+     if (IsEqualGUID(subtype, &MEDIASUBTYPE_MPEG1Payload))
+         return init_caps_from_video_mpeg(caps, format, format_size);
++    if (IsEqualGUID(subtype, &MFVideoFormat_theora))
++        return init_caps_from_video_theora(caps, format, format_size);
+ 
+     GST_FIXME("Unsupported subtype " WG_GUID_FORMAT, WG_GUID_ARGS(*subtype));
+ }

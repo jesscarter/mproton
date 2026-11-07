@@ -1,0 +1,66 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Fri, 5 Jan 2024 15:30:27 -0600
+Subject: [PATCH] amd_ags_x64: Implement agsGetTotalGPUCount().
+
+CW-Bug-Id: #23209
+(cherry picked from commit ad35d5961006592a7964552e54531b8ef6698c1f)
+---
+ dlls/amd_ags_x64/amd_ags.h          | 14 ++++++++++++++
+ dlls/amd_ags_x64/amd_ags_x64.spec   |  1 +
+ dlls/amd_ags_x64/amd_ags_x64_main.c |  8 ++++++++
+ 3 files changed, 23 insertions(+)
+
+diff --git a/dlls/amd_ags_x64/amd_ags.h b/dlls/amd_ags_x64/amd_ags.h
+index 982452bc96e..848c90273a9 100644
+--- a/dlls/amd_ags_x64/amd_ags.h
++++ b/dlls/amd_ags_x64/amd_ags.h
+@@ -1044,6 +1044,20 @@ typedef struct AGSDX12ReturnedParams
+ } AGSDX12ReturnedParams;
+ 
+ 
++// Description
++//   Function used to query the number of GPUs in the system.
++//   This number may be different from agsGetCrossfireGPUCount as it reports
++//   all devices installed in the system, and not only those configured for
++//   Crossfire.
++//
++// Input params
++//   context - Pointer to a context.
++//
++// Output params
++//   numGPUs - Number of GPUs in the system.
++//
++AMD_AGS_API AGSReturnCode agsGetTotalGPUCount( AGSContext* context, int* numGPUs );
++
+ // Description
+ //   Function used to query Eyefinity configuration state information relevant to ISVs. State info returned
+ //   includes: whether Eyefinity is enabled or not, SLS grid configuration, SLS dimensions, whether bezel
+diff --git a/dlls/amd_ags_x64/amd_ags_x64.spec b/dlls/amd_ags_x64/amd_ags_x64.spec
+index 3620bd8885b..19666569599 100644
+--- a/dlls/amd_ags_x64/amd_ags_x64.spec
++++ b/dlls/amd_ags_x64/amd_ags_x64.spec
+@@ -43,3 +43,4 @@
+ @ stdcall agsInit(ptr ptr ptr)
+ @ stdcall agsInitialize(long ptr ptr ptr)
+ @ stdcall agsSetDisplayMode(ptr long long ptr)
++@ stdcall agsGetTotalGPUCount(ptr ptr)
+diff --git a/dlls/amd_ags_x64/amd_ags_x64_main.c b/dlls/amd_ags_x64/amd_ags_x64_main.c
+index b543b58e34a..4a973f1298f 100644
+--- a/dlls/amd_ags_x64/amd_ags_x64_main.c
++++ b/dlls/amd_ags_x64/amd_ags_x64_main.c
+@@ -839,6 +839,14 @@ AGSReturnCode WINAPI agsDeInitialize(AGSContext *context)
+     return AGS_SUCCESS;
+ }
+ 
++AGSReturnCode WINAPI agsGetTotalGPUCount(AGSContext *context, int *numGPUs)
++{
++    TRACE("context %p, numGPUs %p.\n", context, numGPUs);
++
++    *numGPUs = context->device_count;
++    return AGS_SUCCESS;
++}
++
+ static DXGI_COLOR_SPACE_TYPE convert_ags_colorspace_506(AGSDisplaySettings_Mode_506 mode)
+ {
+     switch (mode)

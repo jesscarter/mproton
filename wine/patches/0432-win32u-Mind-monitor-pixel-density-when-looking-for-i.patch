@@ -1,0 +1,39 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Fri, 28 Feb 2025 11:01:29 +0100
+Subject: [PATCH] win32u: Mind monitor pixel density when looking for
+ intersecting area.
+
+CW-Bug-Id: #24946
+(cherry picked from commit b332bd39f47bf76dd48c26ff62833b4098ced95b)
+
+mproton-resolved: 11.20's monitor_get_dpi() returns struct ratio
+---
+ dlls/win32u/sysparams.c | 7 ++++++-
+ 1 file changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/win32u/sysparams.c b/dlls/win32u/sysparams.c
+index 08f4484b74a..252d4863a56 100644
+--- a/dlls/win32u/sysparams.c
++++ b/dlls/win32u/sysparams.c
+@@ -3128,14 +3128,19 @@ static struct monitor *get_monitor_from_rect( RECT rect, UINT flags, struct rati
+     LIST_FOR_EACH_ENTRY(monitor, &monitors, struct monitor, entry)
+     {
+         RECT intersect, monitor_rect;
++        struct ratio raw_dpi, x, y;
++        UINT density, dpi_val;
+ 
+         if (!is_monitor_active( monitor ) || monitor->is_clone) continue;
++        raw_dpi = monitor_get_dpi( monitor, MDT_RAW_DPI, &x, &y );
++        dpi_val = raw_dpi.den ? raw_dpi.num / raw_dpi.den : 96;
++        density = dpi_val * dpi_val / 96 / 96;
+ 
+         monitor_rect = monitor_get_rect( monitor, dpi, type );
+         if (intersect_rect( &intersect, &monitor_rect, &rect ))
+         {
+             /* check for larger intersecting area */
+-            UINT area = (intersect.right - intersect.left) * (intersect.bottom - intersect.top);
++            UINT area = (intersect.right - intersect.left) * (intersect.bottom - intersect.top) * density;
+             if (area > max_area)
+             {
+                 max_area = area;

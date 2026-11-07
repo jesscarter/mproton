@@ -1,0 +1,29 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Timo Gurr <timo.gurr@gmail.com>
+Date: Fri, 17 Feb 2023 14:29:25 +0100
+Subject: [PATCH] wine.inf: HACK: Disable SpeechSynthesisWrapper.dll for
+ Pentiment.
+
+The game crashes when utilizing it and works without it, like seen
+already on the Steam Deck with its specific depot.
+
+https://steamdb.info/depot/1205522/
+https://github.com/ValveSoftware/Proton/issues/6415#issuecomment-1379357568
+
+Link: https://github.com/ValveSoftware/Proton/pull/6479
+Link: https://github.com/ValveSoftware/wine/pull/176
+(cherry picked from commit a053f4352040e34a8d1830c30422714a73f02257)
+---
+ loader/wine.inf.in | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/loader/wine.inf.in b/loader/wine.inf.in
+index e5946a0c058..bcc5909ee9c 100644
+--- a/loader/wine.inf.in
++++ b/loader/wine.inf.in
+@@ -1516,3 +1516,5 @@ HKLM,Software\Wow6432Node\lucasarts entertainment company llc\Star Wars: Episode
+ HKCU,Software\Wine\AppDefaults\RDR2.exe\DllOverrides,"vulkan-1",,"native"
+ HKCU,Software\Wine\AppDefaults\ActOfWar.exe,"Version",,"winxp"
+ HKLM,Software\Khronos\OpenXR\1,"ActiveRuntime",,"C:\openxr\wineopenxr64.json"
++;;Other app-specific overrides
++HKCU,Software\Wine\AppDefaults\Pentiment.exe\DllOverrides,"SpeechSynthesisWrapper",,"disabled"

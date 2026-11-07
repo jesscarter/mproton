@@ -1,0 +1,24 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Tue, 10 Mar 2026 17:49:02 -0600
+Subject: [PATCH] wine.inf: Set Windows version to Win11 for Imperiums: Greek
+ Wars.
+
+CW-Bug-Id: #26735
+(cherry picked from commit 314e5309805918105e3015b520609be05e741a3d)
+---
+ loader/wine.inf.in | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/loader/wine.inf.in b/loader/wine.inf.in
+index e1684139e36..8752f70e5c6 100644
+--- a/loader/wine.inf.in
++++ b/loader/wine.inf.in
+@@ -1502,6 +1502,7 @@ HKCU,Software\Wine\AppDefaults\Paradox Launcher.exe\DllOverrides,,4,
+ HKCU,Software\Wine\AppDefaults\gotg.exe\DllOverrides,"atiadlxx",,"builtin"
+ HKCU,Software\Wine\AppDefaults\RelicCardinal.exe\DllOverrides,"atiadlxx",,"builtin"
+ HKCU,Software\Wine\AppDefaults\msedgewebview2.exe,"Version",,"win7"
++HKCU,Software\Wine\AppDefaults\Imperiums.exe,"Version",,"win11"
+ HKCU,Software\Wine\AppDefaults\Avengers.exe\DllOverrides,"atiadlxx",,"builtin"
+ HKCU,Software\Wine\AppDefaults\starwarssquadrons.exe\DllOverrides,"atiadlxx",,"builtin"
+ HKCU,Software\Wine\AppDefaults\GW2.Main_Win64_Retail.exe\DllOverrides,"atiadlxx",,"builtin"

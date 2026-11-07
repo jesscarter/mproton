@@ -1,0 +1,56 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Wed, 17 Jan 2024 09:55:07 -0600
+Subject: [PATCH] amd_ags_x64: Add stubs for
+ agsDriverExtensionsDX12_Init/DeInit.
+
+CW-Bug-Id: #23258
+(cherry picked from commit 46e377c101d06ddcbaf3dba526d4bed1477e0312)
+---
+ dlls/amd_ags_x64/amd_ags_x64.spec   |  4 ++--
+ dlls/amd_ags_x64/amd_ags_x64_main.c | 15 +++++++++++++++
+ 2 files changed, 17 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/amd_ags_x64/amd_ags_x64.spec b/dlls/amd_ags_x64/amd_ags_x64.spec
+index 6cd8aec62db..58db31687e8 100644
+--- a/dlls/amd_ags_x64/amd_ags_x64.spec
++++ b/dlls/amd_ags_x64/amd_ags_x64.spec
+@@ -31,10 +31,10 @@
+ @ stub agsDriverExtensionsDX11_WriteBreadcrumb
+ @ stdcall agsDriverExtensionsDX12_CreateDevice(ptr ptr ptr ptr)
+ @ stub agsDriverExtensionsDX12_CreateFromDevice
+-@ stub agsDriverExtensionsDX12_DeInit
++@ stdcall agsDriverExtensionsDX12_DeInit(ptr)
+ @ stub agsDriverExtensionsDX12_Destroy
+ @ stdcall agsDriverExtensionsDX12_DestroyDevice(ptr ptr ptr)
+-@ stub agsDriverExtensionsDX12_Init
++@ stdcall agsDriverExtensionsDX12_Init(ptr ptr ptr)
+ @ stub agsDriverExtensionsDX12_PopMarker
+ @ stub agsDriverExtensionsDX12_PushMarker
+ @ stub agsDriverExtensionsDX12_SetMarker
+diff --git a/dlls/amd_ags_x64/amd_ags_x64_main.c b/dlls/amd_ags_x64/amd_ags_x64_main.c
+index 9395359f563..8d931315978 100644
+--- a/dlls/amd_ags_x64/amd_ags_x64_main.c
++++ b/dlls/amd_ags_x64/amd_ags_x64_main.c
+@@ -1198,6 +1198,21 @@ AGSReturnCode WINAPI agsDriverExtensionsDX11_DeInit( AGSContext* context )
+     return AGS_SUCCESS;
+ }
+ 
++AGSReturnCode WINAPI agsDriverExtensionsDX12_Init( AGSContext* context, ID3D12Device* device, unsigned int* extensionsSupported )
++{
++    FIXME("context %p, device %p, extensionsSupported %p stub.\n", context, device, extensionsSupported);
++
++    *extensionsSupported = 0;
++    return AGS_SUCCESS;
++}
++
++AGSReturnCode WINAPI agsDriverExtensionsDX12_DeInit( AGSContext* context )
++{
++    TRACE("context %p.\n", context);
++
++    return AGS_SUCCESS;
++}
++
+ BOOL WINAPI DllMain(HINSTANCE instance, DWORD reason, void *reserved)
+ {
+     TRACE("%p, %u, %p.\n", instance, reason, reserved);

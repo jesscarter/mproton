@@ -1,0 +1,23 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Wed, 18 Dec 2024 22:43:23 +0100
+Subject: [PATCH] winegstreamer/media-converter: Initialize read_size to 0 for
+ errors and EOD cases.
+
+(cherry picked from commit c9d03b829a824483fa571cfb6289718c37bfbead)
+---
+ dlls/winegstreamer/media-converter/fossilize.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/dlls/winegstreamer/media-converter/fossilize.c b/dlls/winegstreamer/media-converter/fossilize.c
+index 36148d0c3ba..7b8e79c6738 100644
+--- a/dlls/winegstreamer/media-converter/fossilize.c
++++ b/dlls/winegstreamer/media-converter/fossilize.c
+@@ -533,6 +533,7 @@ int fozdb_read_entry_data(struct fozdb *db, uint32_t tag, struct fozdb_hash *has
+     GST_DEBUG("db %p, file_name %s, tag %u, hash %s, offset %#"PRIx64", buffer %p, size %zu, read_size %p, with_crc %d.",
+             db, db->file_name, tag, format_hash(hash), offset, buffer, size, read_size, with_crc);
+ 
++    *read_size = 0;
+     if (tag >= db->num_tags)
+         return CONV_ERROR_INVALID_TAG;
+     if (!(ptr = rb_get(&db->entries, &key)))

@@ -1,0 +1,27 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Fri, 29 Mar 2024 15:17:07 +0100
+Subject: [PATCH] winegstreamer/media-converter: Wrap around the blank video if
+ shorter than upstream data.
+
+CW-Bug-Id: #22319
+(cherry picked from commit cfa9a810e3e74f728a218bd6169adc23ba54ef6f)
+---
+ dlls/winegstreamer/media-converter/videoconv.c | 4 +---
+ 1 file changed, 1 insertion(+), 3 deletions(-)
+
+diff --git a/dlls/winegstreamer/media-converter/videoconv.c b/dlls/winegstreamer/media-converter/videoconv.c
+index 25cda8cc331..8bb35ad41fe 100644
+--- a/dlls/winegstreamer/media-converter/videoconv.c
++++ b/dlls/winegstreamer/media-converter/videoconv.c
+@@ -440,9 +440,7 @@ int video_conv_state_fill_buffer(struct video_conv_state *state, uint64_t offset
+     }
+     else /* Fill blank video data to buffer. */
+     {
+-        /* Get copy size. */
+-        if (offset >= state->our_duration)
+-            return CONV_OK;
++        offset = offset % state->our_duration;
+         to_copy = min(state->our_duration - offset, size);
+ 
+         /* Copy data. */

@@ -1,0 +1,43 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Conor McCarthy <cmccarthy@codeweavers.com>
+Date: Thu, 14 Aug 2025 12:24:30 +1000
+Subject: [PATCH] mfplat: HACK: Enable the 2d buffer lock optimisation for
+ Metal Gear Solid V.
+
+CW-Bug-Id: #25788
+(cherry picked from commit 4ffbb36b75ad2c427c516879dc850a7e7276a633)
+---
+ dlls/mfplat/buffer.c | 7 ++++---
+ 1 file changed, 4 insertions(+), 3 deletions(-)
+
+diff --git a/dlls/mfplat/buffer.c b/dlls/mfplat/buffer.c
+index 6db35c2f651..bb10ee4db7d 100644
+--- a/dlls/mfplat/buffer.c
++++ b/dlls/mfplat/buffer.c
+@@ -347,14 +347,15 @@ static HRESULT WINAPI memory_1d_2d_buffer_Lock(IMFMediaBuffer *iface, BYTE **dat
+     EnterCriticalSection(&buffer->cs);
+ 
+     if (!buffer->_2d.linear_buffer && buffer->_2d.width == buffer->_2d.pitch
+-            && (sgi = getenv("SteamGameId")) && !strcmp(sgi, "418370"))
++            && (sgi = getenv("SteamGameId")) && (!strcmp(sgi, "418370") || !strcmp(sgi, "287700")))
+     {
+         BYTE *scanline;
+         LONG pitch;
+ 
+         /* width and pitch are the same, so this avoids a potentially expensive copy
+          * this is a HACK as it does not match Windows behaviour (Windows will copy the buffer)
+-         * this fixes a performance regression for Resident Evil 7 Biohazard (418370)
++         * this fixes performance regressions for Resident Evil 7 Biohazard (418370) and
++         * Metal Gear Solid V (287700).
+          */
+         hr = memory_2d_buffer_lock(buffer, &scanline, &pitch, data, NULL);
+     }
+@@ -408,7 +409,7 @@ static HRESULT WINAPI memory_1d_2d_buffer_Unlock(IMFMediaBuffer *iface)
+     EnterCriticalSection(&buffer->cs);
+ 
+     if (!buffer->_2d.linear_buffer && buffer->_2d.width == buffer->_2d.pitch
+-            && (sgi = getenv("SteamGameId")) && !strcmp(sgi, "418370"))
++            && (sgi = getenv("SteamGameId")) && (!strcmp(sgi, "418370") || !strcmp(sgi, "287700")))
+     {
+         if (buffer->_2d.locks)
+             --buffer->_2d.locks;

@@ -1,0 +1,25 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arkadiusz Hiler <ahiler@codeweavers.com>
+Date: Mon, 15 Jun 2026 16:22:52 +0300
+Subject: [PATCH] dmloader: Log ERR when soundfonts are used.
+
+So it's visible in the logs with the default channels on and it's easily
+grepable.
+
+(cherry picked from commit 81d78e4f3ea8ce868d775021fdc9f90122dc1a6b)
+---
+ dlls/dmloader/loader.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/dlls/dmloader/loader.c b/dlls/dmloader/loader.c
+index ce096bd0c4c..46171e7cb14 100644
+--- a/dlls/dmloader/loader.c
++++ b/dlls/dmloader/loader.c
+@@ -902,6 +902,7 @@ static const IDirectMusicLoader8Vtbl loader_vtbl =
+ static inline void touch_soundfont_used_tag(void)
+ {
+     WCHAR env[MAX_PATH];
++    ERR("Creating the soundfont-used file.\n");
+ 
+     if (GetEnvironmentVariableW(L"STEAM_COMPAT_TRANSCODED_MEDIA_PATH", env, ARRAY_SIZE(env)))
+     {

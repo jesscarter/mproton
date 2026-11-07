@@ -1,0 +1,54 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Fri, 12 Dec 2025 12:33:06 +0100
+Subject: [PATCH] mfsrcsnk: Check and set current stream position before
+ reading.
+
+Some custom media stream implementation do not update their current
+position after reading and need to be explicitly seeked.
+
+CW-Bug-Id: #26349
+(cherry picked from commit 4b77a24883bfdaac2ddc00fde7774372b1bf2d46)
+---
+ dlls/mfsrcsnk/media_source.c | 11 +++++++++++
+ 1 file changed, 11 insertions(+)
+
+diff --git a/dlls/mfsrcsnk/media_source.c b/dlls/mfsrcsnk/media_source.c
+index a18b6908ea1..f01e606ef17 100644
+--- a/dlls/mfsrcsnk/media_source.c
++++ b/dlls/mfsrcsnk/media_source.c
+@@ -273,6 +273,7 @@ struct media_source
+     struct winedmo_demuxer winedmo_demuxer;
+     struct winedmo_stream winedmo_stream;
+     UINT64 file_size;
++    UINT64 position;
+     INT64 duration;
+     UINT stream_count;
+     WCHAR mime_type[256];
+@@ -1768,16 +1769,26 @@ static NTSTATUS CDECL media_source_seek_cb( struct winedmo_stream *stream, UINT6
+         return STATUS_UNSUCCESSFUL;
+     if (FAILED(IMFByteStream_GetCurrentPosition(source->stream, pos)))
+         return STATUS_UNSUCCESSFUL;
++
++    source->position = *pos;
+     return STATUS_SUCCESS;
+ }
+ 
+ static NTSTATUS CDECL media_source_read_cb(struct winedmo_stream *stream, BYTE *buffer, ULONG *size)
+ {
+     struct media_source *source = CONTAINING_RECORD(stream, struct media_source, winedmo_stream);
++    UINT64 position;
++
+     TRACE("stream %p, buffer %p, size %p\n", stream, buffer, size);
+ 
++    if (SUCCEEDED(IMFByteStream_GetCurrentPosition(source->stream, &position)) && position != source->position
++            && FAILED(IMFByteStream_SetCurrentPosition(source->stream, source->position)))
++        WARN("Failed to set current position\n");
++
+     if (FAILED(IMFByteStream_Read(source->stream, buffer, *size, size)))
+         return STATUS_UNSUCCESSFUL;
++
++    source->position += *size;
+     return STATUS_SUCCESS;
+ }
+ 

@@ -1,0 +1,43 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Fri, 1 Aug 2025 13:45:53 -0600
+Subject: [PATCH] wineboot: Preserve dxvk-specific NVAPI enablement variables.
+
+CW-Bug-Id: #25745
+(cherry picked from commit 1956ac8d1f5617bd84be0d050e90390e966afc76)
+---
+ programs/wineboot/wineboot.c | 14 ++++++++++++++
+ 1 file changed, 14 insertions(+)
+
+diff --git a/programs/wineboot/wineboot.c b/programs/wineboot/wineboot.c
+index 13612b3a17d..bde65be36a2 100644
+--- a/programs/wineboot/wineboot.c
++++ b/programs/wineboot/wineboot.c
+@@ -872,6 +872,14 @@ static void create_computer_name_keys(void)
+ 
+ static void create_volatile_environment_registry_key(void)
+ {
++    static const WCHAR *preserve[] =
++    {
++        L"DXVK_ENABLE_NVAPI",
++        L"DXVK_NVAPI_ALLOW_OTHER_DRIVERS",
++        L"DXVK_NVAPI_DRIVER_VERSION",
++    };
++    const WCHAR *str;
++    unsigned int i;
+     WCHAR path[MAX_PATH];
+     WCHAR computername[MAX_COMPUTERNAME_LENGTH + 1 + 2];
+     DWORD size;
+@@ -916,6 +924,12 @@ static void create_volatile_environment_registry_key(void)
+     }
+ 
+     set_reg_value( hkey, L"SESSIONNAME", L"Console" );
++
++    for (i = 0; i < ARRAY_SIZE(preserve); ++i)
++    {
++        if ((str = _wgetenv( preserve[i] ))) set_reg_value( hkey, preserve[i], str );
++    }
++
+     RegCloseKey( hkey );
+ }
+ 

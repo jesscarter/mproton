@@ -1,0 +1,28 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Tue, 13 Aug 2024 19:19:33 +0200
+Subject: [PATCH] winegstreamer: Avoid using the aperture for padding with the
+ H264 decoder.
+
+It can change stream sizes during playback, and the video info aren't
+updated accordingly.
+
+CW-Bug-Id: #20833
+(cherry picked from commit e3c29b7c90cb5fa78fe21e3e0704713e26b632d6)
+---
+ dlls/winegstreamer/wg_transform.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/dlls/winegstreamer/wg_transform.c b/dlls/winegstreamer/wg_transform.c
+index 01b547039eb..415effebd34 100644
+--- a/dlls/winegstreamer/wg_transform.c
++++ b/dlls/winegstreamer/wg_transform.c
+@@ -115,7 +115,7 @@ static void align_video_info_planes(MFVideoInfo *video_info, gsize plane_align,
+     align->padding_right = ((plane_align + 1) - (info->width & plane_align)) & plane_align;
+     align->padding_bottom = ((plane_align + 1) - (info->height & plane_align)) & plane_align;
+ 
+-    if (!is_mf_video_area_empty(aperture))
++    if (!is_mf_video_area_empty(aperture) && !plane_align)
+     {
+         align->padding_right = max(align->padding_right, video_info->dwWidth - aperture->OffsetX.value - aperture->Area.cx);
+         align->padding_bottom = max(align->padding_bottom, video_info->dwHeight - aperture->OffsetY.value - aperture->Area.cy);

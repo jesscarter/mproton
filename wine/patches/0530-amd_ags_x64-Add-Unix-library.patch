@@ -1,0 +1,205 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Thu, 23 Nov 2023 14:30:36 -0600
+Subject: [PATCH] amd_ags_x64: Add Unix library.
+
+CW-Bug-Id: #22976
+(cherry picked from commit 698e66fee28f425e015d22145e1830cd31e82a5d)
+---
+ configure.ac                        |  9 +++++
+ dlls/amd_ags_x64/Makefile.in        |  4 +++
+ dlls/amd_ags_x64/amd_ags_x64_main.c | 24 +++++++++++++
+ dlls/amd_ags_x64/unixlib.c          | 54 +++++++++++++++++++++++++++++
+ dlls/amd_ags_x64/unixlib.h          | 26 ++++++++++++++
+ 5 files changed, 117 insertions(+)
+ create mode 100644 dlls/amd_ags_x64/unixlib.c
+ create mode 100644 dlls/amd_ags_x64/unixlib.h
+
+diff --git a/configure.ac b/configure.ac
+index 7deb74393d9..b3c18fe2f49 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -1571,6 +1571,15 @@ then
+     esac
+ fi
+ 
++dnl **** Check for libdrm ****
++WINE_PACKAGE_FLAGS(DRM,[libdrm],,,,
++    [AC_CHECK_HEADERS([xf86drm.h],
++        [WINE_CHECK_SONAME(drm,drmOpen,,,[$DRM_LIBS])])])
++
++WINE_PACKAGE_FLAGS(DRMAMDGPU,[libdrm_amdgpu],,,,
++    [AC_CHECK_HEADERS([amdgpu_drm.h],
++        [WINE_CHECK_SONAME(drm_amdgpu,amdgpu_query_info,,,[$DRMAMDGPU_LIBS])])])
++
+ dnl **** Check for SANE ****
+ if test "x$with_sane" != "xno"
+ then
+diff --git a/dlls/amd_ags_x64/Makefile.in b/dlls/amd_ags_x64/Makefile.in
+index dec733660c6..e016d6b76d8 100644
+--- a/dlls/amd_ags_x64/Makefile.in
++++ b/dlls/amd_ags_x64/Makefile.in
+@@ -1,4 +1,7 @@
+ MODULE    = amd_ags_x64.dll
++UNIXLIB   = amd_ags_x64.so
++UNIX_CFLAGS = $(DRM_CFLAGS)
++UNIX_LIBS = $(DRM_LIBS) $(DRMAMDGPU_LIBS)
+ IMPORTS   = version vulkan-1 user32
+ IMPORTLIB = amd_ags_x64
+ 
+@@ -6,4 +9,5 @@ EXTRADLLFLAGS = -mno-cygwin
+ 
+ SOURCES = \
+ 	amd_ags_x64_main.c \
++	unixlib.c \
+ 	dxvk_interfaces.idl
+diff --git a/dlls/amd_ags_x64/amd_ags_x64_main.c b/dlls/amd_ags_x64/amd_ags_x64_main.c
+index 0d16572c335..f1a7b20cfcc 100644
+--- a/dlls/amd_ags_x64/amd_ags_x64_main.c
++++ b/dlls/amd_ags_x64/amd_ags_x64_main.c
+@@ -6,8 +6,11 @@
+ #include <stdbool.h>
+ #include <assert.h>
+ 
++#include "ntstatus.h"
++#define WIN32_NO_STATUS
+ #include "windef.h"
+ #include "winbase.h"
++#include "winternl.h"
+ #include "wine/debug.h"
+ 
+ #include "wine/vulkan.h"
+@@ -24,6 +27,8 @@
+ 
+ #include "amd_ags.h"
+ 
++#include "unixlib.h"
++
+ WINE_DEFAULT_DEBUG_CHANNEL(amd_ags);
+ 
+ #define heap_realloc realloc
+@@ -31,6 +36,23 @@ WINE_DEFAULT_DEBUG_CHANNEL(amd_ags);
+ #define heap_calloc calloc
+ #define heap_free free
+ 
++#define AMD_AGS_CALL(func, args) WINE_UNIX_CALL( unix_ ## func, args )
++
++static INIT_ONCE unix_init_once = INIT_ONCE_STATIC_INIT;
++static BOOL unix_lib_initialized;
++
++static BOOL WINAPI init_unix_lib_once( INIT_ONCE *once, void *param, void **context )
++{
++    unix_lib_initialized = !__wine_init_unix_call() && !AMD_AGS_CALL( init, NULL );
++    return TRUE;
++}
++
++static BOOL init_unix_lib(void)
++{
++    InitOnceExecuteOnce( &unix_init_once, init_unix_lib_once, NULL, NULL );
++    return unix_lib_initialized;
++}
++
+ static const char driver_version[] = "23.19.02-230831a-396538C-AMD-Software-Adrenalin-Edition";
+ static const char radeon_version[] = "23.10.2";
+ 
+@@ -692,6 +714,8 @@ static AGSReturnCode init_ags_context(AGSContext *context, int ags_version)
+         SET_DEVICE_FIELD(device, deviceId, int, context->version, vk_properties->deviceID);
+         if (vk_properties->vendorID == 0x1002)
+         {
++            if (!init_unix_lib())
++                ERR("Failed to load unix lib.\n");
+             SET_DEVICE_FIELD(device, architectureVersion, ArchitectureVersion, context->version, ArchitectureVersion_GCN);
+             SET_DEVICE_FIELD(device, asicFamily, AsicFamily, context->version, AsicFamily_GCN4);
+             if (vk_properties->deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU)
+diff --git a/dlls/amd_ags_x64/unixlib.c b/dlls/amd_ags_x64/unixlib.c
+new file mode 100644
+index 00000000000..513c1903e4f
+--- /dev/null
++++ b/dlls/amd_ags_x64/unixlib.c
+@@ -0,0 +1,54 @@
++/*
++ * Unix library for amd_ags_x64 functions
++ *
++ * Copyright 2023 Paul Gofman for CodeWeavers
++ *
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation; either
++ * version 2.1 of the License, or (at your option) any later version.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with this library; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
++ */
++
++#if 0
++#pragma makedep unix
++#endif
++
++#include "config.h"
++
++#include <stdarg.h>
++#include <stdlib.h>
++#include <dlfcn.h>
++
++#include <xf86drm.h>
++#include <amdgpu_drm.h>
++
++#include "ntstatus.h"
++#define WIN32_NO_STATUS
++#include "windef.h"
++#include "winternl.h"
++
++#include "wine/debug.h"
++
++#include "unixlib.h"
++
++WINE_DEFAULT_DEBUG_CHANNEL(amd_ags);
++
++static NTSTATUS init( void *args )
++{
++    TRACE(".\n");
++    return STATUS_SUCCESS;
++}
++
++const unixlib_entry_t __wine_unix_call_funcs[] =
++{
++    init,
++};
+diff --git a/dlls/amd_ags_x64/unixlib.h b/dlls/amd_ags_x64/unixlib.h
+new file mode 100644
+index 00000000000..d3427519867
+--- /dev/null
++++ b/dlls/amd_ags_x64/unixlib.h
+@@ -0,0 +1,26 @@
++/*
++ * Unix library interface
++ *
++ * Copyright 2023 Paul Gofman for CodeWeavers
++ *
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation; either
++ * version 2.1 of the License, or (at your option) any later version.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with this library; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
++ */
++
++#include "wine/unixlib.h"
++
++enum amd_ags_funcs
++{
++    unix_init,
++};

@@ -1,0 +1,34 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Fri, 2 Sep 2022 13:23:21 +0200
+Subject: [PATCH] qasf: Increase the minimum number of buffers in
+ asf_reader_DecideBufferSize.
+
+Required for Sang Froid.
+
+CW-Bug-Id: #18799
+CW-Bug-Id: #18994
+CW-Bug-Id: #20182
+CW-Bug-Id: #20905
+(cherry picked from commit af0cb79844498f6aa7e2a9314c2a85e2b9a6543a)
+---
+ dlls/qasf/asfreader.c | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/qasf/asfreader.c b/dlls/qasf/asfreader.c
+index 740affd50c0..1e7c72e954f 100644
+--- a/dlls/qasf/asfreader.c
++++ b/dlls/qasf/asfreader.c
+@@ -632,7 +632,11 @@ static HRESULT WINAPI asf_reader_DecideBufferSize(struct strmbase_source *iface,
+         buffer_size = format->nAvgBytesPerSec;
+     }
+ 
+-    req_props->cBuffers = max(req_props->cBuffers, 1);
++    if (IsEqualGUID(&stream->source.pin.mt.majortype, &MEDIATYPE_Audio))
++        req_props->cBuffers = max(req_props->cBuffers, 50);
++    else
++        req_props->cBuffers = max(req_props->cBuffers, 10);
++
+     req_props->cbBuffer = max(req_props->cbBuffer, buffer_size);
+     req_props->cbAlign = max(req_props->cbAlign, 1);
+     return IMemAllocator_SetProperties(allocator, req_props, &ret_props);

@@ -1,0 +1,23 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Fri, 6 Dec 2024 01:07:58 +0100
+Subject: [PATCH] HACK: winedmo: Return STATUS_END_OF_FILE on error.
+
+(cherry picked from commit ff2ad0553176a0696b4f8508c5f7b6d2c26f625a)
+---
+ dlls/winedmo/unix_demuxer.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/dlls/winedmo/unix_demuxer.c b/dlls/winedmo/unix_demuxer.c
+index fdc4fa44f3b..4ffd903cebf 100644
+--- a/dlls/winedmo/unix_demuxer.c
++++ b/dlls/winedmo/unix_demuxer.c
+@@ -287,7 +287,7 @@ static NTSTATUS demuxer_filter_packet( struct demuxer *demuxer, AVPacket **packe
+     } while (!ret || ret == AVERROR(EAGAIN));
+ 
+     ERR( "Failed to read packet from demuxer %p, error %s.\n", demuxer, debugstr_averr( ret ) );
+-    return STATUS_UNSUCCESSFUL;
++    return STATUS_END_OF_FILE;
+ }
+ 
+ NTSTATUS demuxer_read( void *arg )

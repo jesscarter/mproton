@@ -1,0 +1,34 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Thu, 23 Apr 2026 20:26:47 -0600
+Subject: [PATCH] amd_ags_x64: Fail device creation for Crimson Desert.
+
+CW-Bug-Id: #26975
+(cherry picked from commit 3db12c747d3d7df656b867368ea9d0a061153d19)
+---
+ dlls/amd_ags_x64/amd_ags_x64_main.c | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/dlls/amd_ags_x64/amd_ags_x64_main.c b/dlls/amd_ags_x64/amd_ags_x64_main.c
+index b09ce5e2c84..76519142865 100644
+--- a/dlls/amd_ags_x64/amd_ags_x64_main.c
++++ b/dlls/amd_ags_x64/amd_ags_x64_main.c
+@@ -1109,11 +1109,18 @@ AGSReturnCode WINAPI agsDriverExtensionsDX12_CreateDevice(AGSContext *context,
+         const AGSDX12DeviceCreationParams *creation_params, const AGSDX12ExtensionParams *extension_params,
+         AGSDX12ReturnedParams *returned_params)
+ {
++    const char *sgi;
+     HRESULT hr;
+ 
+     TRACE("feature level %#x, app %s, engine %s %#x %#x.\n", creation_params->FeatureLevel, debugstr_w(extension_params->pAppName),
+             debugstr_w(extension_params->pEngineName), extension_params->appVersion, extension_params->engineVersion);
+ 
++    if ((sgi = getenv("SteamGameId")) && !strcmp(sgi, "3321460"))
++    {
++        FIXME("HACK: failing agsDriverExtensionsDX12_CreateDevice.\n");
++        return AGS_DX_FAILURE;
++    }
++
+     if (!load_d3d12_functions())
+     {
+         ERR("Could not load d3d12.dll.\n");

@@ -1,0 +1,283 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Thu, 5 Dec 2024 10:57:41 +0100
+Subject: [PATCH] winegstreamer/media-converter: Use a rb_tree rather than a
+ GList.
+
+(cherry picked from commit 04d2bb59bc83f3d680454bde176ebe3677c2a7d9)
+---
+ .../winegstreamer/media-converter/audioconv.c | 45 +++++++++----------
+ .../winegstreamer/media-converter/fossilize.c | 34 ++++++++++++--
+ .../media-converter/media-converter.h         | 26 +++++------
+ .../winegstreamer/media-converter/videoconv.c | 14 +++---
+ 4 files changed, 69 insertions(+), 50 deletions(-)
+
+diff --git a/dlls/winegstreamer/media-converter/audioconv.c b/dlls/winegstreamer/media-converter/audioconv.c
+index 8d69d813416..e6f2c727268 100644
+--- a/dlls/winegstreamer/media-converter/audioconv.c
++++ b/dlls/winegstreamer/media-converter/audioconv.c
+@@ -269,8 +269,11 @@ static int dump_fozdb_open_audio(bool create)
+ 
+ static void dump_fozdb_discard_transcoded(void)
+ {
+-    GList *chunks_to_discard = NULL, *chunks_to_keep = NULL, *chunks = NULL, *list_iter;
++    struct rb_tree chunks_to_discard = {fozdb_entry_compare};
++    struct rb_tree chunks_to_keep = {fozdb_entry_compare};
++    struct rb_tree chunks = {fozdb_entry_compare};
+     struct fozdb_hash chunk_id, *stream_id;
++    struct fozdb_entry *chunk;
+     struct fozdb *read_fozdb;
+     char *read_fozdb_path;
+     GHashTableIter iter;
+@@ -312,7 +315,7 @@ static void dump_fozdb_discard_transcoded(void)
+             if (fozdb_read_entry_data(dump_fozdb.fozdb, AUDIO_CONV_FOZ_TAG_STREAM, stream_id,
+                     0, buffer, chunks_size, &read_size, true) == CONV_OK)
+             {
+-                GList *stream_chunks = NULL;
++                struct rb_tree stream_chunks = {fozdb_entry_compare};
+                 bool has_all = true;
+ 
+                 for (i = 0; i < read_size / sizeof(chunk_id); ++i)
+@@ -323,55 +326,47 @@ static void dump_fozdb_discard_transcoded(void)
+                         has_all = false;
+                         break;
+                     }
+-                    stream_chunks = g_list_append(stream_chunks,
+-                            entry_name_create(AUDIO_CONV_FOZ_TAG_AUDIODATA, &chunk_id));
++                    fozdb_entry_put(&stream_chunks, AUDIO_CONV_FOZ_TAG_AUDIODATA, &chunk_id);
+                 }
+ 
+-                for (list_iter = stream_chunks; list_iter; list_iter = list_iter->next)
++                RB_FOR_EACH_ENTRY(chunk, &stream_chunks, struct fozdb_entry, entry)
+                 {
+-                    struct fozdb_key *entry = list_iter->data;
+                     if (has_all)
+                     {
+-                        chunks_to_discard = g_list_append(chunks_to_discard,
+-                                entry_name_create(entry->tag, &entry->hash));
+-                        chunks_to_discard = g_list_append(chunks_to_discard,
+-                                entry_name_create(AUDIO_CONV_FOZ_TAG_CODECINFO, &entry->hash));
++                        fozdb_entry_put(&chunks_to_discard, chunk->key.tag, &chunk->key.hash);
++                        fozdb_entry_put(&chunks_to_discard, AUDIO_CONV_FOZ_TAG_CODECINFO, &chunk->key.hash);
+                     }
+                     else
+                     {
+-                        chunks_to_keep = g_list_append(chunks_to_keep,
+-                                entry_name_create(entry->tag, &entry->hash));
+-                        chunks_to_keep = g_list_append(chunks_to_keep,
+-                                entry_name_create(AUDIO_CONV_FOZ_TAG_CODECINFO, &entry->hash));
++                        fozdb_entry_put(&chunks_to_keep, chunk->key.tag, &chunk->key.hash);
++                        fozdb_entry_put(&chunks_to_keep, AUDIO_CONV_FOZ_TAG_CODECINFO, &chunk->key.hash);
+                     }
+                 }
+ 
+                 if (has_all)
+-                    chunks_to_discard = g_list_append(chunks_to_discard,
+-                            entry_name_create(AUDIO_CONV_FOZ_TAG_STREAM, stream_id));
++                    fozdb_entry_put(&chunks_to_discard, AUDIO_CONV_FOZ_TAG_STREAM, stream_id);
+ 
+-                g_list_free_full(stream_chunks, free);
++                rb_destroy(&stream_chunks, fozdb_entry_destroy, NULL);
+             }
+             free(buffer);
+         }
+     }
+ 
+-    for (list_iter = chunks_to_discard; list_iter; list_iter = list_iter->next)
++    RB_FOR_EACH_ENTRY(chunk, &chunks_to_discard, struct fozdb_entry, entry)
+     {
+-        struct fozdb_key *entry = list_iter->data;
+-        if (!g_list_find_custom(chunks_to_keep, entry, entry_name_compare))
+-            chunks = g_list_append(chunks, entry_name_create(entry->tag, &entry->hash));
++        if (!rb_get(&chunks_to_keep, chunk))
++            fozdb_entry_put(&chunks, chunk->key.tag, &chunk->key.hash);
+     }
+ 
+-    if ((ret = fozdb_discard_entries(dump_fozdb.fozdb, chunks)) < 0)
++    if ((ret = fozdb_discard_entries(dump_fozdb.fozdb, &chunks)) < 0)
+     {
+         GST_ERROR("Failed to discard entries, ret %d.", ret);
+         dump_fozdb_close(&dump_fozdb);
+     }
+ 
+-    g_list_free_full(chunks, free);
+-    g_list_free_full(chunks_to_keep, free);
+-    g_list_free_full(chunks_to_discard, free);
++    rb_destroy(&chunks, fozdb_entry_destroy, NULL);
++    rb_destroy(&chunks_to_keep, fozdb_entry_destroy, NULL);
++    rb_destroy(&chunks_to_discard, fozdb_entry_destroy, NULL);
+ }
+ 
+ static bool need_transcode_head_create_from_caps(GstCaps *caps, struct need_transcode_head **out)
+diff --git a/dlls/winegstreamer/media-converter/fossilize.c b/dlls/winegstreamer/media-converter/fossilize.c
+index c1fadcd5242..08297cd861b 100644
+--- a/dlls/winegstreamer/media-converter/fossilize.c
++++ b/dlls/winegstreamer/media-converter/fossilize.c
+@@ -101,6 +101,34 @@ struct payload_entry
+     uint64_t offset;
+ };
+ 
++int fozdb_entry_compare( const void *key, const struct rb_entry *ptr )
++{
++    const struct fozdb_entry *entry = RB_ENTRY_VALUE( ptr, const struct fozdb_entry, entry );
++    return memcmp( key, &entry->key, sizeof(entry->key) );
++}
++
++void fozdb_entry_destroy( struct rb_entry *entry, void *context )
++{
++    struct fozdb_entry *chunk = RB_ENTRY_VALUE( entry, struct fozdb_entry, entry );
++    free( chunk );
++}
++
++struct fozdb_entry *fozdb_entry_put( struct rb_tree *tree, uint32_t tag, const struct fozdb_hash *hash )
++{
++    struct fozdb_key key = {.tag = tag, .hash = *hash};
++    struct fozdb_entry *entry;
++
++    if (!(entry = malloc( sizeof(*entry) )) ||
++        rb_put( tree, &key, &entry->entry ))
++    {
++        free( entry );
++        return NULL;
++    }
++
++    entry->key = key;
++    return entry;
++}
++
+ static guint hash_func(gconstpointer key)
+ {
+     const struct fozdb_hash *fozdb_hash = key;
+@@ -648,13 +676,13 @@ int fozdb_write_entry(struct fozdb *db, uint32_t tag, struct fozdb_hash *hash,
+ }
+ 
+ /* Rewrites the database, discarding entries listed. */
+-int fozdb_discard_entries(struct fozdb *db, GList *to_discard_names)
++int fozdb_discard_entries(struct fozdb *db, struct rb_tree *to_discard)
+ {
+     uint8_t entry_name_and_header[ENTRY_NAME_SIZE + sizeof(struct payload_header)];
+     uint64_t file_size;
+     int i, ret;
+ 
+-    GST_DEBUG("db %p, file_name %s, to_discard_entries %p.", db, db->file_name, to_discard_names);
++    GST_DEBUG("db %p, file_name %s, to_discard %p.", db, db->file_name, to_discard);
+ 
+     /* Rewind the file and clear the entry tables. */
+     if (lseek(db->file, 0, SEEK_SET) < 0)
+@@ -685,7 +713,7 @@ int fozdb_discard_entries(struct fozdb *db, GList *to_discard_names)
+         entry_data_offset = lseek(db->file, 0, SEEK_CUR);
+ 
+         /* Check if entry should be discarded. */
+-        if (g_list_find_custom(to_discard_names, &key, entry_name_compare))
++        if (rb_get(to_discard, &key))
+         {
+             if (!fozdb_seek_to_next_entry(db, &header, &truncated))
+                 return CONV_ERROR_SEEK_FAILED;
+diff --git a/dlls/winegstreamer/media-converter/media-converter.h b/dlls/winegstreamer/media-converter/media-converter.h
+index 3d82681d495..7150c46689b 100644
+--- a/dlls/winegstreamer/media-converter/media-converter.h
++++ b/dlls/winegstreamer/media-converter/media-converter.h
+@@ -30,6 +30,7 @@
+ #include <sys/stat.h>
+ 
+ #include "unix_private.h"
++#include "wine/rbtree.h"
+ 
+ GST_DEBUG_CATEGORY_EXTERN(media_converter_debug);
+ #undef GST_CAT_DEFAULT
+@@ -108,6 +109,16 @@ struct fozdb_key
+     struct fozdb_hash hash;
+ };
+ 
++struct fozdb_entry
++{
++    struct rb_entry entry;
++    struct fozdb_key key;
++};
++
++extern int fozdb_entry_compare( const void *key, const struct rb_entry *ptr );
++extern void fozdb_entry_destroy( struct rb_entry *entry, void *context );
++extern struct fozdb_entry *fozdb_entry_put( struct rb_tree *tree, uint32_t tag, const struct fozdb_hash *hash );
++
+ struct dump_fozdb
+ {
+     pthread_mutex_t mutex;
+@@ -171,7 +182,7 @@ extern int fozdb_read_entry_data(struct fozdb *db, uint32_t tag, struct fozdb_ha
+         uint64_t offset, uint8_t *buffer, size_t size, size_t *read_size, bool with_crc);
+ extern int fozdb_write_entry(struct fozdb *db, uint32_t tag, struct fozdb_hash *hash,
+         void *data_src, data_read_callback read_callback, bool with_crc);
+-extern int fozdb_discard_entries(struct fozdb *db, GList *to_discard_entries);
++extern int fozdb_discard_entries(struct fozdb *db, struct rb_tree *to_discard);
+ 
+ static inline bool option_enabled(const char *env)
+ {
+@@ -265,19 +276,6 @@ static inline bool file_exists(const char *file_path)
+     return access(file_path, F_OK) == 0;
+ }
+ 
+-static inline struct fozdb_key *entry_name_create(uint32_t tag, struct fozdb_hash *hash)
+-{
+-    struct fozdb_key *entry = calloc(1, sizeof(*entry));
+-    entry->tag = tag;
+-    entry->hash = *hash;
+-    return entry;
+-}
+-
+-static inline gint entry_name_compare(const void *a, const void *b)
+-{
+-    return memcmp(a, b, sizeof(struct fozdb_key));
+-}
+-
+ static inline uint32_t bytes_to_uint32(const uint8_t *bytes)
+ {
+     return ((uint32_t)bytes[0] << 0)
+diff --git a/dlls/winegstreamer/media-converter/videoconv.c b/dlls/winegstreamer/media-converter/videoconv.c
+index b91e0e27d8c..d27a1c11a48 100644
+--- a/dlls/winegstreamer/media-converter/videoconv.c
++++ b/dlls/winegstreamer/media-converter/videoconv.c
+@@ -175,7 +175,7 @@ static int dump_fozdb_open_video(bool create)
+ 
+ static void dump_fozdb_discard_transcoded(void)
+ {
+-    GList *to_discard_chunks = NULL;
++    struct rb_tree to_discard_chunks = {fozdb_entry_compare};
+     struct fozdb_hash *stream_id;
+     struct fozdb *read_fozdb;
+     char *read_fozdb_path;
+@@ -224,25 +224,23 @@ static void dump_fozdb_discard_transcoded(void)
+                     for (i = 0; i < read_size / sizeof(chunk_id); ++i)
+                     {
+                         fozdb_hash_from_bytes(&chunk_id, buffer + i * sizeof(chunk_id));
+-                        to_discard_chunks = g_list_append(to_discard_chunks,
+-                                entry_name_create(VIDEO_CONV_FOZ_TAG_VIDEODATA, &chunk_id));
++                        fozdb_entry_put(&to_discard_chunks, VIDEO_CONV_FOZ_TAG_VIDEODATA, &chunk_id);
+                     }
+                 }
+                 free(buffer);
+             }
+ 
+-            to_discard_chunks = g_list_append(to_discard_chunks,
+-                    entry_name_create(VIDEO_CONV_FOZ_TAG_STREAM, stream_id));
++            fozdb_entry_put(&to_discard_chunks, VIDEO_CONV_FOZ_TAG_STREAM, stream_id);
+         }
+     }
+ 
+-    if ((ret = fozdb_discard_entries(dump_fozdb.fozdb, to_discard_chunks)) < 0)
++    if ((ret = fozdb_discard_entries(dump_fozdb.fozdb, &to_discard_chunks)) < 0)
+     {
+         GST_ERROR("Failed to discard entries, ret %d.", ret);
+         dump_fozdb_close(&dump_fozdb);
+     }
+ 
+-    g_list_free_full(to_discard_chunks, free);
++    rb_destroy(&to_discard_chunks, fozdb_entry_destroy, NULL);
+ }
+ 
+ struct pad_reader *pad_reader_create_with_stride(GstPad *pad, size_t stride)
+@@ -1423,4 +1421,4 @@ done:
+         free(buffer);
+     pthread_mutex_unlock(&conv->state_mutex);
+     return ret;
+-}
+\ No newline at end of file
++}

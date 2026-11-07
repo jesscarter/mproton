@@ -1,0 +1,139 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Connor McAdams <cmcadams@codeweavers.com>
+Date: Tue, 13 Jan 2026 11:33:23 -0500
+Subject: [PATCH] d3dx11: Add support for the thread pump argument in
+ D3DX11GetImageInfoFrom{File,Memory,Resource}().
+
+Signed-off-by: Connor McAdams <cmcadams@codeweavers.com>
+
+CW-Bug-Id: #20442
+CW-Bug-Id: #23084
+CW-Bug-Id: #23301
+(cherry picked from commit cc4439305f86240ebf969ad9f0aee59ec82bc15e)
+---
+ dlls/d3dx11_43/tests/d3dx11.c |  2 +-
+ dlls/d3dx11_43/texture.c      | 77 +++++++++++++++++++++++++++++++++--
+ 2 files changed, 74 insertions(+), 5 deletions(-)
+
+diff --git a/dlls/d3dx11_43/tests/d3dx11.c b/dlls/d3dx11_43/tests/d3dx11.c
+index 6e0fc366cf8..a2ad1025e32 100644
+--- a/dlls/d3dx11_43/tests/d3dx11.c
++++ b/dlls/d3dx11_43/tests/d3dx11.c
+@@ -3773,7 +3773,7 @@ static void test_get_image_info(void)
+     hr2 = 0xdeadbeef;
+     add_work_item_count = 0;
+     hr = D3DX11GetImageInfoFromMemory(test_image[0].data, test_image[0].size, &thread_pump, &image_info, &hr2);
+-    todo_wine ok(add_work_item_count == 1, "Got unexpected add_work_item_count %u.\n", add_work_item_count);
++    ok(add_work_item_count == 1, "Got unexpected add_work_item_count %u.\n", add_work_item_count);
+     ok(hr == S_OK, "Got unexpected hr %#lx.\n", hr);
+     ok(hr == hr2, "Got unexpected hr2 %#lx.\n", hr2);
+     check_image_info(&image_info, test_image, __LINE__);
+diff --git a/dlls/d3dx11_43/texture.c b/dlls/d3dx11_43/texture.c
+index efac4deff54..fc3530ca46c 100644
+--- a/dlls/d3dx11_43/texture.c
++++ b/dlls/d3dx11_43/texture.c
+@@ -211,7 +211,25 @@ HRESULT WINAPI D3DX11GetImageInfoFromFileW(const WCHAR *src_file, ID3DX11ThreadP
+         return E_FAIL;
+ 
+     if (pump)
+-        FIXME("D3DX11 thread pump is currently unimplemented.\n");
++    {
++        ID3DX11DataProcessor *processor;
++        ID3DX11DataLoader *loader;
++
++        if (FAILED((hr = D3DX11CreateAsyncFileLoaderW(src_file, &loader))))
++            return hr;
++        if (FAILED((hr = D3DX11CreateAsyncTextureInfoProcessor(info, &processor))))
++        {
++            ID3DX11DataLoader_Destroy(loader);
++            return hr;
++        }
++        hr = ID3DX11ThreadPump_AddWorkItem(pump, loader, processor, result, NULL);
++        if (FAILED(hr))
++        {
++            ID3DX11DataLoader_Destroy(loader);
++            ID3DX11DataProcessor_Destroy(processor);
++        }
++        return hr;
++    }
+ 
+     if (SUCCEEDED((hr = load_file(src_file, &buffer, &size))))
+     {
+@@ -234,7 +252,24 @@ HRESULT WINAPI D3DX11GetImageInfoFromResourceA(HMODULE module, const char *resou
+             module, debugstr_a(resource), pump, info, result);
+ 
+     if (pump)
+-        FIXME("D3DX11 thread pump is currently unimplemented.\n");
++    {
++        ID3DX11DataProcessor *processor;
++        ID3DX11DataLoader *loader;
++
++        if (FAILED((hr = D3DX11CreateAsyncResourceLoaderA(module, resource, &loader))))
++            return hr;
++        if (FAILED((hr = D3DX11CreateAsyncTextureInfoProcessor(info, &processor))))
++        {
++            ID3DX11DataLoader_Destroy(loader);
++            return hr;
++        }
++        if (FAILED((hr = ID3DX11ThreadPump_AddWorkItem(pump, loader, processor, result, NULL))))
++        {
++            ID3DX11DataLoader_Destroy(loader);
++            ID3DX11DataProcessor_Destroy(processor);
++        }
++        return hr;
++    }
+ 
+     if (FAILED((hr = d3dx_load_resource_a(module, resource, &buffer, &size))))
+         return hr;
+@@ -255,7 +290,24 @@ HRESULT WINAPI D3DX11GetImageInfoFromResourceW(HMODULE module, const WCHAR *reso
+             module, debugstr_w(resource), pump, info, result);
+ 
+     if (pump)
+-        FIXME("D3DX11 thread pump is currently unimplemented.\n");
++    {
++        ID3DX11DataProcessor *processor;
++        ID3DX11DataLoader *loader;
++
++        if (FAILED((hr = D3DX11CreateAsyncResourceLoaderW(module, resource, &loader))))
++            return hr;
++        if (FAILED((hr = D3DX11CreateAsyncTextureInfoProcessor(info, &processor))))
++        {
++            ID3DX11DataLoader_Destroy(loader);
++            return hr;
++        }
++        if (FAILED((hr = ID3DX11ThreadPump_AddWorkItem(pump, loader, processor, result, NULL))))
++        {
++            ID3DX11DataLoader_Destroy(loader);
++            ID3DX11DataProcessor_Destroy(processor);
++        }
++        return hr;
++    }
+ 
+     if (FAILED((hr = d3dx_load_resource_w(module, resource, &buffer, &size))))
+         return hr;
+@@ -852,7 +904,24 @@ HRESULT WINAPI D3DX11GetImageInfoFromMemory(const void *src_data, SIZE_T src_dat
+     if (!src_data)
+         return E_FAIL;
+     if (pump)
+-        FIXME("D3DX11 thread pump is currently unimplemented.\n");
++    {
++        ID3DX11DataProcessor *processor;
++        ID3DX11DataLoader *loader;
++
++        if (FAILED((hr = D3DX11CreateAsyncMemoryLoader(src_data, src_data_size, &loader))))
++            return hr;
++        if (FAILED((hr = D3DX11CreateAsyncTextureInfoProcessor(img_info, &processor))))
++        {
++            ID3DX11DataLoader_Destroy(loader);
++            return hr;
++        }
++        if (FAILED((hr = ID3DX11ThreadPump_AddWorkItem(pump, loader, processor, hresult, NULL))))
++        {
++            ID3DX11DataLoader_Destroy(loader);
++            ID3DX11DataProcessor_Destroy(processor);
++        }
++        return hr;
++    }
+ 
+     hr = get_image_info(src_data, src_data_size, img_info);
+     if (hresult)

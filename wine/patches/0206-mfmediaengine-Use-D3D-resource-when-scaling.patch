@@ -1,0 +1,117 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Brendan McGrath <bmcgrath@codeweavers.com>
+Date: Wed, 8 Jan 2025 13:37:52 +1100
+Subject: [PATCH] mfmediaengine: Use D3D resource when scaling.
+
+The D3D resource is currently only used when no scaling is required.
+This patch allows the D3D resource to be used on the scaling path (when
+availble).
+
+This addressess a performance regression in MSFS as a result of the Wine
+merge.
+
+CW-Bug-Id: #22403
+(cherry picked from commit 6851ec1b6c983b092a5d073a149b7edf98db3ced)
+---
+ dlls/mfmediaengine/main.c | 69 +++++++++++++++++++++++++--------------
+ 1 file changed, 45 insertions(+), 24 deletions(-)
+
+diff --git a/dlls/mfmediaengine/main.c b/dlls/mfmediaengine/main.c
+index 6be20a6b804..9d2b3aedb86 100644
+--- a/dlls/mfmediaengine/main.c
++++ b/dlls/mfmediaengine/main.c
+@@ -2500,11 +2500,39 @@ static void media_engine_adjust_destination_for_ratio(const struct media_engine
+     }
+ }
+ 
++static HRESULT get_d3d11_resource_from_sample(IMFSample *sample, ID3D11Texture2D **resource, UINT *subresource)
++{
++    IMFDXGIBuffer *dxgi_buffer;
++    IMFMediaBuffer *buffer;
++    HRESULT hr;
++
++    *resource = NULL;
++    *subresource = 0;
++
++    if (FAILED(hr = IMFSample_GetBufferByIndex(sample, 0, &buffer)))
++        return hr;
++
++    if (SUCCEEDED(hr = IMFMediaBuffer_QueryInterface(buffer, &IID_IMFDXGIBuffer, (void **)&dxgi_buffer)))
++    {
++        IMFDXGIBuffer_GetSubresourceIndex(dxgi_buffer, subresource);
++        hr = IMFDXGIBuffer_GetResource(dxgi_buffer, &IID_ID3D11Texture2D, (void **)resource);
++        IMFDXGIBuffer_Release(dxgi_buffer);
++    }
++
++    IMFMediaBuffer_Release(buffer);
++    return hr;
++}
++
+ static void media_engine_update_d3d11_frame_surface(ID3D11DeviceContext *context, struct media_engine *engine)
+ {
+     D3D11_TEXTURE2D_DESC surface_desc;
++    D3D11_TEXTURE2D_DESC src_desc;
+     IMFMediaBuffer *media_buffer;
++    ID3D11Texture2D *src_texture;
++    ID3D11Device *device;
+     IMFSample *sample;
++    UINT subresource;
++    HRESULT hr;
+ 
+     if (!video_frame_sink_get_sample(engine->presentation.frame_sink, &sample))
+         return;
+@@ -2522,7 +2550,23 @@ static void media_engine_update_d3d11_frame_surface(ID3D11DeviceContext *context
+         surface_desc.Width = 0;
+     }
+ 
+-    if (SUCCEEDED(IMFSample_ConvertToContiguousBuffer(sample, &media_buffer)))
++    if (SUCCEEDED(hr = get_d3d11_resource_from_sample(sample, &src_texture, &subresource)))
++    {
++
++        ID3D11Texture2D_GetDesc(src_texture, &src_desc);
++
++        if (SUCCEEDED(hr = media_engine_lock_d3d_device(engine, &device)))
++        {
++            ID3D11Device_GetImmediateContext(device, &context);
++            ID3D11DeviceContext_CopyResource(context, (ID3D11Resource *)engine->video_frame.d3d11.source, (ID3D11Resource *)src_texture);
++            ID3D11DeviceContext_Release(context);
++            media_engine_unlock_d3d_device(engine, device);
++        }
++
++        ID3D11Texture2D_Release(src_texture);
++    }
++
++    if (FAILED(hr) && SUCCEEDED(IMFSample_ConvertToContiguousBuffer(sample, &media_buffer)))
+     {
+         BYTE *buffer;
+         DWORD buffer_size;
+@@ -2542,29 +2586,6 @@ static void media_engine_update_d3d11_frame_surface(ID3D11DeviceContext *context
+     IMFSample_Release(sample);
+ }
+ 
+-static HRESULT get_d3d11_resource_from_sample(IMFSample *sample, ID3D11Texture2D **resource, UINT *subresource)
+-{
+-    IMFDXGIBuffer *dxgi_buffer;
+-    IMFMediaBuffer *buffer;
+-    HRESULT hr;
+-
+-    *resource = NULL;
+-    *subresource = 0;
+-
+-    if (FAILED(hr = IMFSample_GetBufferByIndex(sample, 0, &buffer)))
+-        return hr;
+-
+-    if (SUCCEEDED(hr = IMFMediaBuffer_QueryInterface(buffer, &IID_IMFDXGIBuffer, (void **)&dxgi_buffer)))
+-    {
+-        IMFDXGIBuffer_GetSubresourceIndex(dxgi_buffer, subresource);
+-        hr = IMFDXGIBuffer_GetResource(dxgi_buffer, &IID_ID3D11Texture2D, (void **)resource);
+-        IMFDXGIBuffer_Release(dxgi_buffer);
+-    }
+-
+-    IMFMediaBuffer_Release(buffer);
+-    return hr;
+-}
+-
+ static HRESULT media_engine_transfer_d3d11(struct media_engine *engine, ID3D11Texture2D *dst_texture,
+         const MFVideoNormalizedRect *src_rect, const RECT *dst_rect, const MFARGB *color)
+ {

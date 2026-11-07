@@ -1,0 +1,34 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arkadiusz Hiler <arek@hiler.eu>
+Date: Tue, 13 Oct 2020 18:20:39 +0300
+Subject: [PATCH] wine.inf: Enable atiadlxx and disable ags for Shadow of War.
+
+With the recent stubs game is able to use our atiadlxx without crashing.
+This helps with getting the resolution list populated with AMD GPUs.
+
+AGS has to be force disabled - the dll ships with the game and uses a
+bunch of more complex ADL2 calls that remain unimplemented. The game
+works fine if the DLL is not found.
+
+(cherry picked from commit c81573860abf8b59d26594e7ea039f4ed1bc0a5b)
+---
+ loader/wine.inf.in | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/loader/wine.inf.in b/loader/wine.inf.in
+index 5d5a29a9299..883f146a63f 100644
+--- a/loader/wine.inf.in
++++ b/loader/wine.inf.in
+@@ -1431,6 +1431,7 @@ HKLM,Software\Wow6432Node\Valve\Steam\Apps\CommonRedist\.NET\4.0 Client Profile,
+ HKLM,Software\Wow6432Node\Valve\Steam\Apps\CommonRedist\.NET\3.5,"3.5",0x10001,1
+ HKLM,Software\Wow6432Node\Valve\Steam\Apps\CommonRedist\.NET\3.5 Client Profile,"3.5 Client Profile",0x10001,1
+ HKLM,Software\Wow6432Node\Valve\Steam\Apps\CommonRedist\XNA\4.0,"4.0",0x10001,1
++HKCU,Software\Wine\AppDefaults\ShadowOfWar.exe\DllOverrides,"amd_ags_x64",,"disabled"
+ ;;App-specific overrides for atiadlxx.dll.
+ HKCU,Software\Wine\AppDefaults\s2_sp64_ship.exe\DllOverrides,"atiadlxx",,"builtin"
+ HKCU,Software\Wine\AppDefaults\s2_mp64_ship.exe\DllOverrides,"atiadlxx",,"builtin"
+@@ -1438,3 +1439,4 @@ HKCU,Software\Wine\AppDefaults\h1_sp64_ship.exe\DllOverrides,"atiadlxx",,"builti
+ HKCU,Software\Wine\AppDefaults\h1_mp64_ship.exe\DllOverrides,"atiadlxx",,"builtin"
+ HKCU,Software\Wine\AppDefaults\iw7_ship.exe\DllOverrides,"atiadlxx",,"builtin"
+ HKCU,Software\Wine\AppDefaults\BlackOps3.exe\DllOverrides,"atiadlxx",,"builtin"
++HKCU,Software\Wine\AppDefaults\ShadowOfWar.exe\DllOverrides,"atiadlxx",,"builtin"

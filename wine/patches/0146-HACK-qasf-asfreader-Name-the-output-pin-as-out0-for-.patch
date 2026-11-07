@@ -1,0 +1,42 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Tue, 21 Nov 2023 13:47:07 +0100
+Subject: [PATCH] HACK: qasf/asfreader: Name the output pin as out0 for
+ KoFXIII.
+
+King of Fighters XIII requests them by name, to connect them to the
+Samplegrabber filter.
+
+CW-Bug-Id: #20244
+CW-Bug-Id: #23966
+(cherry picked from commit 5fa55397968349cae751982f93901648ec53d0a8)
+---
+ dlls/qasf/asfreader.c | 11 ++++++++++-
+ 1 file changed, 10 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/qasf/asfreader.c b/dlls/qasf/asfreader.c
+index 0bebfa9727c..4d78f60d0a7 100644
+--- a/dlls/qasf/asfreader.c
++++ b/dlls/qasf/asfreader.c
+@@ -838,11 +838,20 @@ static HRESULT WINAPI reader_callback_OnStatus(IWMReaderCallback *iface, WMT_STA
+             for (i = 0; i < stream_count; ++i)
+             {
+                 struct asf_stream *stream = filter->streams + i;
++                const char *sgi = getenv("SteamGameId");
+ 
+                 if (FAILED(hr = asf_stream_get_media_type(&stream->source.pin, 0, &stream_media_type)))
+                     WARN("Failed to get stream media type, hr %#lx.\n", hr);
+                 if (IsEqualGUID(&stream_media_type.majortype, &MEDIATYPE_Video))
+-                    swprintf(name, ARRAY_SIZE(name), L"Raw Video %u", stream->index);
++                {
++                    /* King of Fighters XIII requests the WMV decoder filter pins by name
++                     * to connect them to a Sample Grabber filter.
++                     */
++                    if (sgi && !strcmp(sgi, "222940"))
++                        swprintf(name, ARRAY_SIZE(name), L"out0");
++                    else
++                        swprintf(name, ARRAY_SIZE(name), L"Raw Video %u", stream->index);
++                }
+                 else
+                     swprintf(name, ARRAY_SIZE(name), L"Raw Audio %u", stream->index);
+                 FreeMediaType(&stream_media_type);

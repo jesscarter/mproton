@@ -1,0 +1,42 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Wed, 31 Aug 2022 12:50:21 +0200
+Subject: [PATCH] HACK: qasf: Only force user provided time to -1 if no quartz
+ clock is set.
+
+This satisfies both Sang Froid intro song which expects the audio stream
+to fast forward decode by not providing any sync source to the filter,
+and Space Engineers which expects the filter to respect the system clock
+timing when decoding its videos.
+
+This is likely a hack and there's probably something to do with wmvcore
+sync clock source to make it match quartz clock.
+
+CW-Bug-Id: #21139
+(cherry picked from commit 91a7b7d0107ca0f1d12aeaf4cbd255a5782d555e)
+---
+ dlls/qasf/asfreader.c | 10 ++++++----
+ 1 file changed, 6 insertions(+), 4 deletions(-)
+
+diff --git a/dlls/qasf/asfreader.c b/dlls/qasf/asfreader.c
+index cf6b3da3f96..0f059eb6b59 100644
+--- a/dlls/qasf/asfreader.c
++++ b/dlls/qasf/asfreader.c
+@@ -556,11 +556,13 @@ static HRESULT asf_reader_init_stream(struct strmbase_filter *iface)
+             filter->stream_count, stream_numbers, selections)))
+         WARN("Failed to set reader %p stream selection, hr %#lx\n", filter->reader, hr);
+ 
+-    if (SUCCEEDED(hr) && FAILED(hr = IWMReaderAdvanced2_SetUserProvidedClock(reader_advanced, TRUE)))
++    if (SUCCEEDED(hr) && FAILED(hr = IWMReaderAdvanced2_SetUserProvidedClock(reader_advanced, !filter->filter.clock)))
+         WARN("Failed to set user provided clock, hr %#lx\n", hr);
+-
+-    if (SUCCEEDED(hr) && FAILED(hr = IWMReaderAdvanced2_DeliverTime(reader_advanced, -1)))
+-        WARN("Failed to set user time, hr %#lx\n", hr);
++    else if (!filter->filter.clock)
++    {
++        if (SUCCEEDED(hr) && FAILED(hr = IWMReaderAdvanced2_DeliverTime(reader_advanced, -1)))
++            WARN("Failed to set user time, hr %#lx\n", hr);
++    }
+ 
+     IWMReaderAdvanced2_Release(reader_advanced);
+ 

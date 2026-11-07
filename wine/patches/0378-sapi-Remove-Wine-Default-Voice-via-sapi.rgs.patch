@@ -1,0 +1,26 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Shaun Ren <sren@codeweavers.com>
+Date: Wed, 6 Mar 2024 18:17:28 -0500
+Subject: [PATCH] sapi: Remove Wine Default Voice via sapi.rgs.
+
+(cherry picked from commit 71fed26906bf6a3183d1f9bb4828625ccc3ad95e)
+---
+ dlls/sapi/sapi.rgs | 5 +----
+ 1 file changed, 1 insertion(+), 4 deletions(-)
+
+diff --git a/dlls/sapi/sapi.rgs b/dlls/sapi/sapi.rgs
+index cba07ab6184..4ae2b96f3cd 100644
+--- a/dlls/sapi/sapi.rgs
++++ b/dlls/sapi/sapi.rgs
+@@ -32,10 +32,7 @@ HKLM
+                 {
+                     NoRemove Tokens
+                     {
+-                        NoRemove 'Wine Default Voice'
+-                        {
+-                            NoRemove Attributes
+-                        }
++                        Delete 'Wine Default Voice'
+                     }
+                 }
+             }

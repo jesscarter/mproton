@@ -1,0 +1,29 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Wed, 6 Aug 2025 15:02:24 -0600
+Subject: [PATCH] kernelbase: Don't redirect BE launcher when run from builtin
+ one.
+
+CW-Bug-Id: #25758
+(cherry picked from commit 300828e138b82a8b35c502106a667e37e7a281fc)
+---
+ dlls/kernelbase/process.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/dlls/kernelbase/process.c b/dlls/kernelbase/process.c
+index e00bada403d..6d524938d01 100644
+--- a/dlls/kernelbase/process.c
++++ b/dlls/kernelbase/process.c
+@@ -558,6 +558,12 @@ static int battleye_launcher_redirect_hack( const WCHAR *app_name, WCHAR *new_na
+     static const WCHAR belauncherW[] = L"c:\\windows\\system32\\belauncher.exe";
+     unsigned int len;
+ 
++    if (GetEnvironmentVariableW(L"PROTON_ORIG_LAUNCHER_NAME", NULL, 0))
++    {
++        /* run from builtin belauncher. */
++        return 0;
++    }
++
+     /* We detect the BattlEye launcher executable through the product name property, as the executable name varies */
+     if (!product_name_matches( app_name, "BattlEye Launcher" ))
+         return 0;

@@ -1,0 +1,21 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Wed, 29 Jun 2022 11:12:42 -0500
+Subject: [PATCH] wine.inf: Use built-in atiadlxx for Plants vs Zombies Garden
+ Warfare 2.
+
+CW-Bug-Id: #20818
+(cherry picked from commit 276bbab40ee63f835f3a2900f154a8cbf700554f)
+---
+ loader/wine.inf.in | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/loader/wine.inf.in b/loader/wine.inf.in
+index 0a7b0aa957e..cf1183bc221 100644
+--- a/loader/wine.inf.in
++++ b/loader/wine.inf.in
+@@ -1446,3 +1446,4 @@ HKCU,Software\Wine\AppDefaults\gotg.exe\DllOverrides,"atiadlxx",,"builtin"
+ HKCU,Software\Wine\AppDefaults\RelicCardinal.exe\DllOverrides,"atiadlxx",,"builtin"
+ HKCU,Software\Wine\AppDefaults\Avengers.exe\DllOverrides,"atiadlxx",,"builtin"
+ HKCU,Software\Wine\AppDefaults\starwarssquadrons.exe\DllOverrides,"atiadlxx",,"builtin"
++HKCU,Software\Wine\AppDefaults\GW2.Main_Win64_Retail.exe\DllOverrides,"atiadlxx",,"builtin"

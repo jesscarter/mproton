@@ -1,0 +1,24 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Tue, 22 Apr 2025 13:51:57 -0600
+Subject: [PATCH] wine.inf: HACK: Spoof Win7 for msedgewebview2.exe.
+
+CW-Bug-Id: #25268
+(cherry picked from commit 2138dcb02f9bddb619aa637994b9e23d912ee058)
+---
+ loader/wine.inf.in | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/loader/wine.inf.in b/loader/wine.inf.in
+index 24780f0d816..8544e7b23d2 100644
+--- a/loader/wine.inf.in
++++ b/loader/wine.inf.in
+@@ -1451,7 +1451,7 @@ HKCU,Software\Wine\AppDefaults\DIRT5.exe\DllOverrides,"atiadlxx",,"builtin"
+ HKCU,Software\Wine\AppDefaults\Paradox Launcher.exe\DllOverrides,,4,
+ HKCU,Software\Wine\AppDefaults\gotg.exe\DllOverrides,"atiadlxx",,"builtin"
+ HKCU,Software\Wine\AppDefaults\RelicCardinal.exe\DllOverrides,"atiadlxx",,"builtin"
+-HKCU,Software\Wine\AppDefaults\msedgewebview2.exe,"Version",,"win81"
++HKCU,Software\Wine\AppDefaults\msedgewebview2.exe,"Version",,"win7"
+ HKCU,Software\Wine\AppDefaults\Avengers.exe\DllOverrides,"atiadlxx",,"builtin"
+ HKCU,Software\Wine\AppDefaults\starwarssquadrons.exe\DllOverrides,"atiadlxx",,"builtin"
+ HKCU,Software\Wine\AppDefaults\GW2.Main_Win64_Retail.exe\DllOverrides,"atiadlxx",,"builtin"

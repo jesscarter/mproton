@@ -1,0 +1,110 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Brendan McGrath <bmcgrath@codeweavers.com>
+Date: Fri, 27 Jun 2025 07:29:55 +1000
+Subject: [PATCH] mfplat: HACK: Fix performance regression in RE:7.
+
+Optimise 1d Lock of 2d buffer when pitch equals width.
+
+When the pitch and width are the same, the original 2D buffer can be
+used. This saves a potentially expensive allocation and memory copy.
+
+This does not match Windows behaviour though, so this is a hack.
+
+CW-Bug-Id: #25609
+(cherry picked from commit 2e41271ca064e129a3ae03995a4df11ec2159324)
+---
+ dlls/mfplat/buffer.c | 40 ++++++++++++++++++++++++++++++++++++----
+ 1 file changed, 36 insertions(+), 4 deletions(-)
+
+diff --git a/dlls/mfplat/buffer.c b/dlls/mfplat/buffer.c
+index 39d482f3211..6db35c2f651 100644
+--- a/dlls/mfplat/buffer.c
++++ b/dlls/mfplat/buffer.c
+@@ -327,10 +327,14 @@ static HRESULT WINAPI memory_1d_2d_buffer_QueryInterface(IMFMediaBuffer *iface,
+     return S_OK;
+ }
+ 
++static HRESULT memory_2d_buffer_lock(struct buffer *buffer, BYTE **scanline0, LONG *pitch,
++        BYTE **buffer_start, DWORD *buffer_length);
++
+ static HRESULT WINAPI memory_1d_2d_buffer_Lock(IMFMediaBuffer *iface, BYTE **data, DWORD *max_length, DWORD *current_length)
+ {
+     struct buffer *buffer = impl_from_IMFMediaBuffer(iface);
+     HRESULT hr = S_OK;
++    const char *sgi;
+ 
+     TRACE("%p, %p, %p, %p.\n", iface, data, max_length, current_length);
+ 
+@@ -342,8 +346,22 @@ static HRESULT WINAPI memory_1d_2d_buffer_Lock(IMFMediaBuffer *iface, BYTE **dat
+ 
+     EnterCriticalSection(&buffer->cs);
+ 
+-    if (!buffer->_2d.linear_buffer && buffer->_2d.locks)
++    if (!buffer->_2d.linear_buffer && buffer->_2d.width == buffer->_2d.pitch
++            && (sgi = getenv("SteamGameId")) && !strcmp(sgi, "418370"))
++    {
++        BYTE *scanline;
++        LONG pitch;
++
++        /* width and pitch are the same, so this avoids a potentially expensive copy
++         * this is a HACK as it does not match Windows behaviour (Windows will copy the buffer)
++         * this fixes a performance regression for Resident Evil 7 Biohazard (418370)
++         */
++        hr = memory_2d_buffer_lock(buffer, &scanline, &pitch, data, NULL);
++    }
++    else if (!buffer->_2d.linear_buffer && buffer->_2d.locks)
++    {
+         hr = MF_E_INVALIDREQUEST;
++    }
+     else if (!buffer->_2d.linear_buffer)
+     {
+         if (!(buffer->_2d.linear_buffer = malloc(buffer->_2d.plane_size)))
+@@ -360,10 +378,14 @@ static HRESULT WINAPI memory_1d_2d_buffer_Lock(IMFMediaBuffer *iface, BYTE **dat
+         }
+     }
+ 
+-    if (SUCCEEDED(hr))
++    if (SUCCEEDED(hr) && buffer->_2d.linear_buffer)
+     {
+         ++buffer->_2d.locks;
+         *data = buffer->_2d.linear_buffer;
++    }
++
++    if (SUCCEEDED(hr))
++    {
+         if (max_length)
+             *max_length = buffer->_2d.plane_size;
+         if (current_length)
+@@ -378,12 +400,22 @@ static HRESULT WINAPI memory_1d_2d_buffer_Lock(IMFMediaBuffer *iface, BYTE **dat
+ static HRESULT WINAPI memory_1d_2d_buffer_Unlock(IMFMediaBuffer *iface)
+ {
+     struct buffer *buffer = impl_from_IMFMediaBuffer(iface);
++    HRESULT hr = S_OK;
++    const char *sgi;
+ 
+     TRACE("%p.\n", iface);
+ 
+     EnterCriticalSection(&buffer->cs);
+ 
+-    if (buffer->_2d.linear_buffer && !--buffer->_2d.locks)
++    if (!buffer->_2d.linear_buffer && buffer->_2d.width == buffer->_2d.pitch
++            && (sgi = getenv("SteamGameId")) && !strcmp(sgi, "418370"))
++    {
++        if (buffer->_2d.locks)
++            --buffer->_2d.locks;
++        else
++            hr = HRESULT_FROM_WIN32(ERROR_WAS_UNLOCKED);
++    }
++    else if (buffer->_2d.linear_buffer && !--buffer->_2d.locks)
+     {
+         int pitch = buffer->_2d.pitch;
+ 
+@@ -398,7 +430,7 @@ static HRESULT WINAPI memory_1d_2d_buffer_Unlock(IMFMediaBuffer *iface)
+ 
+     LeaveCriticalSection(&buffer->cs);
+ 
+-    return S_OK;
++    return hr;
+ }
+ 
+ static const IMFMediaBufferVtbl memory_1d_2d_buffer_vtbl =

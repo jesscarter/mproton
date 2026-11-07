@@ -1,0 +1,227 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Connor McAdams <cmcadams@codeweavers.com>
+Date: Tue, 13 Jan 2026 11:31:11 -0500
+Subject: [PATCH] d3dx11: Implement D3DX11CreateAsyncTextureInfoProcessor().
+
+Signed-off-by: Connor McAdams <cmcadams@codeweavers.com>
+
+CW-Bug-Id: #20442
+CW-Bug-Id: #23084
+CW-Bug-Id: #23301
+(cherry picked from commit 94d00054fc57f3fe58854d440611141e8ae3f962)
+---
+ dlls/d3dx11_42/d3dx11_42.spec |  2 +-
+ dlls/d3dx11_43/async.c        | 62 +++++++++++++++++++++++++++++++++++
+ dlls/d3dx11_43/d3dx11_43.spec |  2 +-
+ dlls/d3dx11_43/tests/d3dx11.c | 59 +++++++++++++++++++++++++++++++++
+ include/d3dx11.h              |  2 +-
+ include/d3dx11async.h         |  2 ++
+ 6 files changed, 126 insertions(+), 3 deletions(-)
+
+diff --git a/dlls/d3dx11_42/d3dx11_42.spec b/dlls/d3dx11_42/d3dx11_42.spec
+index 4e3d2f44192..2e0cf0d1816 100644
+--- a/dlls/d3dx11_42/d3dx11_42.spec
++++ b/dlls/d3dx11_42/d3dx11_42.spec
+@@ -13,7 +13,7 @@
+ @ stdcall -import D3DX11CreateAsyncResourceLoaderW(long wstr ptr)
+ @ stub D3DX11CreateAsyncShaderPreprocessProcessor
+ @ stub D3DX11CreateAsyncShaderResourceViewProcessor
+-@ stub D3DX11CreateAsyncTextureInfoProcessor
++@ stdcall -import D3DX11CreateAsyncTextureInfoProcessor(ptr ptr)
+ @ stub D3DX11CreateAsyncTextureProcessor
+ @ stub D3DX11CreateShaderResourceViewFromFileA
+ @ stub D3DX11CreateShaderResourceViewFromFileW
+diff --git a/dlls/d3dx11_43/async.c b/dlls/d3dx11_43/async.c
+index 8fa7dde052b..6405b2f12eb 100644
+--- a/dlls/d3dx11_43/async.c
++++ b/dlls/d3dx11_43/async.c
+@@ -206,6 +206,48 @@ static const ID3DX11DataLoaderVtbl resourcedataloadervtbl =
+     resourcedataloader_Destroy
+ };
+ 
++struct texture_info_processor
++{
++    ID3DX11DataProcessor ID3DX11DataProcessor_iface;
++    D3DX11_IMAGE_INFO *info;
++};
++
++static inline struct texture_info_processor *impl_from_ID3DX11DataProcessor(ID3DX11DataProcessor *iface)
++{
++    return CONTAINING_RECORD(iface, struct texture_info_processor, ID3DX11DataProcessor_iface);
++}
++
++static HRESULT WINAPI texture_info_processor_Process(ID3DX11DataProcessor *iface, void *data, SIZE_T size)
++{
++    struct texture_info_processor *processor = impl_from_ID3DX11DataProcessor(iface);
++
++    TRACE("iface %p, data %p, size %Iu.\n", iface, data, size);
++    return get_image_info(data, size, processor->info);
++}
++
++static HRESULT WINAPI texture_info_processor_CreateDeviceObject(ID3DX11DataProcessor *iface, void **object)
++{
++    TRACE("iface %p, object %p.\n", iface, object);
++    return S_OK;
++}
++
++static HRESULT WINAPI texture_info_processor_Destroy(ID3DX11DataProcessor *iface)
++{
++    struct texture_info_processor *processor = impl_from_ID3DX11DataProcessor(iface);
++
++    TRACE("iface %p.\n", iface);
++
++    free(processor);
++    return S_OK;
++}
++
++static ID3DX11DataProcessorVtbl texture_info_processor_vtbl =
++{
++    texture_info_processor_Process,
++    texture_info_processor_CreateDeviceObject,
++    texture_info_processor_Destroy
++};
++
+ HRESULT WINAPI D3DX11CompileFromMemory(const char *data, SIZE_T data_size, const char *filename,
+         const D3D10_SHADER_MACRO *defines, ID3D10Include *include, const char *entry_point,
+         const char *target, UINT sflags, UINT eflags, ID3DX11ThreadPump *pump, ID3D10Blob **shader,
+@@ -404,3 +446,23 @@ HRESULT WINAPI D3DX11CreateAsyncResourceLoaderW(HMODULE module, const WCHAR *res
+ 
+     return S_OK;
+ }
++
++HRESULT WINAPI D3DX11CreateAsyncTextureInfoProcessor(D3DX11_IMAGE_INFO *info, ID3DX11DataProcessor **processor)
++{
++    struct texture_info_processor *object;
++
++    TRACE("info %p, processor %p.\n", info, processor);
++
++    if (!processor)
++        return E_INVALIDARG;
++
++    object = malloc(sizeof(*object));
++    if (!object)
++        return E_OUTOFMEMORY;
++
++    object->ID3DX11DataProcessor_iface.lpVtbl = &texture_info_processor_vtbl;
++    object->info = info;
++
++    *processor = &object->ID3DX11DataProcessor_iface;
++    return S_OK;
++}
+diff --git a/dlls/d3dx11_43/d3dx11_43.spec b/dlls/d3dx11_43/d3dx11_43.spec
+index 2033d6003fe..de23f84c63e 100644
+--- a/dlls/d3dx11_43/d3dx11_43.spec
++++ b/dlls/d3dx11_43/d3dx11_43.spec
+@@ -13,7 +13,7 @@
+ @ stdcall D3DX11CreateAsyncResourceLoaderW(long wstr ptr)
+ @ stub D3DX11CreateAsyncShaderPreprocessProcessor
+ @ stub D3DX11CreateAsyncShaderResourceViewProcessor
+-@ stub D3DX11CreateAsyncTextureInfoProcessor
++@ stdcall D3DX11CreateAsyncTextureInfoProcessor(ptr ptr)
+ @ stub D3DX11CreateAsyncTextureProcessor
+ @ stub D3DX11CreateShaderResourceViewFromFileA
+ @ stub D3DX11CreateShaderResourceViewFromFileW
+diff --git a/dlls/d3dx11_43/tests/d3dx11.c b/dlls/d3dx11_43/tests/d3dx11.c
+index 83480cf025c..6e0fc366cf8 100644
+--- a/dlls/d3dx11_43/tests/d3dx11.c
++++ b/dlls/d3dx11_43/tests/d3dx11.c
+@@ -3238,6 +3238,64 @@ static void test_D3DX11CreateAsyncResourceLoader(void)
+     ok(hr == D3DX11_ERR_INVALID_DATA, "Got unexpected hr %#lx.\n", hr);
+ }
+ 
++static void test_D3DX11CreateAsyncTextureInfoProcessor(void)
++{
++    ID3DX11DataProcessor *dp;
++    D3DX11_IMAGE_INFO info;
++    HRESULT hr;
++    int i;
++
++    CoInitialize(NULL);
++
++    hr = D3DX11CreateAsyncTextureInfoProcessor(NULL, NULL);
++    ok(hr == E_INVALIDARG, "Got unexpected hr %#lx.\n", hr);
++
++    hr = D3DX11CreateAsyncTextureInfoProcessor(&info, NULL);
++    ok(hr == E_INVALIDARG, "Got unexpected hr %#lx.\n", hr);
++
++    hr = D3DX11CreateAsyncTextureInfoProcessor(NULL, &dp);
++    ok(hr == S_OK, "Got unexpected hr %#lx.\n", hr);
++
++    if (0)
++    {
++        /* Crashes on native. */
++        hr = ID3DX11DataProcessor_Process(dp, (void *)test_image[0].data, test_image[0].size);
++        ok(hr == S_OK, "Got unexpected hr %#lx.\n", hr);
++    }
++
++    hr = ID3DX11DataProcessor_Destroy(dp);
++    ok(hr == S_OK, "Got unexpected hr %#lx.\n", hr);
++
++    hr = D3DX11CreateAsyncTextureInfoProcessor(&info, &dp);
++    ok(hr == S_OK, "Got unexpected hr %#lx.\n", hr);
++
++    hr = ID3DX11DataProcessor_Process(dp, (void *)test_image[0].data, 0);
++    ok(hr == E_FAIL, "Got unexpected hr %#lx.\n", hr);
++    hr = ID3DX11DataProcessor_Process(dp, NULL, test_image[0].size);
++    ok(hr == E_FAIL, "Got unexpected hr %#lx.\n", hr);
++
++    for (i = 0; i < ARRAY_SIZE(test_image); ++i)
++    {
++        winetest_push_context("Test %u", i);
++
++        hr = ID3DX11DataProcessor_Process(dp, (void *)test_image[i].data, test_image[i].size);
++        ok(hr == S_OK || broken(hr == E_FAIL && test_image[i].expected_info.ImageFileFormat == D3DX11_IFF_WMP),
++                "Got unexpected hr %#lx.\n", hr);
++        if (hr == S_OK)
++            check_image_info(&info, test_image + i, __LINE__);
++
++        winetest_pop_context();
++    }
++
++    hr = ID3DX11DataProcessor_CreateDeviceObject(dp, NULL);
++    ok(hr == S_OK, "Got unexpected hr %#lx.\n", hr);
++
++    hr = ID3DX11DataProcessor_Destroy(dp);
++    ok(hr == S_OK, "Got unexpected hr %#lx.\n", hr);
++
++    CoUninitialize();
++}
++
+ static void check_dds_pixel_format_image_info(unsigned int line, DWORD flags, DWORD fourcc, DWORD bpp,
+         DWORD rmask, DWORD gmask, DWORD bmask, DWORD amask, HRESULT expected_hr, DXGI_FORMAT expected_format)
+ {
+@@ -5009,6 +5067,7 @@ START_TEST(d3dx11)
+     test_D3DX11CreateAsyncMemoryLoader();
+     test_D3DX11CreateAsyncFileLoader();
+     test_D3DX11CreateAsyncResourceLoader();
++    test_D3DX11CreateAsyncTextureInfoProcessor();
+     test_D3DX11CompileFromFile();
+     test_get_image_info();
+     test_create_texture();
+diff --git a/include/d3dx11.h b/include/d3dx11.h
+index e1557857ffa..7514328f4ce 100644
+--- a/include/d3dx11.h
++++ b/include/d3dx11.h
+@@ -28,8 +28,8 @@
+ 
+ #include "d3d11.h"
+ #include "d3dx11core.h"
+-#include "d3dx11async.h"
+ #include "d3dx11tex.h"
++#include "d3dx11async.h"
+ 
+ #define _FACDD 0x876
+ #define MAKE_DDHRESULT(code) MAKE_HRESULT(SEVERITY_ERROR, _FACDD, code)
+diff --git a/include/d3dx11async.h b/include/d3dx11async.h
+index 2d85e4aa46f..86f65ecb887 100644
+--- a/include/d3dx11async.h
++++ b/include/d3dx11async.h
+@@ -44,6 +44,8 @@ HRESULT WINAPI D3DX11CompileFromFileW(const WCHAR *filename, const D3D10_SHADER_
+         ID3D10Include *include, const char *entry_point, const char *target, UINT sflags, UINT eflags,
+         ID3DX11ThreadPump *pump, ID3D10Blob **shader, ID3D10Blob **error_messages, HRESULT *hresult);
+ 
++HRESULT WINAPI D3DX11CreateAsyncTextureInfoProcessor(D3DX11_IMAGE_INFO *info, ID3DX11DataProcessor **processor);
++
+ #ifdef __cplusplus
+ }
+ #endif

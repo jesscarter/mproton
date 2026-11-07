@@ -1,0 +1,26 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Thu, 16 Jun 2022 16:50:42 +0200
+Subject: [PATCH] HACK: winegstreamer/wm_reader: Expose BGRA video format from
+ wm_reader.
+
+For Deadly Premonition.
+
+CW-Bug-Id: #18799
+(cherry picked from commit e0bd4a72735bf1895c9d0e0c3c02e83e62c65569)
+---
+ dlls/winegstreamer/wm_reader.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/dlls/winegstreamer/wm_reader.c b/dlls/winegstreamer/wm_reader.c
+index 493e562aa1f..328ab937984 100644
+--- a/dlls/winegstreamer/wm_reader.c
++++ b/dlls/winegstreamer/wm_reader.c
+@@ -1722,6 +1722,7 @@ static const enum wg_video_format video_formats[] =
+     WG_VIDEO_FORMAT_YUY2,
+     WG_VIDEO_FORMAT_UYVY,
+     WG_VIDEO_FORMAT_YVYU,
++    WG_VIDEO_FORMAT_BGRA,
+     WG_VIDEO_FORMAT_BGRx,
+     WG_VIDEO_FORMAT_BGR,
+     WG_VIDEO_FORMAT_RGB16,

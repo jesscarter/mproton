@@ -1,0 +1,95 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Tue, 6 Jul 2021 14:06:11 +0200
+Subject: [PATCH] HACK: quartz: Keep a reference on the IMediaPosition
+ interface.
+
+In the same way we do for IMediaSeeking. Both interfaces are actually
+implemented with a shared refcount and releasing both makes the filter
+be destroyed.
+
+For Tokyo Xanadu eX+ crash on launch.
+
+CW-Bug-Id: #18994
+(cherry picked from commit 9da85ac7d04192d9dc6d0ccf5ba50353b9dc2634)
+---
+ dlls/quartz/filtergraph.c | 24 ++++++++++++++++--------
+ 1 file changed, 16 insertions(+), 8 deletions(-)
+
+diff --git a/dlls/quartz/filtergraph.c b/dlls/quartz/filtergraph.c
+index bdbfecafba8..b2f053086f1 100644
+--- a/dlls/quartz/filtergraph.c
++++ b/dlls/quartz/filtergraph.c
+@@ -73,6 +73,7 @@ struct filter
+     struct list entry;
+     IBaseFilter *filter;
+     IMediaSeeking *seeking;
++    IMediaPosition *position;
+     WCHAR *name;
+     BOOL sorting;
+ };
+@@ -580,6 +581,7 @@ static BOOL has_output_pins(IBaseFilter *filter)
+ 
+ static void update_seeking(struct filter *filter)
+ {
++    IMediaPosition *position;
+     IMediaSeeking *seeking;
+ 
+     if (!filter->seeking)
+@@ -598,11 +600,19 @@ static void update_seeking(struct filter *filter)
+                 IMediaSeeking_Release(seeking);
+         }
+     }
++
++    if (!filter->position)
++    {
++        /* Tokyo Xanadu eX+, same as above, same developer, destroys its filter when
++         * its IMediaPosition interface is released, so cache the interface instead
++         * of querying for it every time. */
++        if (SUCCEEDED(IBaseFilter_QueryInterface(filter->filter, &IID_IMediaPosition, (void **)&position)))
++            filter->position = position;
++    }
+ }
+ 
+ static BOOL is_renderer(struct filter *filter)
+ {
+-    IMediaPosition *media_position;
+     IAMFilterMiscFlags *flags;
+     BOOL ret = FALSE;
+ 
+@@ -612,16 +622,11 @@ static BOOL is_renderer(struct filter *filter)
+             ret = TRUE;
+         IAMFilterMiscFlags_Release(flags);
+     }
+-    else if (SUCCEEDED(IBaseFilter_QueryInterface(filter->filter, &IID_IMediaPosition, (void **)&media_position)))
+-    {
+-        if (!has_output_pins(filter->filter))
+-            ret = TRUE;
+-        IMediaPosition_Release(media_position);
+-    }
+     else
+     {
+         update_seeking(filter);
+-        if (filter->seeking && !has_output_pins(filter->filter))
++        if ((filter->seeking || filter->position) &&
++            !has_output_pins(filter->filter))
+             ret = TRUE;
+     }
+     return ret;
+@@ -694,6 +699,7 @@ static HRESULT WINAPI FilterGraph2_AddFilter(IFilterGraph2 *iface,
+     list_add_head(&graph->filters, &entry->entry);
+     entry->sorting = FALSE;
+     entry->seeking = NULL;
++    entry->position = NULL;
+     ++graph->version;
+ 
+     return duplicate_name ? VFW_S_DUPLICATE_NAME : hr;
+@@ -761,6 +767,8 @@ static HRESULT WINAPI FilterGraph2_RemoveFilter(IFilterGraph2 *iface, IBaseFilte
+             {
+                 IBaseFilter_SetSyncSource(pFilter, NULL);
+                 IBaseFilter_Release(pFilter);
++                if (entry->position)
++                    IMediaPosition_Release(entry->position);
+                 if (entry->seeking)
+                     IMediaSeeking_Release(entry->seeking);
+                 list_remove(&entry->entry);

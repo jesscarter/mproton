@@ -1,0 +1,86 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Joshua Ashton <joshua@froggi.es>
+Date: Sat, 8 May 2021 05:20:08 +0100
+Subject: [PATCH] amd_ags_x64: Implement AGS 6.0.1
+
+Signed-off-by: Joshua Ashton <joshua@froggi.es>
+(cherry picked from commit ffa1c69c306952c588ad2a06fffd84d6e259cba4)
+---
+ dlls/amd_ags_x64/amd_ags.h          |  8 ++++----
+ dlls/amd_ags_x64/amd_ags_x64_main.c | 13 +++++++++----
+ 2 files changed, 13 insertions(+), 8 deletions(-)
+
+diff --git a/dlls/amd_ags_x64/amd_ags.h b/dlls/amd_ags_x64/amd_ags.h
+index af9c48c1dd5..20fef455f00 100644
+--- a/dlls/amd_ags_x64/amd_ags.h
++++ b/dlls/amd_ags_x64/amd_ags.h
+@@ -151,7 +151,7 @@
+ 
+ #define AMD_AGS_VERSION_MAJOR 6             ///< AGS major version
+ #define AMD_AGS_VERSION_MINOR 0             ///< AGS minor version
+-#define AMD_AGS_VERSION_PATCH 0             ///< AGS patch version
++#define AMD_AGS_VERSION_PATCH 1             ///< AGS patch version
+ 
+ #ifdef __cplusplus
+ extern "C" {
+@@ -906,8 +906,8 @@ typedef struct AGSDX12ReturnedParams
+             unsigned int        baseInstance : 1;                   ///< Supported in Radeon Software Version 20.2.1 onwards.
+             unsigned int        getWaveSize : 1;                    ///< Supported in Radeon Software Version 20.5.1 onwards.
+             unsigned int        floatConversion : 1;                ///< Supported in Radeon Software Version 20.5.1 onwards.
+-            unsigned int        readLaneAt : 1;                     ///< Supported in Radeon Software Version 20.11.1 onwards.
+-            unsigned int        rayHitToken : 1;                    ///< Supported in Radeon Software Version 20.11.1 onwards.
++            unsigned int        readLaneAt : 1;                     ///< Supported in Radeon Software Version 20.11.2 onwards.
++            unsigned int        rayHitToken : 1;                    ///< Supported in Radeon Software Version 20.11.2 onwards.
+             unsigned int        padding : 20;                       ///< Reserved
+         } ExtensionsSupported;
+         ExtensionsSupported     extensionsSupported;                ///< List of supported extensions
+@@ -1631,7 +1631,7 @@ AMD_AGS_API AGSReturnCode agsDriverExtensionsDX11_SetMaxAsyncCompileThreadCount(
+ 
+ ///
+ /// This method can be used to determine the total number of asynchronous shader compile jobs that are either
+-/// queued for waiting for compilation or being compiled by the drivers asynchronous compilation threads.
++/// queued for waiting for compilation or being compiled by the driver's asynchronous compilation threads.
+ /// This method can be called at any during the lifetime of the driver.
+ ///
+ /// \param [in] context                             Pointer to a context.
+diff --git a/dlls/amd_ags_x64/amd_ags_x64_main.c b/dlls/amd_ags_x64/amd_ags_x64_main.c
+index 8a6eace29a1..26fbd65607e 100644
+--- a/dlls/amd_ags_x64/amd_ags_x64_main.c
++++ b/dlls/amd_ags_x64/amd_ags_x64_main.c
+@@ -31,6 +31,7 @@ enum amd_ags_version
+     AMD_AGS_VERSION_5_4_1,
+     AMD_AGS_VERSION_5_4_2,
+     AMD_AGS_VERSION_6_0_0,
++    AMD_AGS_VERSION_6_0_1,
+ 
+     AMD_AGS_VERSION_COUNT
+ };
+@@ -52,20 +53,24 @@ amd_ags_info[AMD_AGS_VERSION_COUNT] =
+     {5, 4, 1, sizeof(AGSDeviceInfo_541)},
+     {5, 4, 2, sizeof(AGSDeviceInfo_542)},
+     {6, 0, 0, sizeof(AGSDeviceInfo_600)},
++    {6, 0, 1, sizeof(AGSDeviceInfo_600)},
+ };
+ 
+ #define DEF_FIELD(name) {DEVICE_FIELD_##name, {offsetof(AGSDeviceInfo_511, name), offsetof(AGSDeviceInfo_520, name), \
+         offsetof(AGSDeviceInfo_520, name), offsetof(AGSDeviceInfo_520, name), offsetof(AGSDeviceInfo_540, name), \
+-        offsetof(AGSDeviceInfo_541, name), offsetof(AGSDeviceInfo_542, name), offsetof(AGSDeviceInfo_600, name)}}
++        offsetof(AGSDeviceInfo_541, name), offsetof(AGSDeviceInfo_542, name), offsetof(AGSDeviceInfo_600, name), \
++        offsetof(AGSDeviceInfo_600, name)}}
+ #define DEF_FIELD_520_BELOW(name) {DEVICE_FIELD_##name, {offsetof(AGSDeviceInfo_511, name), offsetof(AGSDeviceInfo_520, name), \
+         offsetof(AGSDeviceInfo_520, name), offsetof(AGSDeviceInfo_520, name), -1, \
+-        -1, -1, -1}}
++        -1, -1, -1, -1}}
+ #define DEF_FIELD_540_UP(name) {DEVICE_FIELD_##name, {-1, -1, \
+         -1, -1, offsetof(AGSDeviceInfo_540, name), \
+-        offsetof(AGSDeviceInfo_541, name), offsetof(AGSDeviceInfo_542, name), offsetof(AGSDeviceInfo_600, name)}}
++        offsetof(AGSDeviceInfo_541, name), offsetof(AGSDeviceInfo_542, name), offsetof(AGSDeviceInfo_600, name), \
++        offsetof(AGSDeviceInfo_600, name)}}
+ #define DEF_FIELD_600_BELOW(name) {DEVICE_FIELD_##name, {offsetof(AGSDeviceInfo_511, name), offsetof(AGSDeviceInfo_520, name), \
+         offsetof(AGSDeviceInfo_520, name), offsetof(AGSDeviceInfo_520, name), offsetof(AGSDeviceInfo_540, name), \
+-        offsetof(AGSDeviceInfo_541, name), offsetof(AGSDeviceInfo_542, name), -1}}
++        offsetof(AGSDeviceInfo_541, name), offsetof(AGSDeviceInfo_542, name), -1, \
++        -1}}
+ 
+ #define DEVICE_FIELD_adapterString 0
+ #define DEVICE_FIELD_architectureVersion 1

@@ -1,0 +1,63 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Fri, 7 Mar 2025 19:47:29 -0600
+Subject: [PATCH] server: Move find_pointer_from_id() up.
+
+CW-Bug-Id: #24947
+Wine MR: https://gitlab.winehq.org/wine/wine/-/merge_requests/7530
+
+(cherry picked from commit e8c83feeef1ff6aa5f006de4f8143bd6412d1e94)
+---
+ server/queue.c | 32 ++++++++++++++++----------------
+ 1 file changed, 16 insertions(+), 16 deletions(-)
+
+diff --git a/server/queue.c b/server/queue.c
+index 2449f0c8ff3..de7d9be7ba0 100644
+--- a/server/queue.c
++++ b/server/queue.c
+@@ -2492,6 +2492,22 @@ struct pointer
+     union hw_input input;
+ };
+ 
++static struct pointer *find_pointer_from_id( struct desktop *desktop, unsigned int id )
++{
++    struct pointer *pointer;
++
++    LIST_FOR_EACH_ENTRY( pointer, &desktop->pointers, struct pointer, entry )
++        if (LOWORD(pointer->input.hw.wparam) == id) return pointer;
++
++    pointer = mem_alloc( sizeof(struct pointer) );
++    pointer->timeout = NULL;
++    pointer->desktop = desktop;
++    pointer->primary = list_empty( &desktop->pointers );
++    list_add_tail( &desktop->pointers, &pointer->entry );
++
++    return pointer;
++}
++
+ static void queue_pointer_message( struct pointer *pointer, int repeated );
+ 
+ static void pointer_message_timeout( void *private )
+@@ -2569,22 +2585,6 @@ static void queue_pointer_message( struct pointer *pointer, int repeated )
+     }
+ }
+ 
+-static struct pointer *find_pointer_from_id( struct desktop *desktop, unsigned int id )
+-{
+-    struct pointer *pointer;
+-
+-    LIST_FOR_EACH_ENTRY( pointer, &desktop->pointers, struct pointer, entry )
+-        if (LOWORD(pointer->input.hw.wparam) == id) return pointer;
+-
+-    pointer = mem_alloc( sizeof(struct pointer) );
+-    pointer->timeout = NULL;
+-    pointer->desktop = desktop;
+-    pointer->primary = list_empty( &desktop->pointers );
+-    list_add_tail( &desktop->pointers, &pointer->entry );
+-
+-    return pointer;
+-}
+-
+ /* queue a hardware message for a custom type of event */
+ static void queue_custom_hardware_message( struct desktop *desktop, user_handle_t win,
+                                            unsigned int origin, const union hw_input *input )

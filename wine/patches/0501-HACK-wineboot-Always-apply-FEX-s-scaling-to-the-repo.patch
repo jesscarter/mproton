@@ -1,0 +1,34 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Billy Laws <blaws05@gmail.com>
+Date: Sat, 19 Jul 2025 00:22:34 +0100
+Subject: [PATCH] HACK: wineboot: Always apply FEX's scaling to the reported
+ ARM64 TSC
+
+(cherry picked from commit 8d813e09b87f8d7838f050b29eab508ed58c8527)
+---
+ programs/wineboot/wineboot.c | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/programs/wineboot/wineboot.c b/programs/wineboot/wineboot.c
+index 579b80e4b7d..0805602e3c5 100644
+--- a/programs/wineboot/wineboot.c
++++ b/programs/wineboot/wineboot.c
+@@ -306,10 +306,18 @@ static UINT64 read_tsc_frequency(void)
+ 
+ #elif defined(__aarch64__)
+ 
++#define FEX_TSC_SCALE_MAXIMUM 1000000000
++
+ static UINT64 read_tsc_frequency(void)
+ {
+     UINT64 tsc_frequency;
+     __asm__ volatile( "mrs %[Res], CNTFRQ_EL0" : [Res] "=r" (tsc_frequency) );
++
++    /* FEX hack in order to support games relying on this to read the x86 TSC
++     * frequency which FEX scales as below, assumes SmallTSCScale is enabled. */
++    while (tsc_frequency < FEX_TSC_SCALE_MAXIMUM)
++            tsc_frequency <<= 1;
++
+     return tsc_frequency;
+ }
+ 

@@ -1,0 +1,21 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Mon, 14 Aug 2023 20:04:14 -0600
+Subject: [PATCH] wine.inf: Enable builtin atiadlxx for Ratchet & Clank: Rift
+ Apart.
+
+CW-Bug-Id: #22607
+(cherry picked from commit 18ae161c8946fb955d8c4da0b61190438adf44f9)
+---
+ loader/wine.inf.in | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/loader/wine.inf.in b/loader/wine.inf.in
+index bcc10beeaee..70a2ce8a10a 100644
+--- a/loader/wine.inf.in
++++ b/loader/wine.inf.in
+@@ -1448,3 +1448,4 @@ HKCU,Software\Wine\AppDefaults\Avengers.exe\DllOverrides,"atiadlxx",,"builtin"
+ HKCU,Software\Wine\AppDefaults\starwarssquadrons.exe\DllOverrides,"atiadlxx",,"builtin"
+ HKCU,Software\Wine\AppDefaults\GW2.Main_Win64_Retail.exe\DllOverrides,"atiadlxx",,"builtin"
+ HKCU,Software\Wine\AppDefaults\Spider-Man.exe\DllOverrides,"atiadlxx",,"builtin"
++HKCU,Software\Wine\AppDefaults\RiftApart.exe\DllOverrides,"atiadlxx",,"builtin"

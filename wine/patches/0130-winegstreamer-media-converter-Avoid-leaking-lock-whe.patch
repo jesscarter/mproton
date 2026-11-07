@@ -1,0 +1,25 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Tue, 9 Jul 2024 15:22:33 +0200
+Subject: [PATCH] winegstreamer/media-converter: Avoid leaking lock when
+ dumping is interrupted.
+
+CW-Bug-Id: #20833
+(cherry picked from commit fbffb549b121dfd85309916d605fe48c62781fb5)
+---
+ dlls/winegstreamer/media-converter/videoconv.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/dlls/winegstreamer/media-converter/videoconv.c b/dlls/winegstreamer/media-converter/videoconv.c
+index c9ec31be422..d45e2d8be8a 100644
+--- a/dlls/winegstreamer/media-converter/videoconv.c
++++ b/dlls/winegstreamer/media-converter/videoconv.c
+@@ -387,6 +387,8 @@ static int video_conv_state_create(struct video_conv_state **out)
+ 
+ static void video_conv_state_release(struct video_conv_state *state)
+ {
++    if ((state->state_flags & VIDEO_CONV_IS_DUMPING))
++        pthread_mutex_unlock(&dump_fozdb.mutex);
+     if (state->read_fozdb)
+         fozdb_release(state->read_fozdb);
+     close(state->blank_file);

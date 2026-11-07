@@ -1,0 +1,60 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Tue, 5 Mar 2024 11:52:12 +0100
+Subject: [PATCH] winegstreamer/media-converter: Split videoconv stream-start
+ event push to a separate helper.
+
+CW-Bug-Id: #22319
+(cherry picked from commit ffecde51ec8683e6df63a699dba2bbc894aa0d9d)
+---
+ .../winegstreamer/media-converter/videoconv.c | 30 +++++++++++--------
+ 1 file changed, 18 insertions(+), 12 deletions(-)
+
+diff --git a/dlls/winegstreamer/media-converter/videoconv.c b/dlls/winegstreamer/media-converter/videoconv.c
+index 1d691a10ad2..fd5a2dfab67 100644
+--- a/dlls/winegstreamer/media-converter/videoconv.c
++++ b/dlls/winegstreamer/media-converter/videoconv.c
+@@ -669,6 +669,23 @@ static void video_conv_init_transcode(VideoConv *conv)
+     pthread_mutex_unlock(&dump_fozdb.mutex);
+ }
+ 
++static gboolean video_conv_push_stream_start(VideoConv *conv, struct payload_hash *hash)
++{
++    struct video_conv_state *state;
++
++    push_event(conv->src_pad, gst_event_new_stream_start(format_hash(hash)));
++
++    if (!(state = video_conv_lock_state(conv)))
++    {
++        GST_ERROR("VideoConv not yet in READY state?");
++        return false;
++    }
++    state->need_stream_start = false;
++    pthread_mutex_unlock(&conv->state_mutex);
++
++    return true;
++}
++
+ static gboolean video_conv_sink_event_caps(VideoConv *conv, GstEvent *event)
+ {
+     struct video_conv_state *state;
+@@ -885,18 +902,7 @@ static gboolean video_conv_src_active_mode(GstPad *pad, GstObject *parent, GstPa
+     pthread_mutex_unlock(&conv->state_mutex);
+ 
+     if (need_stream_start && active && has_transcoded)
+-    {
+-        push_event(conv->src_pad, gst_event_new_stream_start(format_hash(&hash)));
+-
+-        if (!(state = video_conv_lock_state(conv)))
+-        {
+-            GST_ERROR("VideoConv not yet in READY state?");
+-            return false;
+-        }
+-        state->need_stream_start = false;
+-        pthread_mutex_unlock(&conv->state_mutex);
+-    }
+-
++        return video_conv_push_stream_start(conv, &hash);
+     return true;
+ }
+ 

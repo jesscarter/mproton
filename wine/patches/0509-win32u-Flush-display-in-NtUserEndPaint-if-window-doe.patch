@@ -1,0 +1,40 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Fri, 27 Feb 2026 14:38:10 -0600
+Subject: [PATCH] win32u: Flush display in NtUserEndPaint() if window does not
+ have surface.
+
+CW-Bug-Id: #26662
+(cherry picked from commit 13a4d21ab00077f91ea1fd38298fc6b3657ca928)
+
+mproton-resolved: window_surface_get() comes from a winex11-group commit that is not carried: look the surface up through the WND
+---
+ dlls/win32u/dce.c | 13 +++++++++++++
+ 1 file changed, 13 insertions(+)
+
+diff --git a/dlls/win32u/dce.c b/dlls/win32u/dce.c
+index 2e2c9ef30d6..2f7bd0a5075 100644
+--- a/dlls/win32u/dce.c
++++ b/dlls/win32u/dce.c
+@@ -1754,8 +1754,21 @@ HDC WINAPI NtUserBeginPaint( HWND hwnd, PAINTSTRUCT *ps )
+  */
+ BOOL WINAPI NtUserEndPaint( HWND hwnd, const PAINTSTRUCT *ps )
+ {
++    struct window_surface *surface;
++
+     NtUserShowCaret( hwnd );
+     flush_window_surfaces( FALSE );
++    {
++        WND *win = get_win_ptr( hwnd );
++
++        surface = NULL;
++        if (win && win != WND_DESKTOP && win != WND_OTHER_PROCESS)
++        {
++            surface = win->surface;
++            release_win_ptr( win );
++        }
++        if (!surface) user_driver->pProcessEvents( 0 );
++    }
+     if (!ps) return FALSE;
+     release_dc( hwnd, ps->hdc, TRUE );
+     return TRUE;

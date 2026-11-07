@@ -1,0 +1,33 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Ziqing Hui <zhui@codeweavers.com>
+Date: Wed, 7 Aug 2024 09:05:43 +0800
+Subject: [PATCH] winegstreamer/media-converter: Log error if failed to pull
+ data from upstream.
+
+(cherry picked from commit 7f18057a7e9d8512b4c51fcedc5479bda914d4d9)
+---
+ dlls/winegstreamer/media-converter/videoconv.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/winegstreamer/media-converter/videoconv.c b/dlls/winegstreamer/media-converter/videoconv.c
+index a73292a59eb..2dd7446cedb 100644
+--- a/dlls/winegstreamer/media-converter/videoconv.c
++++ b/dlls/winegstreamer/media-converter/videoconv.c
+@@ -312,7 +312,7 @@ int pad_reader_read(void *data_src, uint8_t *buffer, size_t size, size_t *read_s
+         }
+         else
+         {
+-            GST_WARNING("Failed to pull data from %"GST_PTR_FORMAT", reason %s.",
++            GST_ERROR("Failed to pull data from %"GST_PTR_FORMAT", reason %s.",
+                     reader->pad, gst_flow_get_name(gst_ret));
+             return CONV_ERROR;
+         }
+@@ -657,7 +657,7 @@ static void video_conv_init_transcode(VideoConv *conv)
+     }
+     else
+     {
+-        GST_WARNING("Failed to hash upstream data.");
++        GST_ERROR("Failed to hash upstream data.");
+     }
+ 
+     pthread_mutex_unlock(&dump_fozdb.mutex);

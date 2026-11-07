@@ -1,0 +1,31 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Wed, 29 Jan 2025 16:22:59 +0100
+Subject: [PATCH] HACK: wmvdecod: Advertize VP9 format decoding support.
+
+CW-Bug-Id: #24789
+(cherry picked from commit 880a79e0f076cdcaab05acfc91c416d16e28ca0a)
+---
+ dlls/wmvdecod/wmvdecod.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/dlls/wmvdecod/wmvdecod.c b/dlls/wmvdecod/wmvdecod.c
+index 94ad04219bc..6932c89c6d6 100644
+--- a/dlls/wmvdecod/wmvdecod.c
++++ b/dlls/wmvdecod/wmvdecod.c
+@@ -68,6 +68,7 @@ HRESULT WINAPI DllRegisterServer(void)
+         {MFMediaType_Video, MEDIASUBTYPE_VC1S},
+         {MFMediaType_Video, MFVideoFormat_theora},
+         {MFMediaType_Video, MFVideoFormat_AV1},
++        {MFMediaType_Video, MFVideoFormat_VP90},
+     };
+     MFT_REGISTER_TYPE_INFO wmv_decoder_mft_outputs[] =
+     {
+@@ -109,6 +110,7 @@ HRESULT WINAPI DllRegisterServer(void)
+         {.type = MEDIATYPE_Video, .subtype = MEDIASUBTYPE_VC1S},
+         {.type = MEDIATYPE_Video, .subtype = MFVideoFormat_theora},
+         {.type = MEDIATYPE_Video, .subtype = MFVideoFormat_AV1},
++        {.type = MEDIATYPE_Video, .subtype = MFVideoFormat_VP90},
+     };
+     HRESULT hr;
+ 

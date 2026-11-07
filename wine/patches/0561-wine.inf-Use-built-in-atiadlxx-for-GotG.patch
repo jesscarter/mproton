@@ -1,0 +1,23 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Wed, 27 Oct 2021 17:25:25 +0300
+Subject: [PATCH] wine.inf: Use built-in atiadlxx for GotG.
+
+CW-Bug-ID: #19579
+
+Avoids the warning about too old drivers on start.
+
+(cherry picked from commit 91dafb50af512d06322d83069e90fd9a51323429)
+---
+ loader/wine.inf.in | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/loader/wine.inf.in b/loader/wine.inf.in
+index a0fe23d744a..09ffa6b8256 100644
+--- a/loader/wine.inf.in
++++ b/loader/wine.inf.in
+@@ -1442,3 +1442,4 @@ HKCU,Software\Wine\AppDefaults\BlackOps3.exe\DllOverrides,"atiadlxx",,"builtin"
+ HKCU,Software\Wine\AppDefaults\NFS16.exe\DllOverrides,"atiadlxx",,"builtin"
+ HKCU,Software\Wine\AppDefaults\ShadowOfWar.exe\DllOverrides,"atiadlxx",,"builtin"
+ HKCU,Software\Wine\AppDefaults\DIRT5.exe\DllOverrides,"atiadlxx",,"builtin"
++HKCU,Software\Wine\AppDefaults\gotg.exe\DllOverrides,"atiadlxx",,"builtin"

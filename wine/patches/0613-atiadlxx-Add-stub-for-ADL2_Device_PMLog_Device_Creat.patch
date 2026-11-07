@@ -1,0 +1,49 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Fri, 10 Jul 2026 12:05:56 -0600
+Subject: [PATCH] atiadlxx: Add stub for ADL2_Device_PMLog_Device_Create().
+
+CW-Bug-Id: #27348
+(cherry picked from commit f0fdb6c4b5bb9770118bdc4fae8239b720797379)
+---
+ dlls/atiadlxx/atiadlxx.spec   | 2 +-
+ dlls/atiadlxx/atiadlxx_main.c | 9 +++++++++
+ 2 files changed, 10 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/atiadlxx/atiadlxx.spec b/dlls/atiadlxx/atiadlxx.spec
+index fd9ad816fe5..d18bfc0eb5d 100644
+--- a/dlls/atiadlxx/atiadlxx.spec
++++ b/dlls/atiadlxx/atiadlxx.spec
+@@ -211,7 +211,7 @@
+ @ stub ADL2_Desktop_PrimaryInfo_Get
+ @ stub ADL2_Desktop_TextureState_Get
+ @ stub ADL2_Desktop_Texture_Enable
+-@ stub ADL2_Device_PMLog_Device_Create
++@ cdecl ADL2_Device_PMLog_Device_Create(ptr long ptr)
+ @ stub ADL2_Device_PMLog_Device_Destroy
+ @ stub ADL2_DisplayScaling_Set
+ @ stub ADL2_Display_AdapterID_Get
+diff --git a/dlls/atiadlxx/atiadlxx_main.c b/dlls/atiadlxx/atiadlxx_main.c
+index 09c2176c205..c1080869754 100644
+--- a/dlls/atiadlxx/atiadlxx_main.c
++++ b/dlls/atiadlxx/atiadlxx_main.c
+@@ -318,6 +318,8 @@ typedef struct ADLAdapterODClockInfo
+     ADLODClockSetting sEngineClock;
+ } ADLAdapterODClockInfo;
+ 
++typedef unsigned int ADL_D3DKMT_HANDLE;
++
+ static const ADLVersionsInfo version = {
+     "99.19.02-230831a-396538C-AMD-Software-Adrenalin-Edition",
+     "",
+@@ -1150,3 +1152,10 @@ int CDECL ADL_Display_ODClockInfo_Get(int adapter_index, ADLAdapterODClockInfo *
+     clock_info->sEngineClock = clock_info->sMemoryClock;
+     return ADL_OK;
+ }
++
++int CDECL ADL2_Device_PMLog_Device_Create(ADL_CONTEXT_HANDLE ctx, int adapter_index, ADL_D3DKMT_HANDLE *device)
++{
++    FIXME("ctx %p, adapter_index %d, device %p stub.\n", ctx, adapter_index, device);
++
++    return ADL_ERR_NOT_SUPPORTED;
++}

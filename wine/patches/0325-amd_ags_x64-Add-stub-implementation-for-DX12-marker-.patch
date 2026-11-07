@@ -1,0 +1,62 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Mon, 4 Mar 2024 16:23:06 -0600
+Subject: [PATCH] amd_ags_x64: Add stub implementation for DX12 marker
+ functions.
+
+CW-Bug-Id: #23474
+(cherry picked from commit 57aaedb824c3cd2b3fb134c8f4a3b8bb8d3fb905)
+---
+ dlls/amd_ags_x64/amd_ags_x64.spec   |  6 +++---
+ dlls/amd_ags_x64/amd_ags_x64_main.c | 21 +++++++++++++++++++++
+ 2 files changed, 24 insertions(+), 3 deletions(-)
+
+diff --git a/dlls/amd_ags_x64/amd_ags_x64.spec b/dlls/amd_ags_x64/amd_ags_x64.spec
+index 22543cd9479..99852d7f750 100644
+--- a/dlls/amd_ags_x64/amd_ags_x64.spec
++++ b/dlls/amd_ags_x64/amd_ags_x64.spec
+@@ -35,9 +35,9 @@
+ @ stub agsDriverExtensionsDX12_Destroy
+ @ stdcall agsDriverExtensionsDX12_DestroyDevice(ptr ptr ptr)
+ @ stdcall agsDriverExtensionsDX12_Init(ptr ptr ptr)
+-@ stub agsDriverExtensionsDX12_PopMarker
+-@ stub agsDriverExtensionsDX12_PushMarker
+-@ stub agsDriverExtensionsDX12_SetMarker
++@ stdcall agsDriverExtensionsDX12_PopMarker(ptr ptr)
++@ stdcall agsDriverExtensionsDX12_PushMarker(ptr ptr ptr)
++@ stdcall agsDriverExtensionsDX12_SetMarker(ptr ptr ptr)
+ @ stdcall agsGetCrossfireGPUCount(ptr ptr)
+ @ stdcall agsGetVersionNumber()
+ @ stdcall agsInit(ptr ptr ptr)
+diff --git a/dlls/amd_ags_x64/amd_ags_x64_main.c b/dlls/amd_ags_x64/amd_ags_x64_main.c
+index f4ddf00bf2e..d809d273286 100644
+--- a/dlls/amd_ags_x64/amd_ags_x64_main.c
++++ b/dlls/amd_ags_x64/amd_ags_x64_main.c
+@@ -1215,6 +1215,27 @@ AGSReturnCode WINAPI agsDriverExtensionsDX12_DeInit( AGSContext* context )
+     return AGS_SUCCESS;
+ }
+ 
++AGSReturnCode WINAPI  agsDriverExtensionsDX12_SetMarker( AGSContext *context, ID3D12GraphicsCommandList *command_list, const char *data)
++{
++    WARN("context %p, command_list %p, data %p stub.\n", context, command_list, data);
++
++    return AGS_SUCCESS;
++}
++
++AGSReturnCode WINAPI agsDriverExtensionsDX12_PushMarker( AGSContext *context, ID3D12GraphicsCommandList *command_list, const char* data)
++{
++    WARN("context %p, command_list %p, data %p stub.\n", context, command_list, data);
++
++    return AGS_SUCCESS;
++}
++
++AGSReturnCode WINAPI agsDriverExtensionsDX12_PopMarker(AGSContext *context, ID3D12GraphicsCommandList *command_list)
++{
++    WARN("context %p, command_list %p stub.\n", context, command_list);
++
++    return AGS_SUCCESS;
++}
++
+ BOOL WINAPI DllMain(HINSTANCE instance, DWORD reason, void *reserved)
+ {
+     TRACE("%p, %u, %p.\n", instance, reason, reserved);

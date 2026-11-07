@@ -1,0 +1,29 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Wed, 12 Jun 2024 12:29:20 -0600
+Subject: [PATCH] amd_ags_x64: Check for NULL context in
+ agsDriverExtensionsDX11_Init().
+
+CW-Bug-Id: #23904
+(cherry picked from commit 19d8ad741e059cc935e87877fb13da819aa6aba9)
+---
+ dlls/amd_ags_x64/amd_ags_x64_main.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/dlls/amd_ags_x64/amd_ags_x64_main.c b/dlls/amd_ags_x64/amd_ags_x64_main.c
+index d809d273286..59da62807b1 100644
+--- a/dlls/amd_ags_x64/amd_ags_x64_main.c
++++ b/dlls/amd_ags_x64/amd_ags_x64_main.c
+@@ -1167,6 +1167,12 @@ AGSReturnCode WINAPI agsDriverExtensionsDX11_Init( AGSContext *context, ID3D11De
+ {
+     FIXME("context %p, device %p, uavSlot %u, extensionsSupported %p stub.\n", context, device, uavSlot, extensionsSupported);
+ 
++    if (!context)
++    {
++        ERR("NULL context.\n");
++        return AGS_INVALID_ARGS;
++    }
++
+     *extensionsSupported = 0;
+     if (device)
+     {

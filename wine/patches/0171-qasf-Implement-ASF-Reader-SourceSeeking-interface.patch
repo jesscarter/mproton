@@ -1,0 +1,27 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Fri, 27 May 2022 10:45:33 +0200
+Subject: [PATCH] qasf: Implement ASF Reader SourceSeeking interface.
+
+CW-Bug-Id: #18799
+CW-Bug-Id: #18994
+CW-Bug-Id: #20182
+CW-Bug-Id: #20905
+(cherry picked from commit 61fd847e4e0b36c431ca895b244e88000b241a83)
+---
+ dlls/qasf/asfreader.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/dlls/qasf/asfreader.c b/dlls/qasf/asfreader.c
+index 1e7c72e954f..cf6b3da3f96 100644
+--- a/dlls/qasf/asfreader.c
++++ b/dlls/qasf/asfreader.c
+@@ -535,7 +535,7 @@ static HRESULT asf_reader_init_stream(struct strmbase_filter *iface)
+             break;
+         }
+ 
+-        if (FAILED(hr = IPin_NewSegment(stream->source.pin.peer, 0, 0, 1)))
++        if (FAILED(hr = IPin_NewSegment(stream->source.pin.peer, stream->seek.llCurrent, stream->seek.llStop, stream->seek.dRate)))
+         {
+             WARN("Failed to start stream %u new segment, hr %#lx\n", i, hr);
+             break;

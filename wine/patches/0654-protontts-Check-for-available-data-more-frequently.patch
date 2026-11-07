@@ -1,0 +1,23 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Shaun Ren <sren@codeweavers.com>
+Date: Thu, 17 Jul 2025 23:14:08 -0400
+Subject: [PATCH] protontts: Check for available data more frequently.
+
+(cherry picked from commit c2b31103f06937e8e828c30cb3c23d55e124e660)
+---
+ dlls/protontts/tts.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/dlls/protontts/tts.c b/dlls/protontts/tts.c
+index 39d7a270b2a..06762939e86 100644
+--- a/dlls/protontts/tts.c
++++ b/dlls/protontts/tts.c
+@@ -257,7 +257,7 @@ static HRESULT WINAPI ttsengine_Speak(ISpTTSEngine *iface, DWORD flags, REFGUID
+             void *buf;
+             UINT32 size;
+ 
+-            Sleep(50);
++            Sleep(10);
+ 
+             actions = ISpTTSEngineSite_GetActions(site);
+             if (actions & SPVES_ABORT)

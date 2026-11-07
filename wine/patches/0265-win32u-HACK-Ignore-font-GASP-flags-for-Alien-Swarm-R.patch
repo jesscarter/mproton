@@ -1,0 +1,33 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Fri, 10 May 2024 16:08:58 -0600
+Subject: [PATCH] win32u: HACK: Ignore font GASP flags for Alien Swarm Reactive
+ Drop.
+
+CW-Bug-Id: #23776
+(cherry picked from commit 7f878b9d3bd731b7f6a69ada28dbc4f803914a67)
+---
+ dlls/win32u/freetype.c | 10 ++++++++--
+ 1 file changed, 8 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/win32u/freetype.c b/dlls/win32u/freetype.c
+index 1bad519f887..db05a052831 100644
+--- a/dlls/win32u/freetype.c
++++ b/dlls/win32u/freetype.c
+@@ -286,8 +286,14 @@ static BOOL is_hinting_enabled(void)
+ 
+     if (enabled == -1)
+     {
+-        FT_TrueTypeEngineType type = pFT_Get_TrueType_Engine_Type(library);
+-        enabled = (type == FT_TRUETYPE_ENGINE_TYPE_PATENTED);
++        const char *sgi;
++
++        if ((sgi = getenv("SteamGameId")) && !strcmp(sgi, "563560")) enabled = FALSE;
++        else
++        {
++            FT_TrueTypeEngineType type = pFT_Get_TrueType_Engine_Type(library);
++            enabled = (type == FT_TRUETYPE_ENGINE_TYPE_PATENTED);
++        }
+         TRACE("hinting is %senabled\n", enabled ? "" : "NOT ");
+     }
+     return enabled;

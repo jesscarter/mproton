@@ -1,0 +1,25 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Yuxuan Shui <yshui@codeweavers.com>
+Date: Thu, 5 Feb 2026 19:58:59 +0000
+Subject: [PATCH] ntdll: When overriding dlls, update len.
+
+Otherwise build_import_name will access OOB when reading the dll name.
+
+CW-Bug-Id: #24534
+(cherry picked from commit 7c37252819efe894a313eb1ffd4bad4c42519479)
+---
+ dlls/ntdll/loader.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
+index e959a16cf5d..fb4a1fca73a 100644
+--- a/dlls/ntdll/loader.c
++++ b/dlls/ntdll/loader.c
+@@ -1196,6 +1196,7 @@ static BOOL import_dll( WINE_MODREF *wm, const IMAGE_IMPORT_DESCRIPTOR *descr, L
+         {
+             TRACE("%s -> ntdll.\n", name);
+             name = "ntdll.dll";
++            len = strlen(name);
+         }
+     }
+ 

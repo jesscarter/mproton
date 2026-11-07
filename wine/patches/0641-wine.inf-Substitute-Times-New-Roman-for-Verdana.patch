@@ -1,0 +1,23 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Tue, 17 Oct 2023 20:11:43 -0600
+Subject: [PATCH] wine.inf: Substitute Times New Roman for Verdana.
+
+CW-Bug-Id: #22875
+(cherry picked from commit 84fcfca30032f07afef2c6f4ec05b21b11c49e85)
+---
+ loader/wine.inf.in | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/loader/wine.inf.in b/loader/wine.inf.in
+index 191179abb5a..a6e3fa9e6be 100644
+--- a/loader/wine.inf.in
++++ b/loader/wine.inf.in
+@@ -561,6 +561,7 @@ HKLM,%FontsNT%,"Times New Roman (TrueType)",,"times.ttf"
+ HKLM,%FontsNT%,"Webdings (TrueType)",,"webdings.ttf"
+ HKLM,%FontsNT%,"Wingdings (TrueType)",,"wingdings.ttf"
+ HKCU,Software\Wine\Fonts\Replacements,"Palatino Linotype",,"Times New Roman"
++HKCU,Software\Wine\Fonts\Replacements,"Verdana",,"Times New Roman"
+ 
+ [MCI]
+ HKLM,%Mci32Str%,"AVIVideo",,"mciavi32.dll"

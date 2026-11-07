@@ -1,0 +1,27 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Bitwolf <65789901+Bitwolfies@users.noreply.github.com>
+Date: Thu, 23 Feb 2023 13:05:59 -0800
+Subject: [PATCH] wine.inf: Use included d3d8.dll with Bloodrayne Terminal Cut
+ 1/2.
+
+Proton defaults to use the built-in DirectX 8 implementation but the
+game ships with it's own d3d8.dll which uses DirectX 9 internally.
+
+This helps with massive slowdowns and a few other misc bugs.
+
+LinK: https://github.com/ValveSoftware/wine/pull/179
+(cherry picked from commit a28ffcf85bce86c0cda170819f81fbd87e267cce)
+---
+ loader/wine.inf.in | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/loader/wine.inf.in b/loader/wine.inf.in
+index 23fb241edc8..5badde00d57 100644
+--- a/loader/wine.inf.in
++++ b/loader/wine.inf.in
+@@ -1451,3 +1451,5 @@ HKCU,Software\Wine\AppDefaults\Spider-Man.exe\DllOverrides,"atiadlxx",,"builtin"
+ HKCU,Software\Wine\AppDefaults\RiftApart.exe\DllOverrides,"atiadlxx",,"builtin"
+ HKCU,Software\Wine\AppDefaults\ffxvi.exe\DllOverrides,"atiadlxx",,"builtin"
+ HKCU,Software\Wine\AppDefaults\ffxvi_demo.exe\DllOverrides,"atiadlxx",,"builtin"
++HKCU,Software\Wine\AppDefaults\rayne1.exe\DllOverrides,"d3d8",,"native"
++HKCU,Software\Wine\AppDefaults\rayne2.exe\DllOverrides,"d3d8",,"native"

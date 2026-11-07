@@ -1,0 +1,42 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Tue, 22 Feb 2022 21:31:55 +0100
+Subject: [PATCH] HACK: winegstreamer/wg_transform: Check if the decoder
+ accepted our caps.
+
+Wine-Bug: https://bugs.winehq.org/show_bug.cgi?id=51931
+Wine-Bug: https://bugs.winehq.org/show_bug.cgi?id=52391
+CW-Bug-Id: #19854
+CW-Bug-Id: #20966
+
+CW-Bug-Id: #20833
+(cherry picked from commit 72a0f755c85351fe4856e65105d6096dea8fa6e4)
+---
+ dlls/winegstreamer/wg_transform.c | 14 ++++++++++++++
+ 1 file changed, 14 insertions(+)
+
+diff --git a/dlls/winegstreamer/wg_transform.c b/dlls/winegstreamer/wg_transform.c
+index 8fb24f47acd..1ec05aad0aa 100644
+--- a/dlls/winegstreamer/wg_transform.c
++++ b/dlls/winegstreamer/wg_transform.c
+@@ -775,6 +775,20 @@ NTSTATUS wg_transform_create(void *args)
+             || !push_event(transform->my_src, event))
+         goto out;
+ 
++    /* Check that the caps event have been accepted */
++    if (!strcmp(input_mime, "video/x-h264"))
++    {
++        GstPad *peer;
++        if (!(peer = gst_pad_get_peer(transform->my_src)))
++            goto out;
++        else if (!gst_pad_has_current_caps(peer))
++        {
++            gst_object_unref(peer);
++            goto out;
++        }
++        gst_object_unref(peer);
++    }
++
+     /* We need to use GST_FORMAT_TIME here because it's the only format
+      * some elements such avdec_wmav2 correctly support. */
+     gst_segment_init(&transform->segment, GST_FORMAT_TIME);

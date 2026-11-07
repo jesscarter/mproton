@@ -1,0 +1,25 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Conor McCarthy <cmccarthy@codeweavers.com>
+Date: Tue, 10 Dec 2024 00:19:53 +1000
+Subject: [PATCH] mf: Propagate errors from session_collect_nodes() to the
+ caller of session_set_current_topology().
+
+(cherry picked from commit 5ded0b621149e06f99f729fcd44c975b50a0b754)
+---
+ dlls/mf/session.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/mf/session.c b/dlls/mf/session.c
+index d0f2de13ca8..2546a9b4b68 100644
+--- a/dlls/mf/session.c
++++ b/dlls/mf/session.c
+@@ -2075,7 +2075,8 @@ static HRESULT session_set_current_topology(struct media_session *session, IMFTo
+         return hr;
+     }
+ 
+-    session_collect_nodes(session);
++    if (FAILED(hr = session_collect_nodes(session)))
++        return hr;
+ 
+     LIST_FOR_EACH_ENTRY(node, &session->presentation.nodes, struct topo_node, entry)
+     {

@@ -1,0 +1,58 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Brendan McGrath <bmcgrath@codeweavers.com>
+Date: Fri, 23 May 2025 14:11:47 +1000
+Subject: [PATCH] winegstreamer: HACK: Always preserve theora timestamps.
+
+The theora decoder can receive data from FFmpeg that includes multiple
+frames, but the decoder will only preserve the metadata for the
+first frame that is produced. This results in invalid timestamps (zeros) for
+the subsequent frames.
+
+This hack ensures that the timestamps provided by the theora decoder
+are always used.
+
+The theora decoder is only used with transcoded video.
+
+This fixes a regression in Darksiders Warmastered Edition (462780) introduced
+when cherry-picking an upstream fix for the following bugs:
+
+CW-Bug-Id: #23810
+CW-Bug-Id: #24708
+(cherry picked from commit b488d4325bf98867b66d708af8469c9f0a2381b7)
+---
+ dlls/winegstreamer/video_decoder.c | 8 ++++++--
+ 1 file changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/winegstreamer/video_decoder.c b/dlls/winegstreamer/video_decoder.c
+index 29d0e218e16..ffc53cb64dc 100644
+--- a/dlls/winegstreamer/video_decoder.c
++++ b/dlls/winegstreamer/video_decoder.c
+@@ -36,6 +36,8 @@
+ WINE_DEFAULT_DEBUG_CHANNEL(mfplat);
+ WINE_DECLARE_DEBUG_CHANNEL(winediag);
+ 
++extern const GUID MFVideoFormat_theora;
++
+ struct subtype_info
+ {
+     const GUID *subtype;
+@@ -1014,7 +1016,10 @@ static HRESULT WINAPI transform_ProcessOutput(IMFTransform *iface, DWORD flags,
+             duration = MulDiv(10000000, (UINT32)frame_rate, frame_rate >> 32);
+         }
+ 
+-        if (!preserve_timestamps)
++        if (FAILED(hr = IMFMediaType_GetGUID(decoder->input_type, &MF_MT_SUBTYPE, &subtype)))
++            return hr;
++
++        if (!preserve_timestamps && !IsEqualGUID(&subtype, &MFVideoFormat_theora))
+         {
+             if (FAILED(IMFSample_SetSampleTime(sample, decoder->sample_time)))
+                 WARN("Failed to set sample time\n");
+@@ -1816,7 +1821,6 @@ HRESULT WINAPI winegstreamer_create_video_decoder(IMFTransform **out)
+ 
+ extern const GUID MEDIASUBTYPE_VC1S;
+ extern const GUID MEDIASUBTYPE_WMV_Unknown;
+-extern const GUID MFVideoFormat_theora;
+ static const GUID *const wmv_decoder_input_types[] =
+ {
+     &MEDIASUBTYPE_WMV1,

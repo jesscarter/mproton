@@ -1,0 +1,25 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Bernhard=20K=C3=B6lbl?= <bkoelbl@codeweavers.com>
+Date: Tue, 24 Feb 2026 20:35:21 +0100
+Subject: [PATCH] winedmo: HACK: Set a non-zero value in WAVEFORMATEX
+ wBitsPerSample for transcoded audio in Metal Gear Survive.
+
+CW-Bug-Id: #26476
+(cherry picked from commit f220e9788910ca204209c0e60753aac1c94b2337)
+---
+ dlls/winedmo/unix_media_type.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/dlls/winedmo/unix_media_type.c b/dlls/winedmo/unix_media_type.c
+index fa75c2b160a..0a8f68c3836 100644
+--- a/dlls/winedmo/unix_media_type.c
++++ b/dlls/winedmo/unix_media_type.c
+@@ -89,7 +89,7 @@ static void wave_format_ex_init( const AVCodecParameters *params, WAVEFORMATEX *
+     format->wBitsPerSample = av_get_bits_per_sample( params->codec_id );
+     if (!format->wBitsPerSample) format->wBitsPerSample = params->bits_per_coded_sample;
+     if (!format->wBitsPerSample && (params->codec_id == AV_CODEC_ID_OPUS || params->codec_id == AV_CODEC_ID_VORBIS)
+-            && (sgi = getenv("SteamGameId")) && !strcmp(sgi, "287700"))
++            && (sgi = getenv("SteamGameId")) && (!strcmp(sgi, "287700") || !strcmp(sgi, "543900")))
+     {
+         /* Metal Gear Solid V: The Phantom Pain uses wBitsPerSample as a divisor in an integer division,
+          * so it must be non-zero, but is zero for transcoded audio. */

@@ -1,0 +1,28 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arkadiusz Hiler <ahiler@codeweavers.com>
+Date: Mon, 9 Jun 2025 18:36:32 +0300
+Subject: [PATCH] media-converter: Log tag file creation as error.
+
+It's a first indicator to tell us that a game uses h264 or showed the
+placeholder video. It would be nice to have this in the logs created by
+proton without having to add the whole +dmo channel to list of the
+default ones.
+
+(cherry picked from commit 01866609e1e8d48595f75146821f3195b63c51c9)
+---
+ dlls/winegstreamer/media-converter/lib.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/dlls/winegstreamer/media-converter/lib.c b/dlls/winegstreamer/media-converter/lib.c
+index 39299b331ba..aef38d5846b 100644
+--- a/dlls/winegstreamer/media-converter/lib.c
++++ b/dlls/winegstreamer/media-converter/lib.c
+@@ -260,7 +260,7 @@ int create_placeholder_file(const char *file_name)
+     char path[1024];
+     int ret;
+ 
+-    GST_INFO("Creating tag file %s.", file_name);
++    GST_ERROR("Creating tag file %s.", file_name);
+ 
+     if ((shader_path = getenv("STEAM_COMPAT_TRANSCODED_MEDIA_PATH")))
+     {

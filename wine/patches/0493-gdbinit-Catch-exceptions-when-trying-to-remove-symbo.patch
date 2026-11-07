@@ -1,0 +1,29 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Bernhard=20K=C3=B6lbl?= <besentv@gmail.com>
+Date: Thu, 28 Nov 2024 19:25:32 +0100
+Subject: [PATCH] gdbinit: Catch exceptions when trying to remove symbol files.
+
+(cherry picked from commit 03293730b1a134b657f068c1ea97905701412f50)
+---
+ tools/gdbinit.py | 8 ++++++--
+ 1 file changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/tools/gdbinit.py b/tools/gdbinit.py
+index ba3b7d003ac..b8bd6df1151 100644
+--- a/tools/gdbinit.py
++++ b/tools/gdbinit.py
+@@ -58,8 +58,12 @@ class LoadSymbolFiles(gdb.Command):
+     # unload symbol file if address changed
+     for k in set(libs) & set(self.libs[pid]):
+       if libs[k] != self.libs[pid][k]:
+-        command('remove-symbol-file "{}"'.format(k), confirm=False)
+-        del self.libs[k]
++        try:
++          command('remove-symbol-file "{}"'.format(k), confirm=False)
++        except:
++          print("warn: Failed to unload symbol file {}".format(k))
++        finally:
++          del self.libs[pid][k]
+ 
+     # load symbol file for new mappings
+     for k in set(libs) - set(self.libs[pid]):

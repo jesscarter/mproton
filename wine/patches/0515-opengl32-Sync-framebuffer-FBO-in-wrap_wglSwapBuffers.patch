@@ -1,0 +1,28 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Tue, 26 May 2026 19:23:41 -0600
+Subject: [PATCH] opengl32: Sync framebuffer FBO in wrap_wglSwapBuffers().
+
+CW-Bug-Id: #27136
+(cherry picked from commit 7abd0e269350de0cafbf3b261743c7e503bb5439)
+---
+ dlls/opengl32/unix_wgl.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/dlls/opengl32/unix_wgl.c b/dlls/opengl32/unix_wgl.c
+index 55321e11464..910588391df 100644
+--- a/dlls/opengl32/unix_wgl.c
++++ b/dlls/opengl32/unix_wgl.c
+@@ -669,6 +669,12 @@ BOOL wrap_wglSwapBuffers( TEB *teb, HDC hdc )
+         /* default implementation: implicitly flush the context */
+         flush_context( teb, funcs->p_glFlush );
+     }
++    else
++    {
++        /* Drawable could've changed in p_wglSwapBuffers(). */
++        pop_default_fbo( teb );
++        pop_default_fbo_buffers( teb );
++    }
+ 
+     pop_default_fbo_buffers( teb );
+     return ret;

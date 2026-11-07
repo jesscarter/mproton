@@ -1,0 +1,68 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arkadiusz Hiler <ahiler@codeweavers.com>
+Date: Thu, 19 Dec 2024 13:08:29 +0200
+Subject: [PATCH] protontts: Create tts-used tag for Steam.
+
+(cherry picked from commit a7714e599a36dfae0e111132fc5b71d4b917e7ed)
+---
+ dlls/protontts/unixlib.c | 33 +++++++++++++++++++++++++++++++++
+ 1 file changed, 33 insertions(+)
+
+diff --git a/dlls/protontts/unixlib.c b/dlls/protontts/unixlib.c
+index 74c9df4bf58..1b0fa7a9836 100644
+--- a/dlls/protontts/unixlib.c
++++ b/dlls/protontts/unixlib.c
+@@ -26,6 +26,9 @@
+ #include <stdlib.h>
+ #include <unistd.h>
+ #include <pthread.h>
++#include <fcntl.h>
++#include <linux/limits.h>
++#include <sys/stat.h>
+ 
+ #include <piper/piper_c.h>
+ 
+@@ -39,6 +42,35 @@
+ 
+ WINE_DEFAULT_DEBUG_CHANNEL(protontts);
+ 
++static inline void touch_tts_used_tag(void)
++{
++    const char *e;
++
++
++    if ((e = getenv("STEAM_COMPAT_TRANSCODED_MEDIA_PATH")))
++    {
++        char buffer[PATH_MAX];
++        int fd;
++
++        snprintf(buffer, sizeof(buffer), "%s/tts-used", e);
++
++        fd = open(buffer, O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
++        if (fd == -1)
++        {
++            ERR("Failed to open/create \"%s/tts-used\"", e);
++            return;
++        }
++
++        futimens(fd, NULL);
++
++        close(fd);
++    }
++    else
++    {
++        ERR("STEAM_COMPAT_TRANSCODED_MEDIA_PATH not set, cannot create tts-used file");
++    }
++}
++
+ struct tts_audio_buf
+ {
+     pthread_mutex_t mutex;
+@@ -79,6 +111,7 @@ static NTSTATUS process_attach(void *args)
+         zero_bits = (ULONG_PTR)info.HighestUserAddress | 0x7fffffff;
+     }
+ #endif
++    touch_tts_used_tag();
+     return STATUS_SUCCESS;
+ }
+ 

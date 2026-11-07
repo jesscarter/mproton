@@ -1,0 +1,23 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Tue, 18 Feb 2025 09:28:19 +0100
+Subject: [PATCH] HACK: winegstreamer: Set GST_GL_WINDOW environment variable.
+
+CW-Bug-Id: #24900
+(cherry picked from commit 2b76249421fc9b05f5dfc97d4276abda80d2d912)
+---
+ dlls/winegstreamer/unixlib.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/dlls/winegstreamer/unixlib.c b/dlls/winegstreamer/unixlib.c
+index 6585dafe76d..42368631961 100644
+--- a/dlls/winegstreamer/unixlib.c
++++ b/dlls/winegstreamer/unixlib.c
+@@ -275,6 +275,7 @@ NTSTATUS wg_init_gstreamer(void *arg)
+     if (params->err_on)
+         setenv("GST_DEBUG", "1", FALSE);
+     setenv("GST_DEBUG_NO_COLOR", "1", FALSE);
++    setenv("GST_GL_WINDOW", "x11", 1);
+ 
+     /* GStreamer installs a temporary SEGV handler when it loads plugins
+      * to initialize its registry calling exit(-1) when any fault is caught.

@@ -1,0 +1,72 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Andrew Eikum <aeikum@codeweavers.com>
+Date: Wed, 15 Jul 2020 14:57:28 -0500
+Subject: [PATCH] wineboot: On prefix upgrade, update win10 build number
+
+Some games (Death Stranding) require later build numbers than we had
+shipped earlier. So fix it up on existing prefixes.
+
+(cherry picked from commit c2cc178a067e12a465f197ea820f797e7c7698a3)
+---
+ programs/wineboot/wineboot.c | 41 ++++++++++++++++++++++++++++++++++++
+ 1 file changed, 41 insertions(+)
+
+diff --git a/programs/wineboot/wineboot.c b/programs/wineboot/wineboot.c
+index cb4e080e8fe..63929e504f6 100644
+--- a/programs/wineboot/wineboot.c
++++ b/programs/wineboot/wineboot.c
+@@ -1678,6 +1678,46 @@ static void update_user_profile(void)
+     LocalFree(sid);
+ }
+ 
++static void update_win_version(void)
++{
++    static const WCHAR win10_buildW[] = L"19045";
++    static const WCHAR win10_ntW[] = L"6.3";
++
++    HKEY cv_h;
++    DWORD type, sz;
++    WCHAR current_version[256];
++
++    if(RegOpenKeyExW(HKEY_LOCAL_MACHINE, L"Software\\Microsoft\\Windows NT\\CurrentVersion",
++                0, KEY_ALL_ACCESS, &cv_h) == ERROR_SUCCESS){
++        /* get the current windows version */
++        sz = sizeof(current_version);
++        if(RegQueryValueExW(cv_h, L"CurrentVersion", NULL, &type, (BYTE *)current_version, &sz) == ERROR_SUCCESS &&
++                type == REG_SZ){
++            if(!wcscmp(current_version, L"6.3") || !wcscmp(current_version, L"10.0")){
++                RegSetValueExW(cv_h, L"CurrentVersion", 0, REG_SZ, (const BYTE *)win10_ntW, sizeof(win10_ntW));
++                RegSetValueExW(cv_h, L"CurrentBuild", 0, REG_SZ, (const BYTE *)win10_buildW, sizeof(win10_buildW));
++                RegSetValueExW(cv_h, L"CurrentBuildNumber", 0, REG_SZ, (const BYTE *)win10_buildW, sizeof(win10_buildW));
++            }
++        }
++        RegCloseKey(cv_h);
++    }
++
++    if(RegOpenKeyExW(HKEY_LOCAL_MACHINE, L"Software\\Wow6432Node\\Microsoft\\Windows NT\\CurrentVersion",
++                0, KEY_ALL_ACCESS, &cv_h) == ERROR_SUCCESS){
++        /* get the current windows version */
++        sz = sizeof(current_version);
++        if(RegQueryValueExW(cv_h, L"CurrentVersion", NULL, &type, (BYTE *)current_version, &sz) == ERROR_SUCCESS &&
++                type == REG_SZ){
++            if(!wcscmp(current_version, L"6.3") || !wcscmp(current_version, L"10.0")){
++                RegSetValueExW(cv_h, L"CurrentVersion", 0, REG_SZ, (const BYTE *)win10_ntW, sizeof(win10_ntW));
++                RegSetValueExW(cv_h, L"CurrentBuild", 0, REG_SZ, (const BYTE *)win10_buildW, sizeof(win10_buildW));
++                RegSetValueExW(cv_h, L"CurrentBuildNumber", 0, REG_SZ, (const BYTE *)win10_buildW, sizeof(win10_buildW));
++            }
++        }
++        RegCloseKey(cv_h);
++    }
++}
++
+ /* execute rundll32 on the wine.inf file if necessary */
+ static void update_wineprefix( BOOL force )
+ {
+@@ -1732,6 +1772,7 @@ static void update_wineprefix( BOOL force )
+         }
+         install_root_pnp_devices();
+         update_user_profile();
++        update_win_version();
+ 
+         TRACE( "wine: configuration in %s has been updated.\n", debugstr_w(prettyprint_configdir()) );
+     }

@@ -1,0 +1,68 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Wed, 4 Nov 2020 18:08:21 +0300
+Subject: [PATCH] ws2_32: HACK Fail 'download-alt.easyanticheat.net' DNS name
+ resolution.
+
+CW-Bug-Id: #16695
+(cherry picked from commit 16cae6c395d2bbe53d807fe0f5eaed806d50db78)
+---
+ dlls/ws2_32/protocol.c | 31 +++++++++++++++++++++++++++++++
+ 1 file changed, 31 insertions(+)
+
+diff --git a/dlls/ws2_32/protocol.c b/dlls/ws2_32/protocol.c
+index 78dc0c78fca..e9ed94fbd04 100644
+--- a/dlls/ws2_32/protocol.c
++++ b/dlls/ws2_32/protocol.c
+@@ -184,6 +184,25 @@ static int dns_only_query( const char *node, const struct addrinfo *hints, struc
+     return 0;
+ }
+ 
++static BOOL eac_download_hack(void)
++{
++    static int eac_download_hack_enabled = -1;
++    char str[64];
++
++    if (eac_download_hack_enabled == -1)
++    {
++        if (GetEnvironmentVariableA("WINE_DISABLE_EAC_ALT_DOWNLOAD", str, sizeof(str)))
++            eac_download_hack_enabled = !!atoi(str);
++        else
++            eac_download_hack_enabled = GetEnvironmentVariableA("SteamGameId", str, sizeof(str))
++                                        && !strcmp(str, "626690");
++
++        if (eac_download_hack_enabled)
++            ERR("HACK: failing download-alt.easyanticheat.net resolution.\n");
++    }
++    return eac_download_hack_enabled;
++}
++
+ /***********************************************************************
+  *      getaddrinfo   (ws2_32.@)
+  */
+@@ -205,6 +224,12 @@ int WINAPI getaddrinfo( const char *node, const char *service,
+ 
+     if (node)
+     {
++        if (eac_download_hack() && !strcmp(node, "download-alt.easyanticheat.net"))
++        {
++            SetLastError(WSAHOST_NOT_FOUND);
++            return WSAHOST_NOT_FOUND;
++        }
++
+         if (!node[0])
+         {
+             if (!(fqdn = get_fqdn())) return WSA_NOT_ENOUGH_MEMORY;
+@@ -980,6 +1005,12 @@ struct hostent * WINAPI gethostbyname( const char *name )
+         return NULL;
+     }
+ 
++    if (eac_download_hack() && name && !strcmp(name, "download-alt.easyanticheat.net"))
++    {
++        SetLastError( WSAHOST_NOT_FOUND );
++        return NULL;
++    }
++
+     if ((ret = WS_CALL( gethostname, &params )))
+     {
+         SetLastError( ret );

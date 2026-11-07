@@ -1,0 +1,32 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Tue, 21 Oct 2025 18:53:48 -0600
+Subject: [PATCH] services: HACK: Create Arc Service on default desktop.
+
+CW-Bug-Id: #26091
+(cherry picked from commit 184d7163cd1e88b0cd2b7b419b24c7e1d9820ef7)
+---
+ programs/services/services.c | 7 ++++++-
+ 1 file changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/programs/services/services.c b/programs/services/services.c
+index 705c5112bf4..43cbd94f5d2 100644
+--- a/programs/services/services.c
++++ b/programs/services/services.c
+@@ -1026,10 +1026,15 @@ found:
+ 
+     ZeroMemory(&si, sizeof(STARTUPINFOW));
+     si.cb = sizeof(STARTUPINFOW);
+-    if (!(service_entry->config.dwServiceType & SERVICE_INTERACTIVE_PROCESS))
++    if (!(service_entry->config.dwServiceType & SERVICE_INTERACTIVE_PROCESS)
++        && service_entry->config.lpDisplayName && wcscmp(service_entry->config.lpDisplayName, L"Arc Service"))
+     {
+         si.lpDesktop = (WCHAR *)L"__wineservice_winstation\\Default";
+     }
++    else if (!(service_entry->config.dwServiceType & SERVICE_INTERACTIVE_PROCESS))
++    {
++        FIXME("HACK: Creating service %s on default desktop.\n", debugstr_w(service_entry->config.lpDisplayName));
++    }
+ 
+     if (!environment && OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY | TOKEN_DUPLICATE, &token))
+     {

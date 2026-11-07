@@ -1,0 +1,33 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Tue, 16 May 2023 12:41:04 +0200
+Subject: [PATCH] winegstreamer/wg_parser: Request live latency with
+ WINE_ENABLE_GST_LIVE_LATENCY=1.
+
+Effectively greatly reducing the memory overhead from avdec_h264, which
+otherwise starts one decoding thread per frame.
+
+CW-Bug-Id: #22045
+(cherry picked from commit 388cbde4820b609f12bcacb02fe904ac670d8ab4)
+---
+ dlls/winegstreamer/wg_parser.c | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/dlls/winegstreamer/wg_parser.c b/dlls/winegstreamer/wg_parser.c
+index efce9bf69f4..b16d3c2509f 100644
+--- a/dlls/winegstreamer/wg_parser.c
++++ b/dlls/winegstreamer/wg_parser.c
+@@ -1406,6 +1406,13 @@ static gboolean src_query_cb(GstPad *pad, GstObject *parent, GstQuery *query)
+             }
+             return FALSE;
+ 
++        case GST_QUERY_LATENCY:
++        {
++            const char *live = getenv("WINE_ENABLE_GST_LIVE_LATENCY");
++            gst_query_set_latency(query, live && !strcmp(live, "1"), 0, 0);
++            return TRUE;
++        }
++
+         default:
+             GST_WARNING("Unhandled query type %s.", GST_QUERY_TYPE_NAME(query));
+             return FALSE;

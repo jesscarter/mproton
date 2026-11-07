@@ -1,0 +1,45 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Esme Povirk <esme@codeweavers.com>
+Date: Sat, 13 Dec 2025 16:56:15 +0000
+Subject: [PATCH] winebrowser: Restore original LD_LIBRARY_PATH before calling
+ to system
+
+(cherry picked from commit 4f6565f78ccece4dbd6a12871e9c739eaf6d0bf6)
+---
+ programs/winebrowser/main.c | 16 ++++++++++++++++
+ 1 file changed, 16 insertions(+)
+
+diff --git a/programs/winebrowser/main.c b/programs/winebrowser/main.c
+index 9e00b111274..df3373147a9 100644
+--- a/programs/winebrowser/main.c
++++ b/programs/winebrowser/main.c
+@@ -62,6 +62,17 @@ static char *strdup_unixcp( const WCHAR *str )
+     return ret;
+ }
+ 
++static void restore_system_environment(void)
++{
++    const char* orig_ld_path = getenv("ORIG_LD_LIBRARY_PATH");
++
++    if (orig_ld_path)
++    {
++        __wine_set_unix_env("LD_LIBRARY_PATH", orig_ld_path);
++        __wine_set_unix_env("ORIG_LD_LIBRARY_PATH", NULL);
++    }
++}
++
+ /* try to launch a unix app from a comma separated string of app names */
+ static int launch_app( const WCHAR *candidates, const WCHAR *argv1 )
+ {
+@@ -71,6 +82,11 @@ static int launch_app( const WCHAR *candidates, const WCHAR *argv1 )
+ 
+     if (!(cmdline = strdup_unixcp( argv1 ))) return 1;
+ 
++    /* PROTON HACK: Restore ORIG_LD_LIBRARY_PATH to LD_LIBRARY_PATH.
++     * System programs may not work correctly with our libraries, in
++     * particular gio on Ubuntu 19.04 is broken by our libgio. */
++    restore_system_environment();
++
+     while (*candidates)
+     {
+         WCHAR **args = CommandLineToArgvW( candidates, &count );

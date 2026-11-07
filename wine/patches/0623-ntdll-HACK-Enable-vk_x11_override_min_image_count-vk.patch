@@ -1,0 +1,30 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Fri, 18 Aug 2023 18:44:58 -0600
+Subject: [PATCH] ntdll: HACK: Enable vk_x11_override_min_image_count,
+ vk_x11_strict_image_count for Rainbow Six Extraction.
+
+CW-Bug-Id: #22634
+(cherry picked from commit a746f97c181b44d0938dec84064e90421f102a09)
+---
+ dlls/ntdll/unix/loader.c | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/dlls/ntdll/unix/loader.c b/dlls/ntdll/unix/loader.c
+index f0c5d2930d4..80d787f5bcb 100644
+--- a/dlls/ntdll/unix/loader.c
++++ b/dlls/ntdll/unix/loader.c
+@@ -2146,6 +2146,13 @@ static void hacks_init(void)
+         ERR("HACK: setting WINE_ENABLE_GST_LIVE_LATENCY.\n");
+         setenv("WINE_ENABLE_GST_LIVE_LATENCY", "1", 0);
+     }
++
++    if (sgi && !strcmp(sgi, "2379390"))
++    {
++        ERR("HACK: setting vk_x11_override_min_image_count, vk_x11_strict_image_count.\n");
++        setenv("vk_x11_override_min_image_count", "2", 0);
++        setenv("vk_x11_strict_image_count", "true", 0);
++    }
+ }
+ 
+ /***********************************************************************

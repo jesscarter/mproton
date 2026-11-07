@@ -1,0 +1,188 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Wed, 28 Feb 2024 11:41:41 -0600
+Subject: [PATCH] amd_ags_x64: Support v3.2.
+
+CW-Bug-Id: #23474
+(cherry picked from commit dde13b4fc325029f62dc11e932f92df58217634b)
+---
+ dlls/amd_ags_x64/amd_ags.h          | 17 ++++++++
+ dlls/amd_ags_x64/amd_ags_x64.spec   |  3 ++
+ dlls/amd_ags_x64/amd_ags_x64_main.c | 67 +++++++++++++++++++++++++++--
+ 3 files changed, 83 insertions(+), 4 deletions(-)
+
+diff --git a/dlls/amd_ags_x64/amd_ags.h b/dlls/amd_ags_x64/amd_ags.h
+index 8eab0732d5b..0116a527ba5 100644
+--- a/dlls/amd_ags_x64/amd_ags.h
++++ b/dlls/amd_ags_x64/amd_ags.h
+@@ -733,7 +733,24 @@ typedef union AGSConfiguration
+     AGSConfiguration_520    agsConfiguration520;
+ } AGSConfiguration;
+ 
++struct AGSGPUInfo_320
++{
++    int                     agsVersionMajor;                // Major field of Major.Minor.Patch AGS version number
++    int                     agsVersionMinor;                // Minor field of Major.Minor.Patch AGS version number
++    int                     agsVersionPatch;                // Patch field of Major.Minor.Patch AGS version number
++
++    ArchitectureVersion     architectureVersion;            // Set to Unknown if not AMD hardware
++    const char*             adapterString;                  // The adapter name string. NULL if not AMD hardware
++    int                     deviceId;                       // The device id
++    int                     revisionId;                     // The revision id
++
++    const char*             driverVersion;                  // The driver package version
+ 
++    int                     iNumCUs;                        // Number of GCN compute units. Zero if not GCN
++    int                     iCoreClock;                     // core clock speed at 100% power in MHz
++    int                     iMemoryClock;                   // memory clock speed at 100% power in MHz
++    float                   fTFlops;                        // Teraflops of GPU. Zero if not GCN. Calculated from iCoreClock * iNumCUs * 64 Pixels/clk * 2 instructions/MAD
++};
+ 
+ /// The top level GPU information returned from \ref agsInitialize
+ struct AGSGPUInfo_403
+diff --git a/dlls/amd_ags_x64/amd_ags_x64.spec b/dlls/amd_ags_x64/amd_ags_x64.spec
+index 6bf73258776..be7b6bf0622 100644
+--- a/dlls/amd_ags_x64/amd_ags_x64.spec
++++ b/dlls/amd_ags_x64/amd_ags_x64.spec
+@@ -3,12 +3,14 @@
+ @ stdcall agsCheckDriverVersion(ptr long)
+ @ stdcall -norelay -arch=x86_64,arm64ec agsDriverExtensions_BeginUAVOverlap() DX11_BeginUAVOverlap_impl
+ @ stdcall -norelay -arch=x86_64,arm64ec agsDriverExtensionsDX11_BeginUAVOverlap() DX11_BeginUAVOverlap_impl
++@ stub agsDriverExtensions_IASetPrimitiveTopology
+ @ stub agsDriverExtensionsDX11_CreateBuffer
+ @ stdcall agsDriverExtensionsDX11_CreateDevice(ptr ptr ptr ptr)
+ @ stub agsDriverExtensionsDX11_CreateFromDevice
+ @ stub agsDriverExtensionsDX11_CreateTexture1D
+ @ stub agsDriverExtensionsDX11_CreateTexture2D
+ @ stub agsDriverExtensionsDX11_CreateTexture3D
++@ stdcall agsDriverExtensions_DeInit(ptr)
+ @ stdcall agsDriverExtensionsDX11_DeInit(ptr)
+ @ stub agsDriverExtensionsDX11_Destroy
+ @ stdcall -norelay -arch=x86_64,arm64ec agsDriverExtensionsDX11_DestroyDevice()
+@@ -16,6 +18,7 @@
+ @ stdcall -norelay -arch=x86_64,arm64ec agsDriverExtensionsDX11_EndUAVOverlap() DX11_EndUAVOverlap_impl
+ @ stub agsDriverExtensionsDX11_GetMaxClipRects
+ @ stub agsDriverExtensionsDX11_IASetPrimitiveTopology
++@ stdcall agsDriverExtensions_Init(ptr ptr ptr)
+ @ stdcall agsDriverExtensionsDX11_Init(ptr ptr long ptr)
+ @ stdcall -norelay -arch=x86_64,arm64ec agsDriverExtensions_MultiDrawIndexedInstancedIndirect() DX11_MultiDrawIndexedInstancedIndirect_impl
+ @ stdcall -norelay -arch=x86_64,arm64ec agsDriverExtensionsDX11_MultiDrawIndexedInstancedIndirect() DX11_MultiDrawIndexedInstancedIndirect_impl
+diff --git a/dlls/amd_ags_x64/amd_ags_x64_main.c b/dlls/amd_ags_x64/amd_ags_x64_main.c
+index 9a000491f32..f3fe22a124f 100644
+--- a/dlls/amd_ags_x64/amd_ags_x64_main.c
++++ b/dlls/amd_ags_x64/amd_ags_x64_main.c
+@@ -82,7 +82,7 @@ static const struct
+ }
+ amd_ags_info[AMD_AGS_VERSION_COUNT] =
+ {
+-    {AGS_MAKE_VERSION(4, 0, 0), AGS_MAKE_VERSION(4, 0, 3), sizeof(AGSDeviceInfo_511), sizeof(AGSDX11ReturnedParams_511), 0},
++    {AGS_MAKE_VERSION(3, 2, 0), AGS_MAKE_VERSION(4, 0, 3), sizeof(AGSDeviceInfo_511), sizeof(AGSDX11ReturnedParams_511), 0},
+     {AGS_MAKE_VERSION(5, 0, 0), AGS_MAKE_VERSION(5, 0, 6), sizeof(AGSDeviceInfo_511), sizeof(AGSDX11ReturnedParams_511), 0},
+     {AGS_MAKE_VERSION(5, 1, 1), AGS_MAKE_VERSION(5, 1, 1), sizeof(AGSDeviceInfo_511), sizeof(AGSDX11ReturnedParams_511), 0},
+     {AGS_MAKE_VERSION(5, 2, 0), AGS_MAKE_VERSION(5, 2, 1), sizeof(AGSDeviceInfo_520), sizeof(AGSDX11ReturnedParams_520), 0},
+@@ -372,13 +372,20 @@ static BOOL get_ags_version_from_resource(const WCHAR *filename, enum amd_ags_ve
+     return TRUE;
+ }
+ 
+-static enum amd_ags_version guess_version_from_exports(HMODULE hnative)
++static enum amd_ags_version guess_version_from_exports(HMODULE hnative, int *ags_version)
+ {
+     /* Known DLL versions without version info:
+      *  - An update to AGS 5.4.1 included an amd_ags_x64.dll with no file version info;
+      *  - CoD: Modern Warfare Remastered (2017) ships dll without version info which is version 5.0.1
+      *    (not tagged in AGSSDK history), compatible with 5.0.5.
+      */
++    if (GetProcAddress(hnative, "agsDriverExtensions_Init"))
++    {
++        /* agsGetEyefinityConfigInfo was deprecated in 4.0.0 */
++        TRACE("agsDriverExtensions_Init found.\n");
++        *ags_version = AGS_MAKE_VERSION(3, 2, 2);
++        return AMD_AGS_VERSION_4_0_3;
++    }
+     if (GetProcAddress(hnative, "agsGetEyefinityConfigInfo"))
+     {
+         /* agsGetEyefinityConfigInfo was deprecated in 5.0.0 */
+@@ -448,7 +455,7 @@ static enum amd_ags_version determine_ags_version(int *ags_version)
+         goto done;
+     }
+ 
+-    ret = guess_version_from_exports(hnative);
++    ret = guess_version_from_exports(hnative, ags_version);
+ 
+ done:
+     if (!*ags_version)
+@@ -837,7 +844,47 @@ AGSReturnCode WINAPI agsInit(AGSContext **context, const AGSConfiguration *confi
+         return ret;
+     }
+ 
+-    if (object->version <= AMD_AGS_VERSION_4_0_3)
++    if (object->public_version <= AGS_MAKE_VERSION(3, 2, 2))
++    {
++        /* Unfortunately it doesn't look sanely possible to distinguish 3.2.2 and 3.2.0 versions, while in
++         * 3.2.2 radeonSoftwareVersion was added in the middle of the structure. So fill the shorter one
++         * to avoid out of bound write. */
++        struct AGSDeviceInfo_511 *devices = (struct AGSDeviceInfo_511 *)object->devices, *device;
++        struct AGSGPUInfo_320 *info = (struct AGSGPUInfo_320 *)gpu_info;
++        unsigned int i;
++
++        TRACE("filling AGSGPUInfo_320.\n");
++        if (!object->device_count)
++        {
++            ERR("No devices.\n");
++            agsDeInit(object);
++            return AGS_FAILURE;
++        }
++
++        for (i = 0; i < object->device_count; ++i)
++            if (devices[i].isPrimaryDevice)
++                break;
++        if (i == object->device_count)
++        {
++            WARN("No primary device, using first.\n");
++            i = 0;
++        }
++        device = &devices[i];
++        memset(info, 0, sizeof(*info));
++        info->agsVersionMajor = AGS_VER_MAJOR(object->public_version);
++        info->agsVersionMinor = AGS_VER_MINOR(object->public_version);
++        info->agsVersionPatch = AGS_VER_PATCH(object->public_version);
++        info->architectureVersion = device->architectureVersion;
++        info->adapterString = device->adapterString;
++        info->deviceId = device->deviceId;
++        info->revisionId = device->revisionId;
++        info->driverVersion = driver_version;
++        info->iNumCUs = device->numCUs;
++        info->iCoreClock = device->coreClock;
++        info->iMemoryClock = device->memoryClock;
++        info->fTFlops = device->teraFlops;
++    }
++    else if (object->version <= AMD_AGS_VERSION_4_0_3)
+     {
+         struct AGSDeviceInfo_511 *devices = (struct AGSDeviceInfo_511 *)object->devices, *device;
+         struct AGSGPUInfo_403 *info = (struct AGSGPUInfo_403 *)gpu_info;
+@@ -1324,6 +1371,13 @@ AGSReturnCode WINAPI agsDriverExtensionsDX11_Init( AGSContext *context, ID3D11De
+     return AGS_SUCCESS;
+ }
+ 
++AGSReturnCode WINAPI agsDriverExtensions_Init( AGSContext* context, ID3D11Device* device, unsigned int* extensionsSupported )
++{
++    TRACE("context %p, device %p, extensionsSupported %p.\n", context, device, extensionsSupported);
++
++    return agsDriverExtensionsDX11_Init(context, device, ~0u, extensionsSupported);
++}
++
+ AGSReturnCode WINAPI agsDriverExtensionsDX11_DeInit( AGSContext* context )
+ {
+     TRACE("context %p.\n", context);
+@@ -1337,6 +1391,11 @@ AGSReturnCode WINAPI agsDriverExtensionsDX11_DeInit( AGSContext* context )
+     return AGS_SUCCESS;
+ }
+ 
++AGSReturnCode WINAPI agsDriverExtensions_DeInit(AGSContext *context)
++{
++    return agsDriverExtensionsDX11_DeInit(context);
++}
++
+ AGSReturnCode WINAPI agsDriverExtensionsDX12_Init( AGSContext* context, ID3D12Device* device, unsigned int* extensionsSupported )
+ {
+     FIXME("context %p, device %p, extensionsSupported %p stub.\n", context, device, extensionsSupported);

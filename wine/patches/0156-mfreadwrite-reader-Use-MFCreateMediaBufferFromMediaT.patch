@@ -1,0 +1,85 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Mon, 4 Mar 2024 09:54:09 +0100
+Subject: [PATCH] mfreadwrite/reader: Use MFCreateMediaBufferFromMediaType to
+ allocate samples.
+
+CW-Bug-Id: #20833
+(cherry picked from commit 536d9ae36eba3459799afdf35c06f2d25e5a50fe)
+---
+ dlls/mfreadwrite/reader.c       | 23 ++++++++++++++---------
+ dlls/mfreadwrite/tests/mfplat.c |  6 +++---
+ 2 files changed, 17 insertions(+), 12 deletions(-)
+
+diff --git a/dlls/mfreadwrite/reader.c b/dlls/mfreadwrite/reader.c
+index af77c46b7e6..69169cd751f 100644
+--- a/dlls/mfreadwrite/reader.c
++++ b/dlls/mfreadwrite/reader.c
+@@ -649,26 +649,31 @@ static ULONG WINAPI source_reader_stream_events_callback_Release(IMFAsyncCallbac
+     return source_reader_release(reader);
+ }
+ 
+-static HRESULT source_reader_allocate_stream_sample(MFT_OUTPUT_STREAM_INFO *info, IMFSample **out)
++static HRESULT source_reader_allocate_stream_sample(IMFTransform *transform, MFT_OUTPUT_STREAM_INFO *info, IMFSample **out)
+ {
++    IMFMediaType *media_type;
+     IMFMediaBuffer *buffer;
+     IMFSample *sample;
+     HRESULT hr;
+ 
+     *out = NULL;
+-    if (FAILED(hr = MFCreateSample(&sample)))
++    if (SUCCEEDED(hr = IMFTransform_GetOutputCurrentType(transform, 0, &media_type)))
++    {
++        hr = MFCreateMediaBufferFromMediaType(media_type, 10000000, info->cbSize, info->cbAlignment, &buffer);
++        IMFMediaType_Release(media_type);
++    }
++    if (FAILED(hr) && FAILED(hr = MFCreateAlignedMemoryBuffer(info->cbSize, info->cbAlignment, &buffer)))
+         return hr;
+-    if (SUCCEEDED(hr = MFCreateAlignedMemoryBuffer(info->cbSize, info->cbAlignment, &buffer)))
++
++    if (SUCCEEDED(hr = MFCreateSample(&sample)))
+     {
+         if (SUCCEEDED(hr = IMFSample_AddBuffer(sample, buffer)))
+-        {
+             *out = sample;
+-            IMFSample_AddRef(sample);
+-        }
+-        IMFMediaBuffer_Release(buffer);
++        else
++            IMFSample_Release(sample);
+     }
+ 
+-    IMFSample_Release(sample);
++    IMFMediaBuffer_Release(buffer);
+     return hr;
+ }
+ 
+@@ -870,7 +875,7 @@ static HRESULT source_reader_pull_transform_samples(struct source_reader *reader
+         IMFMediaType *media_type;
+ 
+         if (!(stream_info.dwFlags & (MFT_OUTPUT_STREAM_PROVIDES_SAMPLES | MFT_OUTPUT_STREAM_CAN_PROVIDE_SAMPLES))
+-                && FAILED(hr = source_reader_allocate_stream_sample(&stream_info, &out_buffer.pSample)))
++                && FAILED(hr = source_reader_allocate_stream_sample(entry->transform, &stream_info, &out_buffer.pSample)))
+             break;
+ 
+         if (SUCCEEDED(hr = IMFTransform_ProcessOutput(entry->transform, 0, 1, &out_buffer, &status)))
+diff --git a/dlls/mfreadwrite/tests/mfplat.c b/dlls/mfreadwrite/tests/mfplat.c
+index c8d83c134bc..68894e44eb2 100644
+--- a/dlls/mfreadwrite/tests/mfplat.c
++++ b/dlls/mfreadwrite/tests/mfplat.c
+@@ -3337,11 +3337,11 @@ static HRESULT WINAPI test_decoder_ProcessOutput(IMFTransform *iface, DWORD flag
+ 
+         hr = IMFSample_GetBufferByIndex(data->pSample, 0, &buffer);
+         ok(hr == S_OK, "Unexpected hr %#lx.\n", hr);
+-        todo_wine check_interface(buffer, &IID_IMF2DBuffer2, TRUE);
+-        todo_wine check_interface(buffer, &IID_IMFGetService, TRUE);
++        check_interface(buffer, &IID_IMF2DBuffer2, TRUE);
++        check_interface(buffer, &IID_IMFGetService, TRUE);
+         check_interface(buffer, &IID_IMFDXGIBuffer, FALSE);
+         hr = MFGetService((IUnknown *)buffer, &MR_BUFFER_SERVICE, &IID_IDirect3DSurface9, (void **)&unknown);
+-        todo_wine ok(hr == E_NOTIMPL, "Unexpected hr %#lx.\n", hr);
++        ok(hr == E_NOTIMPL, "Unexpected hr %#lx.\n", hr);
+         IMFMediaBuffer_Release(buffer);
+     }
+ 

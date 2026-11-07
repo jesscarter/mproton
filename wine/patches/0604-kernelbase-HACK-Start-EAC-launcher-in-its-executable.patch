@@ -1,0 +1,42 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Mon, 16 Feb 2026 12:25:25 -0600
+Subject: [PATCH] kernelbase: HACK: Start EAC launcher in its executable
+ directory.
+
+CW-Bug-Id: #25027
+(cherry picked from commit ad5919f4903977e988a045f0d7678a357f1b3076)
+---
+ dlls/kernelbase/process.c | 12 ++++++++++++
+ 1 file changed, 12 insertions(+)
+
+diff --git a/dlls/kernelbase/process.c b/dlls/kernelbase/process.c
+index 918100ab945..170b2d4295e 100644
+--- a/dlls/kernelbase/process.c
++++ b/dlls/kernelbase/process.c
+@@ -767,6 +767,7 @@ BOOL WINAPI DECLSPEC_HOTPATCH CreateProcessInternalW( HANDLE token, const WCHAR
+       - we don't overwrite WINEDLLOVERRIDES because it's fetched from the unix environment */
+     {
+         UNICODE_STRING name, value;
++        WCHAR exe_path[MAX_PATH], *p;
+ 
+         WCHAR *new_env = RtlAllocateHeap( GetProcessHeap(), 0, params->EnvironmentSize );
+         memcpy(new_env, params->Environment, params->EnvironmentSize);
+@@ -779,6 +780,17 @@ BOOL WINAPI DECLSPEC_HOTPATCH CreateProcessInternalW( HANDLE token, const WCHAR
+              * PE side will be lost. Preserve some critical ones. */
+             sync_env_var_to_unix( new_env, "UPLAY_ARGUMENTS" );
+             sync_env_var_to_unix( new_env, "UPC_GAME_STARTER_RUNNING" );
++
++            p = app_name + wcslen( app_name );
++            while (p != app_name && *p != '/' && *p != '\\') --p;
++            if (p != app_name)
++            {
++                /* The current directory may actually be wrong for the game executable (started by EAC bootstrapper)
++                 * and not the bootstrapper itself started here but it is easier to workaround this way.  */
++                memcpy( exe_path, app_name, (p - app_name) * sizeof(*p) );
++                exe_path[p - app_name] = 0;
++                cur_dir = exe_path;
++            }
+         }
+ 
+         RtlInitUnicodeString( &name, L"PROTON_EAC_LAUNCHER_PROCESS" );

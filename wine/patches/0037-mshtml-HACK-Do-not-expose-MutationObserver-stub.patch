@@ -1,0 +1,26 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Gabriel=20Iv=C4=83ncescu?= <gabrielopcode@gmail.com>
+Date: Mon, 15 Dec 2025 22:22:34 +0200
+Subject: [PATCH] mshtml HACK: Do not expose MutationObserver stub.
+
+FFXIV Launcher breaks with MutationObserver stub so it needs a proper
+implementation.
+
+(cherry picked from commit 684bc4f9951df4e4c95d43f9e7b68d16eb5ab5e8)
+---
+ dlls/mshtml/mutation.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/dlls/mshtml/mutation.c b/dlls/mshtml/mutation.c
+index b330bf3d883..4b290d43ab0 100644
+--- a/dlls/mshtml/mutation.c
++++ b/dlls/mshtml/mutation.c
+@@ -1236,7 +1236,7 @@ dispex_static_data_t MutationObserver_dispex = {
+     .vtbl             = &mutation_observer_dispex_vtbl,
+     .disp_tid         = IWineMSHTMLMutationObserver_tid,
+     .iface_tids       = mutation_observer_iface_tids,
+-    .min_compat_mode  = COMPAT_MODE_IE11,
++    .min_compat_mode  = COMPAT_MODE_IE11 + 1,  /* FIXME HACK: Not exposed as FFXIV Launcher breaks with MutationObserver stub */
+ };
+ 
+ static HRESULT create_mutation_observer(DispatchEx *owner, IDispatch *callback,

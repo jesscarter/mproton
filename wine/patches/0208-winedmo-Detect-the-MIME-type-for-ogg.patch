@@ -1,0 +1,26 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Conor McCarthy <cmccarthy@codeweavers.com>
+Date: Mon, 13 Jan 2025 15:37:24 +1000
+Subject: [PATCH] winedmo: Detect the MIME type for ogg.
+
+(cherry picked from commit 8ee7d2eec8258f28514d3b051a9b5b2f1a1b734c)
+---
+ dlls/winedmo/unix_demuxer.c | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/dlls/winedmo/unix_demuxer.c b/dlls/winedmo/unix_demuxer.c
+index 4ffd903cebf..f8f7faf64cc 100644
+--- a/dlls/winedmo/unix_demuxer.c
++++ b/dlls/winedmo/unix_demuxer.c
+@@ -202,6 +202,11 @@ NTSTATUS demuxer_create( void *arg )
+         else if (!strcmp( ext, ".wmv" )) strcpy( params->mime_type, "video/x-ms-wmv" );
+         else strcpy( params->mime_type, "video/x-ms-asf" );
+     }
++    else if (strstr( format->name, "ogg" ))
++    {
++        if (!strcmp( ext, ".oga" ) || !strcmp( ext, ".opus" )) strcpy( params->mime_type, "audio/ogg" );
++        else strcpy( params->mime_type, "video/ogg" );
++    }
+     else
+     {
+         FIXME( "Unknown MIME type for format %s, url %s\n", debugstr_a(format->name), debugstr_a(params->url) );

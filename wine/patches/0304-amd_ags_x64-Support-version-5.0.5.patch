@@ -1,0 +1,109 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Fri, 25 Aug 2023 14:40:35 -0600
+Subject: [PATCH] amd_ags_x64: Support version 5.0.5.
+
+Elden Ring is using this version.
+
+(cherry picked from commit 76f26395a41d16a22b3d180af8826e2bf9551c87)
+---
+ dlls/amd_ags_x64/amd_ags_x64_main.c | 25 ++++++++++++++++---------
+ 1 file changed, 16 insertions(+), 9 deletions(-)
+
+diff --git a/dlls/amd_ags_x64/amd_ags_x64_main.c b/dlls/amd_ags_x64/amd_ags_x64_main.c
+index a27b5a54175..9b30f300d2c 100644
+--- a/dlls/amd_ags_x64/amd_ags_x64_main.c
++++ b/dlls/amd_ags_x64/amd_ags_x64_main.c
+@@ -32,6 +32,7 @@ WINE_DEFAULT_DEBUG_CHANNEL(amd_ags);
+ 
+ enum amd_ags_version
+ {
++    AMD_AGS_VERSION_5_0_5,
+     AMD_AGS_VERSION_5_1_1,
+     AMD_AGS_VERSION_5_2_0,
+     AMD_AGS_VERSION_5_2_1,
+@@ -56,6 +57,7 @@ static const struct
+ }
+ amd_ags_info[AMD_AGS_VERSION_COUNT] =
+ {
++    {5, 0, 5, sizeof(AGSDeviceInfo_511), sizeof(AGSDX11ReturnedParams_511)},
+     {5, 1, 1, sizeof(AGSDeviceInfo_511), sizeof(AGSDX11ReturnedParams_511)},
+     {5, 2, 0, sizeof(AGSDeviceInfo_520), sizeof(AGSDX11ReturnedParams_520)},
+     {5, 2, 1, sizeof(AGSDeviceInfo_520), sizeof(AGSDX11ReturnedParams_520)},
+@@ -68,22 +70,22 @@ amd_ags_info[AMD_AGS_VERSION_COUNT] =
+     {6, 1, 0, sizeof(AGSDeviceInfo_600), sizeof(AGSDX11ReturnedParams_600)},
+ };
+ 
+-#define DEF_FIELD(name) {DEVICE_FIELD_##name, {offsetof(AGSDeviceInfo_511, name), offsetof(AGSDeviceInfo_520, name), \
++#define DEF_FIELD(name) {DEVICE_FIELD_##name, {offsetof(AGSDeviceInfo_511, name), offsetof(AGSDeviceInfo_511, name), offsetof(AGSDeviceInfo_520, name), \
+         offsetof(AGSDeviceInfo_520, name), offsetof(AGSDeviceInfo_520, name), offsetof(AGSDeviceInfo_540, name), \
+         offsetof(AGSDeviceInfo_541, name), offsetof(AGSDeviceInfo_542, name), offsetof(AGSDeviceInfo_600, name), \
+         offsetof(AGSDeviceInfo_600, name), offsetof(AGSDeviceInfo_600, name)}}
+-#define DEF_FIELD_520_BELOW(name) {DEVICE_FIELD_##name, {offsetof(AGSDeviceInfo_511, name), offsetof(AGSDeviceInfo_520, name), \
++#define DEF_FIELD_520_BELOW(name) {DEVICE_FIELD_##name, {offsetof(AGSDeviceInfo_511, name), offsetof(AGSDeviceInfo_511, name), offsetof(AGSDeviceInfo_520, name), \
+         offsetof(AGSDeviceInfo_520, name), offsetof(AGSDeviceInfo_520, name), -1, \
+         -1, -1, -1, -1, -1}}
+-#define DEF_FIELD_540_UP(name) {DEVICE_FIELD_##name, {-1, -1, \
++#define DEF_FIELD_540_UP(name) {DEVICE_FIELD_##name, {-1, -1, -1, \
+         -1, -1, offsetof(AGSDeviceInfo_540, name), \
+         offsetof(AGSDeviceInfo_541, name), offsetof(AGSDeviceInfo_542, name), offsetof(AGSDeviceInfo_600, name), \
+         offsetof(AGSDeviceInfo_600, name), offsetof(AGSDeviceInfo_600, name)}}
+-#define DEF_FIELD_540_600(name) {DEVICE_FIELD_##name, {-1, -1, \
++#define DEF_FIELD_540_600(name) {DEVICE_FIELD_##name, {-1, -1, -1, \
+         -1, -1, offsetof(AGSDeviceInfo_540, name), \
+         offsetof(AGSDeviceInfo_541, name), offsetof(AGSDeviceInfo_542, name), \
+         -1, -1, -1}}
+-#define DEF_FIELD_600_BELOW(name) {DEVICE_FIELD_##name, {offsetof(AGSDeviceInfo_511, name), offsetof(AGSDeviceInfo_520, name), \
++#define DEF_FIELD_600_BELOW(name) {DEVICE_FIELD_##name, {offsetof(AGSDeviceInfo_511, name), offsetof(AGSDeviceInfo_511, name), offsetof(AGSDeviceInfo_520, name), \
+         offsetof(AGSDeviceInfo_520, name), offsetof(AGSDeviceInfo_520, name), offsetof(AGSDeviceInfo_540, name), \
+         offsetof(AGSDeviceInfo_541, name), offsetof(AGSDeviceInfo_542, name), -1, \
+         -1, -1}}
+@@ -946,9 +948,10 @@ AGSReturnCode WINAPI agsDriverExtensionsDX11_SetDepthBounds_530(AGSContext* cont
+     return set_depth_bounds(context, dx_context, enabled, min_depth, max_depth);
+ }
+ 
++C_ASSERT(AMD_AGS_VERSION_5_3_0 == 4);
+ __ASM_GLOBAL_FUNC( DX11_SetDepthBounds_impl,
+                    "mov (%rcx),%eax\n\t" /* version */
+-                   "cmp $3,%eax\n\t"
++                   "cmp $4,%eax\n\t"
+                    "jge 1f\n\t"
+                    "jmp " __ASM_NAME("agsDriverExtensionsDX11_SetDepthBounds") "\n\t"
+                    "1:\tjmp " __ASM_NAME("agsDriverExtensionsDX11_SetDepthBounds_530") )
+@@ -997,9 +1000,10 @@ AGSReturnCode WINAPI agsDriverExtensionsDX11_BeginUAVOverlap(AGSContext *context
+     return update_uav_overlap(context, dx_context, TRUE);
+ }
+ 
++C_ASSERT(AMD_AGS_VERSION_5_3_0 == 4);
+ __ASM_GLOBAL_FUNC( DX11_BeginUAVOverlap_impl,
+                    "mov (%rcx),%eax\n\t" /* version */
+-                   "cmp $3,%eax\n\t"
++                   "cmp $4,%eax\n\t"
+                    "jge 1f\n\t"
+                    "jmp " __ASM_NAME("agsDriverExtensionsDX11_BeginUAVOverlap_520") "\n\t"
+                    "1:\tjmp " __ASM_NAME("agsDriverExtensionsDX11_BeginUAVOverlap") )
+@@ -1030,9 +1034,10 @@ AGSReturnCode WINAPI agsDriverExtensionsDX11_EndUAVOverlap(AGSContext *context,
+     return update_uav_overlap(context, dx_context, FALSE);
+ }
+ 
++C_ASSERT(AMD_AGS_VERSION_5_3_0 == 4);
+ __ASM_GLOBAL_FUNC( DX11_EndUAVOverlap_impl,
+                    "mov (%rcx),%eax\n\t" /* version */
+-                   "cmp $3,%eax\n\t"
++                   "cmp $4,%eax\n\t"
+                    "jge 1f\n\t"
+                    "jmp " __ASM_NAME("agsDriverExtensionsDX11_EndUAVOverlap_520") "\n\t"
+                    "1:\tjmp " __ASM_NAME("agsDriverExtensionsDX11_EndUAVOverlap") )
+@@ -1075,9 +1080,11 @@ AGSReturnCode WINAPI agsDriverExtensionsDX11_DestroyDevice_511(AGSContext *conte
+ 
+     return agsDriverExtensionsDX11_DestroyDevice_520(context, device, references, NULL, NULL);
+ }
++
++C_ASSERT(AMD_AGS_VERSION_5_2_0 == 2);
+ __ASM_GLOBAL_FUNC( agsDriverExtensionsDX11_DestroyDevice,
+                    "mov (%rcx),%eax\n\t" /* version */
+-                   "cmp $1,%eax\n\t"
++                   "cmp $2,%eax\n\t"
+                    "jge 1f\n\t"
+                    "jmp "     __ASM_NAME("agsDriverExtensionsDX11_DestroyDevice_511") "\n\t"
+                    "1:\tjmp " __ASM_NAME("agsDriverExtensionsDX11_DestroyDevice_520") )

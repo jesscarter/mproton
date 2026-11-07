@@ -1,0 +1,57 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arkadiusz Hiler <ahiler@codeweavers.com>
+Date: Wed, 28 Dec 2022 12:09:43 +0200
+Subject: [PATCH] winegstreamer/wg_parser: Set n-threads for dav1d to 1.
+
+It defaults to `$(nproc)` which causes the memory footprint to skyrocet
+on high core count systems.
+
+Setting it to 1 makes it use a bit less memory that theora decoder and
+is enough to decode 1080p 30fps stream on 5950x with a speed of 4x the
+real time.
+
+We may want to set it to value higher than 1 for 64bit apps where
+limited address space is not an issue. 2 or 4 may be optimal for tiling
+with 2 columns and 2 rosw when encoding the video.
+
+CW-Bug-Id: #19516
+(cherry picked from commit 657e08b06f7159a91a8f4824fb10cca34b842e77)
+---
+ dlls/winegstreamer/wg_parser.c | 19 +++++++++++++++++++
+ 1 file changed, 19 insertions(+)
+
+diff --git a/dlls/winegstreamer/wg_parser.c b/dlls/winegstreamer/wg_parser.c
+index bf796cbbcfb..32f0daf1de1 100644
+--- a/dlls/winegstreamer/wg_parser.c
++++ b/dlls/winegstreamer/wg_parser.c
+@@ -666,11 +666,30 @@ static void no_more_pads_cb(GstElement *element, gpointer user)
+     pthread_mutex_unlock(&parser->mutex);
+     pthread_cond_signal(&parser->init_cond);
+ }
++static void set_dav1d_n_threads(GstElement *element)
++{
++    GstElementFactory *factory = NULL;
++    const char *name = NULL;
++
++    if (element)
++        factory = gst_element_get_factory(element);
++
++    if (factory)
++        name = gst_element_factory_get_longname(factory);
++
++    if (name && strstr(name, "Dav1d"))
++    {
++        GST_DEBUG("%s found, setting n-threads to 1.", name);
++        g_object_set(element, "n-threads", G_GINT64_CONSTANT(1), NULL);
++    }
++}
+ 
+ static void deep_element_added_cb(GstBin *self, GstBin *sub_bin, GstElement *element, gpointer user)
+ {
+     if (element)
+         set_max_threads(element);
++
++    set_dav1d_n_threads(element);
+ }
+ 
+ static gboolean sink_event_cb(GstPad *pad, GstObject *parent, GstEvent *event)

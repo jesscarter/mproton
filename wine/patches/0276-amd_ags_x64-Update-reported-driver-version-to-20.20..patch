@@ -1,0 +1,27 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Brendan Shanks <bshanks@codeweavers.com>
+Date: Wed, 17 Jun 2020 16:36:24 -0700
+Subject: [PATCH] amd_ags_x64: Update reported driver version to 20.20.2.
+
+Needed to silence warnings in Red Dead Redemption 2.
+
+(cherry picked from commit 1f57cea2da197d57c01a7625d0b3a07b90c15e2a)
+---
+ dlls/amd_ags_x64/amd_ags_x64_main.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/amd_ags_x64/amd_ags_x64_main.c b/dlls/amd_ags_x64/amd_ags_x64_main.c
+index e2630d0f68b..d5d99e14e7e 100644
+--- a/dlls/amd_ags_x64/amd_ags_x64_main.c
++++ b/dlls/amd_ags_x64/amd_ags_x64_main.c
+@@ -256,8 +256,8 @@ AGSReturnCode WINAPI agsInit(AGSContext **context, const AGSConfiguration *confi
+     gpu_info->agsVersionMajor = amd_ags_versions[object->version].major;
+     gpu_info->agsVersionMinor = amd_ags_versions[object->version].minor;
+     gpu_info->agsVersionPatch = amd_ags_versions[object->version].patch;
+-    gpu_info->driverVersion = "18.10.16-180516a-328911C-RadeonSoftwareAdrenalin";
+-    gpu_info->radeonSoftwareVersion  = "18.5.1";
++    gpu_info->driverVersion = "20.20.2-180516a-328911C-RadeonSoftwareAdrenalin";
++    gpu_info->radeonSoftwareVersion  = "20.20.2";
+     gpu_info->numDevices = object->device_count;
+     gpu_info->devices = object->devices;
+ 

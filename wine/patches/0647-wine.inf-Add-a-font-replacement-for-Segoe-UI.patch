@@ -1,0 +1,23 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Jactry Zeng <jzeng@codeweavers.com>
+Date: Wed, 28 Feb 2024 00:59:28 -0600
+Subject: [PATCH] wine.inf: Add a font replacement for Segoe UI.
+
+CW-Bug-Id: #23020
+(cherry picked from commit d00c739a63432a609979c3882ac3ba26020e9047)
+---
+ loader/wine.inf.in | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/loader/wine.inf.in b/loader/wine.inf.in
+index 2ed2aec8276..26e1caaffd3 100644
+--- a/loader/wine.inf.in
++++ b/loader/wine.inf.in
+@@ -568,6 +568,7 @@ HKLM,%FontsNT%,"Wingdings (TrueType)",,"wingdings.ttf"
+ HKCU,Software\Wine\Fonts\Replacements,"Palatino Linotype",,"Times New Roman"
+ HKCU,Software\Wine\Fonts\Replacements,"Verdana",,"Times New Roman"
+ HKCU,Software\Wine\Fonts\Replacements,"Segoe UI Semibold",,"Times New Roman"
++HKCU,Software\Wine\Fonts\Replacements,"Segoe UI",,"Times New Roman"
+ 
+ [MCI]
+ HKLM,%Mci32Str%,"AVIVideo",,"mciavi32.dll"

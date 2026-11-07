@@ -1,0 +1,30 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Yuxuan Shui <yshui@codeweavers.com>
+Date: Mon, 11 Mar 2024 23:13:41 +0000
+Subject: [PATCH] wm_reader: Don't reinit stream if read_compressed didn't
+ change.
+
+CW-Bug-Id: #23483
+(cherry picked from commit 6d7eef65f8d0a26ad17366886af686e6e471db77)
+---
+ dlls/winegstreamer/wm_reader.c | 7 +++++--
+ 1 file changed, 5 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/winegstreamer/wm_reader.c b/dlls/winegstreamer/wm_reader.c
+index f3302d4acb8..54f385de9f2 100644
+--- a/dlls/winegstreamer/wm_reader.c
++++ b/dlls/winegstreamer/wm_reader.c
+@@ -2597,8 +2597,11 @@ static HRESULT WINAPI reader_SetReadStreamSamples(IWMSyncReader2 *iface, WORD st
+         return E_INVALIDARG;
+     }
+ 
+-    stream->read_compressed = compressed;
+-    reinit_stream(reader, compressed);
++    if (stream->read_compressed != compressed)
++    {
++        stream->read_compressed = compressed;
++        reinit_stream(reader, compressed);
++    }
+ 
+     LeaveCriticalSection(&reader->cs);
+     return S_OK;

@@ -1,0 +1,187 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Tue, 24 Sep 2024 13:38:50 -0600
+Subject: [PATCH] ntdll: Maintain module exception directory table.
+
+(cherry picked from commit 8f5a97992322a8afad5bc16dc6958b3e372b1078)
+---
+ dlls/ntdll/loader.c     |  3 ++
+ dlls/ntdll/ntdll_misc.h |  2 +
+ dlls/ntdll/unwind.c     | 96 +++++++++++++++++++++++++++++++++++++++++
+ include/winnt.h         | 10 +++++
+ 4 files changed, 111 insertions(+)
+
+diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
+index 78c503a0a09..5114e7c2250 100644
+--- a/dlls/ntdll/loader.c
++++ b/dlls/ntdll/loader.c
+@@ -1592,6 +1592,7 @@ static WINE_MODREF *alloc_module( HMODULE hModule, const UNICODE_STRING *nt_name
+     InsertTailList(&hash_table[hash_basename( &wm->ldr.BaseDllName )], &wm->ldr.HashLinks);
+     if (rtl_rb_tree_put( &base_address_index_tree, wm->ldr.DllBase, &wm->ldr.BaseAddressIndexNode, base_address_compare ))
+         ERR( "rtl_rb_tree_put failed.\n" );
++    register_module_exception_directory( hModule );
+     /* wait until init is called for inserting into InInitializationOrderModuleList */
+ 
+     if (!(nt->OptionalHeader.DllCharacteristics & IMAGE_DLLCHARACTERISTICS_NX_COMPAT))
+@@ -2313,6 +2314,7 @@ static NTSTATUS build_module( LPCWSTR load_path, const UNICODE_STRING *nt_name,
+             RemoveEntryList(&wm->ldr.InMemoryOrderLinks);
+             RemoveEntryList(&wm->ldr.HashLinks);
+             RtlRbRemoveNode( &base_address_index_tree, &wm->ldr.BaseAddressIndexNode );
++            unregister_module_exception_directory( wm->ldr.DllBase );
+ 
+             /* FIXME: there are several more dangling references
+              * left. Including dlls loaded by this dll before the
+@@ -4104,6 +4106,7 @@ static void free_modref( WINE_MODREF *wm )
+     RtlRbRemoveNode( &base_address_index_tree, &wm->ldr.BaseAddressIndexNode );
+     if (wm->ldr.InInitializationOrderLinks.Flink)
+         RemoveEntryList(&wm->ldr.InInitializationOrderLinks);
++    unregister_module_exception_directory( wm->ldr.DllBase );
+ 
+     while ((entry = wm->ldr.DdagNode->Dependencies.Tail))
+     {
+diff --git a/dlls/ntdll/ntdll_misc.h b/dlls/ntdll/ntdll_misc.h
+index 2bf3cfaca32..af7d5891084 100644
+--- a/dlls/ntdll/ntdll_misc.h
++++ b/dlls/ntdll/ntdll_misc.h
+@@ -59,6 +59,8 @@ extern EXCEPTION_DISPOSITION WINAPI user_callback_handler( EXCEPTION_RECORD *rec
+                                                            CONTEXT *context, void *dispatch );
+ extern void DECLSPEC_NORETURN raise_status( NTSTATUS status, EXCEPTION_RECORD *rec );
+ extern LONG WINAPI call_unhandled_exception_filter( PEXCEPTION_POINTERS eptr );
++extern void register_module_exception_directory( void *module );
++extern void unregister_module_exception_directory( void *module );
+ extern void WINAPI process_breakpoint(void);
+ 
+ static inline BOOL is_valid_frame( ULONG_PTR frame )
+diff --git a/dlls/ntdll/unwind.c b/dlls/ntdll/unwind.c
+index f0707346a35..4c63c8de52d 100644
+--- a/dlls/ntdll/unwind.c
++++ b/dlls/ntdll/unwind.c
+@@ -79,6 +79,92 @@ static RTL_CRITICAL_SECTION_DEBUG dynamic_unwind_debug =
+ };
+ static RTL_CRITICAL_SECTION dynamic_unwind_section = { &dynamic_unwind_debug, -1, 0, 0, 0, 0 };
+ 
++struct module_exception_dir_entry
++{
++    void *exception_dir;
++    void *dllbase;
++    DWORD size_of_image;
++    DWORD exception_dir_size;
++};
++
++#define MAX_MODULE_EXCEPTION_DIR_ENTRIES 512
++
++struct module_exception_dir_table
++{
++    DWORD count;
++    DWORD max_count;
++    DWORD unk;
++    DWORD unk2;
++    struct module_exception_dir_entry entries[MAX_MODULE_EXCEPTION_DIR_ENTRIES];
++};
++struct module_exception_dir_table DECLSPEC_ALLOCATE(".mrdata") exception_dir_table = { 1, MAX_MODULE_EXCEPTION_DIR_ENTRIES };
++
++C_ASSERT( sizeof(struct module_exception_dir_entry) == 0x18 );
++C_ASSERT( offsetof(struct module_exception_dir_table, entries) == 0x10 );
++
++void register_module_exception_directory( void *module )
++{
++    SIZE_T size = sizeof(exception_dir_table);
++    struct module_exception_dir_entry e;
++    void *addr = &exception_dir_table;
++    IMAGE_NT_HEADERS *nt;
++    ULONG old_prot;
++    unsigned int i;
++
++    if (!(nt = RtlImageNtHeader( module ))) return;
++    e.exception_dir = RtlImageDirectoryEntryToData( module, TRUE, IMAGE_DIRECTORY_ENTRY_EXCEPTION, &e.exception_dir_size );
++    if (!e.exception_dir) return;
++    e.size_of_image = nt->OptionalHeader.SizeOfImage;
++    e.dllbase = module;
++
++    RtlEnterCriticalSection( &dynamic_unwind_section );
++
++    if (exception_dir_table.count == MAX_MODULE_EXCEPTION_DIR_ENTRIES) goto done;
++
++    NtProtectVirtualMemory( NtCurrentProcess(), &addr, &size, PAGE_READWRITE, &old_prot );
++    /* First entry is reserved for ntdll regardless of base address order. */
++    if (exception_dir_table.count <= 2)
++    {
++        MEMORY_BASIC_INFORMATION mbi;
++
++        NtQueryVirtualMemory( GetCurrentProcess(), LdrInitializeThunk, MemoryBasicInformation, &mbi, sizeof(mbi), NULL );
++        if (module == mbi.AllocationBase)
++        {
++            exception_dir_table.entries[0] = e;
++            goto done;
++        }
++    }
++    for (i = 1; i < exception_dir_table.count; ++i)
++        if ((ULONG_PTR)module < (ULONG_PTR)exception_dir_table.entries[i].dllbase) break;
++    memmove( &exception_dir_table.entries[i + 1], &exception_dir_table.entries[i],
++             sizeof(*exception_dir_table.entries) * (exception_dir_table.count - i) );
++    exception_dir_table.entries[i] = e;
++    ++exception_dir_table.count;
++done:
++    RtlLeaveCriticalSection( &dynamic_unwind_section );
++}
++
++void unregister_module_exception_directory( void *module )
++{
++    SIZE_T size = sizeof(exception_dir_table);
++    void *addr = &exception_dir_table;
++    ULONG old_prot;
++    unsigned int i;
++
++    RtlEnterCriticalSection( &dynamic_unwind_section );
++    for (i = 1; i < exception_dir_table.count; ++i)
++    {
++        if (module == exception_dir_table.entries[i].dllbase)
++        {
++            NtProtectVirtualMemory( NtCurrentProcess(), &addr, &size, PAGE_READWRITE, &old_prot );
++            memmove( &exception_dir_table.entries[i], &exception_dir_table.entries[i + 1],
++                     sizeof(*exception_dir_table.entries) * (exception_dir_table.count - i - 1) );
++            --exception_dir_table.count;
++            break;
++        }
++    }
++    RtlLeaveCriticalSection( &dynamic_unwind_section );
++}
+ 
+ static RUNTIME_FUNCTION *lookup_dynamic_function_table( ULONG_PTR pc, ULONG_PTR *base, ULONG *count )
+ {
+@@ -2387,4 +2473,14 @@ void WINAPI _local_unwind( void *frame, void *target_ip )
+     RtlUnwind( frame, target_ip, NULL, NULL );
+ }
+ 
++#else
++
++void register_module_exception_directory( void *module )
++{
++}
++
++void unregister_module_exception_directory( void *module )
++{
++}
++
+ #endif  /* !__i386__ */
+diff --git a/include/winnt.h b/include/winnt.h
+index f270727aea5..345442dae02 100644
+--- a/include/winnt.h
++++ b/include/winnt.h
+@@ -83,6 +83,16 @@ extern "C" {
+ # endif
+ #endif
+ 
++#ifndef DECLSPEC_ALLOCATE
++# if __has_declspec_attribute(allocate) && !defined(MIDL_PASS)
++#  define DECLSPEC_ALLOCATE(x) __declspec(allocate(x))
++# elif defined(__GNUC__)
++#  define DECLSPEC_ALLOCATE(x) __attribute__((section(x)))
++# else
++#  define DECLSPEC_ALLOCATE(x)
++# endif
++#endif
++
+ #ifndef DECLSPEC_NOTHROW
+ # ifdef __GNUC__
+ #  define DECLSPEC_NOTHROW __attribute__((nothrow))

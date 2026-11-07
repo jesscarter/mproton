@@ -1,0 +1,43 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Mon, 27 Jan 2025 15:31:41 +0100
+Subject: [PATCH] winegstreamer/media-converter: Try mediaconv even if
+ compressed output is requested.
+
+CW-Bug-Id: #24739
+(cherry picked from commit 2db1c9039fa78bcc6d86a5d456e24d4362b3f655)
+---
+ dlls/winegstreamer/wg_parser.c | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/dlls/winegstreamer/wg_parser.c b/dlls/winegstreamer/wg_parser.c
+index fd1e5c22157..66e26a9d43b 100644
+--- a/dlls/winegstreamer/wg_parser.c
++++ b/dlls/winegstreamer/wg_parser.c
+@@ -1588,7 +1588,7 @@ static GstBusSyncReply bus_handler_cb(GstBus *bus, GstMessage *msg, gpointer use
+         if (gst_structure_has_name(structure, "missing-plugin"))
+         {
+             pthread_mutex_lock(&parser->mutex);
+-            if (!parser->use_mediaconv && !parser->output_compressed)
++            if (!parser->use_mediaconv)
+             {
+                 GST_WARNING("Autoplugged element failed to initialise, trying again with protonvideoconvert.");
+                 parser->error = true;
+@@ -1805,7 +1805,7 @@ static NTSTATUS wg_parser_connect(void *args)
+ 
+     if (ret == GST_STATE_CHANGE_FAILURE)
+     {
+-        if (!parser->use_mediaconv && !parser->output_compressed)
++        if (!parser->use_mediaconv)
+         {
+             GST_WARNING("Failed to play media, trying again with protonvideoconvert.");
+             use_mediaconv = true;
+@@ -1821,7 +1821,7 @@ static NTSTATUS wg_parser_connect(void *args)
+         pthread_cond_wait(&parser->init_cond, &parser->mutex);
+     if (parser->error)
+     {
+-        if (!parser->use_mediaconv && !parser->output_compressed)
++        if (!parser->use_mediaconv)
+             use_mediaconv = true;
+         pthread_mutex_unlock(&parser->mutex);
+         goto out;

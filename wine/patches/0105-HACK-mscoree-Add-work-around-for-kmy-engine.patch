@@ -1,0 +1,45 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Esme Povirk <esme@codeweavers.com>
+Date: Sat, 6 Jun 2026 23:01:46 +0000
+Subject: [PATCH] HACK: mscoree: Add work-around for kmy engine.
+
+CW-Bug-Id: #27141
+(cherry picked from commit 2aaf983aed4edbc3dca4e879b32e745b250bfe9e)
+---
+ dlls/mscoree/metahost.c | 11 ++++++++++-
+ 1 file changed, 10 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/mscoree/metahost.c b/dlls/mscoree/metahost.c
+index 72a95fef56b..f0599290d3a 100644
+--- a/dlls/mscoree/metahost.c
++++ b/dlls/mscoree/metahost.c
+@@ -1900,6 +1900,7 @@ static MonoAssembly* CDECL wine_mono_assembly_preload_hook_v2_fn(MonoAssemblyNam
+             const char *module_name;
+             const char *appid;
+             const char *source;
++            const WCHAR *library;
+         } assembly_hacks[] = {
+             {
+                 "CameraQuakeViewer",
+@@ -1925,12 +1926,20 @@ static MonoAssembly* CDECL wine_mono_assembly_preload_hook_v2_fn(MonoAssemblyNam
+                 "46450", /* Grotesque Tactics: Evil Heroes  */
+                 "namespace WeifenLuo.WinFormsUI { class DockPanel {} }"
+             },
++            {
++                "EdgeBrowserControl",
++                "EdgeBrowserControl.dll",
++                NULL,
++                "namespace EdgeBrowserControl { class MyWebBrowser {} }",
++                L"SharpKmyCore"
++            },
+         };
+ 
+         for (i = 0; i < ARRAY_SIZE(assembly_hacks); ++i)
+         {
+             if (!strcmp(assemblyname, assembly_hacks[i].assembly_name) &&
+-                    !strcmp(sgi, assembly_hacks[i].appid))
++                    (!assembly_hacks[i].appid || !strcmp(sgi, assembly_hacks[i].appid)) &&
++                    (!assembly_hacks[i].library || GetModuleHandleW(assembly_hacks[i].library)))
+             {
+                 char assembly_path[MAX_PATH];
+ 

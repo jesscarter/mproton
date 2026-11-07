@@ -1,0 +1,31 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Bernhard=20K=C3=B6lbl?= <besentv@gmail.com>
+Date: Mon, 5 May 2025 17:41:32 +0200
+Subject: [PATCH] ddraw: HACK: Ignore gamma ramp changes by e-Racer. CW-Bug-Id:
+ #25272
+
+(cherry picked from commit 19c6f062639ae8aef2f73dce07fc8f69992e3e90)
+---
+ dlls/ddraw/surface.c | 9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+diff --git a/dlls/ddraw/surface.c b/dlls/ddraw/surface.c
+index 1af00301f1b..88d25b2c9fb 100644
+--- a/dlls/ddraw/surface.c
++++ b/dlls/ddraw/surface.c
+@@ -5513,6 +5513,15 @@ static HRESULT WINAPI ddraw_gamma_control_SetGammaRamp(IDirectDrawGammaControl *
+         return DDERR_INVALIDPARAMS;
+     }
+ 
++    {
++        const char *sgi = getenv("SteamGameId");
++        if (sgi && !strcmp(sgi, "3600700"))
++        {
++            FIXME("HACK: not applying gamma.\n");
++            return DD_OK;
++        }
++    }
++
+     wined3d_mutex_lock();
+     if (surface->surface_desc.ddsCaps.dwCaps & DDSCAPS_PRIMARYSURFACE)
+     {

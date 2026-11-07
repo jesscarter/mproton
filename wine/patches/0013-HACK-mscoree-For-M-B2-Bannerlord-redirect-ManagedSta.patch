@@ -1,0 +1,49 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Esme Povirk <esme@codeweavers.com>
+Date: Thu, 22 Apr 2021 14:35:40 -0500
+Subject: [PATCH] HACK: mscoree: For M&B2:Bannerlord, redirect ManagedStarter
+ loads to Bannerlord.exe
+
+For M&B2:Bannerlord.
+
+CW-Bug-Id: #18843
+(cherry picked from commit 34072a78e8c8673cff12c8e828cfd849532114f3)
+---
+ dlls/mscoree/metahost.c | 24 ++++++++++++++++++++++++
+ 1 file changed, 24 insertions(+)
+
+diff --git a/dlls/mscoree/metahost.c b/dlls/mscoree/metahost.c
+index 848cab6d57b..0f449874875 100644
+--- a/dlls/mscoree/metahost.c
++++ b/dlls/mscoree/metahost.c
+@@ -1863,6 +1863,30 @@ static MonoAssembly* CDECL wine_mono_assembly_preload_hook_v2_fn(MonoAssemblyNam
+         }
+     }
+ 
++    if (!strcmp(assemblyname, "ManagedStarter"))
++    {
++        /* HACK for Mount & Blade II: Bannerlord
++         *
++         * The launcher executable uses an AssemblyResolve event handler
++         * to redirect loads of the "ManagedStarter" assembly to
++         * Bannerlord.exe. Due to Mono issue #11319, the runtime attempts
++         * to load ManagedStarter before executing the static constructor
++         * that adds this event handler. We work around this by doing the
++         * same thing in our own assembly load hook. */
++        const char* sgi = getenv("SteamGameId");
++        if (sgi && !strcmp(sgi, "261550"))
++        {
++            FIXME("hack, using Bannerlord.exe\n");
++
++            result = mono_assembly_open("Bannerlord.exe", &stat);
++
++            if (result)
++                goto done;
++            else
++                ERR("Bannerlord.exe failed to load\n");
++        }
++    }
++
+     if (!strcmp(assemblyname, "CameraQuakeViewer"))
+     {
+         /* HACK for Nights of Azure which references type from a non-existing DLL.

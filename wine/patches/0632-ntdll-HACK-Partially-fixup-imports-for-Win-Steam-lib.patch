@@ -1,0 +1,96 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Wed, 28 Aug 2024 11:58:36 -0600
+Subject: [PATCH] ntdll: HACK: Partially fixup imports for Win Steam libs.
+
+CW-Bug-Id: #24174
+(cherry picked from commit bb6514f45fd216bf05378d872aa0b7918fabcada)
+---
+ dlls/ntdll/loader.c | 53 +++++++++++++++++++++++++++++----------------
+ 1 file changed, 34 insertions(+), 19 deletions(-)
+
+diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
+index b33c786d00e..3f4500b33b3 100644
+--- a/dlls/ntdll/loader.c
++++ b/dlls/ntdll/loader.c
+@@ -1132,6 +1132,24 @@ void * WINAPI RtlFindExportedRoutineByName( HMODULE module, const char *name )
+     return proc;
+ }
+ 
++static int use_lsteamclient(void)
++{
++    WCHAR env[32];
++    static int use = -1;
++
++    if (use != -1) return use;
++
++    {
++        UNICODE_STRING name = RTL_CONSTANT_STRING( L"PROTON_DISABLE_LSTEAMCLIENT" );
++        UNICODE_STRING value = { 0, sizeof(env) - sizeof(WCHAR), env };
++
++        env[0] = 0;
++        use = RtlQueryEnvironmentVariable_U( NULL, &name, &value ) || *env == '0';
++    }
++    if (!use)
++        ERR("lsteamclient disabled.\n");
++    return use;
++}
+ 
+ /*************************************************************************
+  *		import_dll
+@@ -1170,6 +1188,17 @@ static BOOL import_dll( WINE_MODREF *wm, const IMAGE_IMPORT_DESCRIPTOR *descr, L
+         return TRUE;
+     }
+ 
++    if (use_lsteamclient())
++    {
++        if ((!strcmp(name, "tier0_s64.dll") || !strcmp(name, "vstdlib_s64.dll")) && wm->ldr.BaseDllName.Buffer
++            && (!wcscmp(wm->ldr.BaseDllName.Buffer, L"steamclient64.dll")
++                || !wcscmp(wm->ldr.BaseDllName.Buffer, L"gameoverlayrenderer64.dll")))
++        {
++            TRACE("%s -> ntdll.\n", name);
++            name = "ntdll.dll";
++        }
++    }
++
+     status = build_import_name( wm, buffer, name, len );
+     if (!status) status = load_dll( load_path, buffer, 0, &wmImp, system );
+ 
+@@ -2259,25 +2288,6 @@ done:
+     return status;
+ }
+ 
+-static int use_lsteamclient(void)
+-{
+-    WCHAR env[32];
+-    static int use = -1;
+-
+-    if (use != -1) return use;
+-
+-    {
+-        UNICODE_STRING name = RTL_CONSTANT_STRING( L"PROTON_DISABLE_LSTEAMCLIENT" );
+-        UNICODE_STRING value = { 0, sizeof(env) - sizeof(WCHAR), env };
+-
+-        env[0] = 0;
+-        use = RtlQueryEnvironmentVariable_U( NULL, &name, &value ) || *env == '0';
+-    }
+-    if (!use)
+-        ERR("lsteamclient disabled.\n");
+-    return use;
+-}
+-
+ /*************************************************************************
+  *		build_module
+  *
+@@ -2363,6 +2373,11 @@ static NTSTATUS build_module( LPCWSTR load_path, const UNICODE_STRING *nt_name,
+             TRACE( "steamclient ImageBase %#Ix.\n", nt->OptionalHeader.ImageBase );
+             NtProtectVirtualMemory( NtCurrentProcess(), &addr, &size, protect_old, &protect_old );
+         }
++        else
++        {
++            fixup_imports( wm, load_path );
++            wm->ldr.Flags |= LDR_DONT_RESOLVE_REFS;
++        }
+     }
+ 
+     /* fixup imports */

@@ -1,0 +1,67 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Tue, 5 Mar 2024 22:23:44 +0100
+Subject: [PATCH] winegstreamer/media-converter: Automatically add an audio
+ decoder to protondemuxer.
+
+CW-Bug-Id: #22319
+(cherry picked from commit 44bf21e1f280bca42a0b56e1dcdf975b4b7bfa2a)
+---
+ .../media-converter/protondemuxer.c           | 33 +++++++++++++++++--
+ 1 file changed, 30 insertions(+), 3 deletions(-)
+
+diff --git a/dlls/winegstreamer/media-converter/protondemuxer.c b/dlls/winegstreamer/media-converter/protondemuxer.c
+index 9ab4be5ae3c..124d105ca46 100644
+--- a/dlls/winegstreamer/media-converter/protondemuxer.c
++++ b/dlls/winegstreamer/media-converter/protondemuxer.c
+@@ -58,13 +58,39 @@ static gboolean proton_demuxer_sink_event(GstPad *pad, GstObject *parent, GstEve
+ static void proton_demuxer_pad_added(GstElement *element, GstPad *pad, gpointer user)
+ {
+     ProtonDemuxer *bin = PROTON_DEMUXER(user);
+-    GstPad *ghost_src;
++    GstPad *ghost_src, *src_pad;
++    GstElement *decoder = NULL;
+     GstEvent *event;
++    GstCaps *caps;
+ 
+     GST_DEBUG_OBJECT(element, "Got inner pad added %"GST_PTR_FORMAT".", pad);
+ 
+-    ghost_src = gst_ghost_pad_new(GST_PAD_NAME(pad), pad);
+-    gst_pad_set_active(ghost_src, true);
++    if ((caps = gst_pad_get_current_caps(pad)))
++    {
++        const char *mime_type = gst_structure_get_name(gst_caps_get_structure(caps, 0));
++        GST_DEBUG_OBJECT(element, "Got inner pad caps %"GST_PTR_FORMAT".", caps);
++
++        if (!strcmp(mime_type, "audio/x-vorbis"))
++            decoder = create_element("vorbisdec", "base");
++        else if (!strcmp(mime_type, "audio/x-opus"))
++            decoder = create_element("opusdec", "base");
++
++        gst_caps_unref(caps);
++    }
++
++    if (!decoder)
++        ghost_src = gst_ghost_pad_new(GST_PAD_NAME(pad), pad);
++    else
++    {
++        gst_bin_add(GST_BIN(bin), decoder);
++        link_src_to_element(pad, decoder);
++
++        src_pad = gst_element_get_static_pad(decoder, "src");
++        ghost_src = gst_ghost_pad_new(GST_PAD_NAME(src_pad), src_pad);
++        gst_object_unref(src_pad);
++
++        gst_element_sync_state_with_parent(decoder);
++    }
+ 
+     if ((event = gst_pad_get_sticky_event(pad, GST_EVENT_STREAM_START, 0)))
+     {
+@@ -72,6 +98,7 @@ static void proton_demuxer_pad_added(GstElement *element, GstPad *pad, gpointer
+         gst_event_unref(event);
+     }
+ 
++    gst_pad_set_active(ghost_src, true);
+     gst_element_add_pad(GST_ELEMENT(&bin->bin), ghost_src);
+ }
+ 

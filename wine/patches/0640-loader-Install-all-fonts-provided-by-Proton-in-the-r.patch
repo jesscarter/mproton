@@ -1,0 +1,41 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Giovanni Mascellani <gmascellani@codeweavers.com>
+Date: Tue, 24 Jan 2023 12:12:01 +0100
+Subject: [PATCH] loader: Install all fonts provided by Proton in the registry.
+
+(cherry picked from commit 31b56a9a7b6b22e8c2e88776c2b7ed546d8fa84f)
+---
+ loader/wine.inf.in | 14 ++++++++++++--
+ 1 file changed, 12 insertions(+), 2 deletions(-)
+
+diff --git a/loader/wine.inf.in b/loader/wine.inf.in
+index 3d26420b515..191179abb5a 100644
+--- a/loader/wine.inf.in
++++ b/loader/wine.inf.in
+@@ -542,14 +542,24 @@ HKCU,Software\Wine\Fonts\Replacements,"Segoe Fluent Icons",,"Symbols"
+ HKCU,Software\Wine\Fonts\Replacements,"Segoe MDL2 Assets",,"Symbols"
+ HKLM,%FontsNT%,"Arial (TrueType)",,"arial.ttf"
+ HKLM,%FontsNT%,"Arial Bold (TrueType)",,"arialbd.ttf"
+-HKLM,%FontsNT%,"Times New Roman (TrueType)",,"times.ttf"
+ HKLM,%FontsNT%,"Courier New (TrueType)",,"cour.ttf"
++HKLM,%FontsNT%,"Courier New Bold (TrueType)",,"courbd.ttf"
+ HKLM,%FontsNT%,"Malgun Gothic (TrueType)",,"malgun.ttf"
++HKLM,%FontsNT%,"Marlett (TrueType)",,"marlett.ttf"
+ HKLM,%FontsNT%,"Microsoft Sans Serif (TrueType)",,"micross.ttf"
+-HKLM,%FontsNT%,"Microsoft YaHei (TrueType)",,"msyh.ttf"
+ HKLM,%FontsNT%,"MS Gothic (TrueType)",,"msgothic.ttc"
++HKLM,%FontsNT%,"MS PGothic (TrueType)",,"msgothic.ttc"
++HKLM,%FontsNT%,"MS UI Gothic (TrueType)",,"msgothic.ttc"
++HKLM,%FontsNT%,"Microsoft YaHei (TrueType)",,"msyh.ttf"
+ HKLM,%FontsNT%,"Nirmala UI (TrueType)",,"nirmala.ttf"
+ HKLM,%FontsNT%,"SimSun (TrueType)",,"simsun.ttc"
++HKLM,%FontsNT%,"NSimSun (TrueType)",,"simsun.ttc"
++HKLM,%FontsNT%,"Symbol (TrueType)",,"symbol.ttf"
++HKLM,%FontsNT%,"Tahoma (TrueType)",,"tahoma.ttf"
++HKLM,%FontsNT%,"Tahoma Bold (TrueType)",,"tahomabd.ttf"
++HKLM,%FontsNT%,"Times New Roman (TrueType)",,"times.ttf"
++HKLM,%FontsNT%,"Webdings (TrueType)",,"webdings.ttf"
++HKLM,%FontsNT%,"Wingdings (TrueType)",,"wingdings.ttf"
+ HKCU,Software\Wine\Fonts\Replacements,"Palatino Linotype",,"Times New Roman"
+ 
+ [MCI]

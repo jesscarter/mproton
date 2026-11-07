@@ -1,0 +1,52 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Wed, 30 Oct 2024 10:11:35 +0100
+Subject: [PATCH] HACK: winegstreamer/wm_reader: Force faking compressed
+ samples for some games.
+
+CW-Bug-Id: #24401
+(cherry picked from commit 4abf4a41104851d9f8588ee6a0ec251f9c517435)
+---
+ dlls/winegstreamer/wm_reader.c | 14 +++++++++++---
+ 1 file changed, 11 insertions(+), 3 deletions(-)
+
+diff --git a/dlls/winegstreamer/wm_reader.c b/dlls/winegstreamer/wm_reader.c
+index 671e3597670..2129053b30d 100644
+--- a/dlls/winegstreamer/wm_reader.c
++++ b/dlls/winegstreamer/wm_reader.c
+@@ -31,6 +31,7 @@ struct wm_stream
+     WORD index;
+     bool eos;
+     bool read_compressed;
++    bool demux_compressed;
+ 
+     struct wg_parser_buffer current_buffer;
+     DWORD current_buffer_offset;
+@@ -2597,9 +2598,16 @@ static HRESULT WINAPI reader_SetReadStreamSamples(IWMSyncReader2 *iface, WORD st
+         return E_INVALIDARG;
+     }
+ 
+-    if (stream->read_compressed != compressed)
++    stream->read_compressed = compressed;
++
++    {
++        const char *sgi = getenv("SteamGameId");
++        if (sgi && !strcmp(sgi, "638160")) compressed = FALSE;
++    }
++
++    if (stream->demux_compressed != compressed)
+     {
+-        stream->read_compressed = compressed;
++        stream->demux_compressed = compressed;
+         reinit_stream(reader, compressed);
+     }
+ 
+@@ -2650,7 +2658,7 @@ static HRESULT WINAPI reader_SetStreamsSelected(IWMSyncReader2 *iface,
+                 FIXME("Ignoring selection %#x for stream %u; treating as enabled.\n",
+                         selections[i], stream_numbers[i]);
+             TRACE("Enabling stream %u.\n", stream_numbers[i]);
+-            if (stream->read_compressed)
++            if (stream->demux_compressed)
+             {
+                 struct wg_format format;
+                 wg_parser_stream_get_current_format(stream->wg_stream, &format);

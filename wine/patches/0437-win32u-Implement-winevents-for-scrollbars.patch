@@ -1,0 +1,31 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Esme Povirk <esme@codeweavers.com>
+Date: Fri, 15 Mar 2024 16:30:57 +0000
+Subject: [PATCH] win32u: Implement winevents for scrollbars.
+
+(cherry picked from commit 78032a5b3ea2043effe8b001832e9799fa2158aa)
+---
+ dlls/win32u/scroll.c | 10 ++++++++++
+ 1 file changed, 10 insertions(+)
+
+diff --git a/dlls/win32u/scroll.c b/dlls/win32u/scroll.c
+index 958de64b9ea..16a64c45eed 100644
+--- a/dlls/win32u/scroll.c
++++ b/dlls/win32u/scroll.c
+@@ -168,6 +168,16 @@ static BOOL show_scroll_bar( HWND hwnd, int bar, BOOL show_horz, BOOL show_vert
+         /* frame has been changed, let the window redraw itself */
+         NtUserSetWindowPos( hwnd, 0, 0, 0, 0, 0,
+                             SWP_NOSIZE | SWP_NOMOVE | SWP_NOACTIVATE | SWP_NOZORDER | SWP_FRAMECHANGED );
++
++        if ((set_bits & WS_HSCROLL) && !(old_style & WS_HSCROLL))
++            NtUserNotifyWinEvent( EVENT_OBJECT_SHOW, hwnd, OBJID_HSCROLL, 0 );
++        if ((set_bits & WS_VSCROLL) && !(old_style & WS_VSCROLL))
++            NtUserNotifyWinEvent( EVENT_OBJECT_SHOW, hwnd, OBJID_VSCROLL, 0 );
++        if ((clear_bits & WS_HSCROLL) && (old_style & WS_HSCROLL))
++            NtUserNotifyWinEvent( EVENT_OBJECT_HIDE, hwnd, OBJID_HSCROLL, 0 );
++        if ((clear_bits & WS_VSCROLL) && (old_style & WS_VSCROLL))
++            NtUserNotifyWinEvent( EVENT_OBJECT_HIDE, hwnd, OBJID_VSCROLL, 0 );
++
+         return TRUE;
+     }
+     return FALSE; /* no frame changes */

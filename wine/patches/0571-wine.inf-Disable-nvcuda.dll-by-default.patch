@@ -1,0 +1,29 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Mon, 11 Oct 2021 11:17:19 +0200
+Subject: [PATCH] wine.inf: Disable nvcuda.dll by default.
+
+The nvcuda.dll stub presence may cause regressions when the games
+successfully load and try to use it (like Divinity The Original Sin 2).
+The library is enabled in proton script together with nvapi.dll.
+
+Link: https://github.com/ValveSoftware/wine/pull/119
+
+CW-Bug-Id: #23561
+(cherry picked from commit 98f7c4f66095360120dc72d56b12c080bb374353)
+---
+ loader/wine.inf.in | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/loader/wine.inf.in b/loader/wine.inf.in
+index d41833c4759..6a09b444e47 100644
+--- a/loader/wine.inf.in
++++ b/loader/wine.inf.in
+@@ -1425,6 +1425,7 @@ HKCU,Software\Wine\DllOverrides,"vcomp140",0x2,"native,builtin"
+ HKCU,Software\Wine\DllOverrides,"vcruntime140",0x2,"native,builtin"
+ HKCU,Software\Wine\DllOverrides,"vccorlib140",0x2,"native,builtin"
+ HKCU,Software\Wine\DllOverrides,"atiadlxx",,"disabled"
++HKCU,Software\Wine\DllOverrides,"nvcuda",0x2,"disabled"
+ HKCU,Software\Wine\DllOverrides,"vcruntime140_1",0x2,"native,builtin"
+ HKLM,Software\Wow6432Node\Valve\Steam\Apps\CommonRedist\.NET\4.8,"4.8",0x10001,1
+ HKLM,Software\Wow6432Node\Valve\Steam\Apps\CommonRedist\.NET\4.7.2,"4.7.2",0x10001,1

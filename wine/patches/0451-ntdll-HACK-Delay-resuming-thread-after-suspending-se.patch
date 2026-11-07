@@ -1,0 +1,54 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Thu, 10 Mar 2022 17:58:41 +0300
+Subject: [PATCH] ntdll: HACK: Delay resuming thread after suspending self.
+
+CW-Bug-Id: #20270
+
+Fixes a random hang on exit in Little Nightmares 2.
+
+(cherry picked from commit 6636d29886396ab252a8d650a94e13a733d7c555)
+---
+ dlls/ntdll/unix/thread.c | 5 ++++-
+ server/thread.c          | 2 +-
+ 2 files changed, 5 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/ntdll/unix/thread.c b/dlls/ntdll/unix/thread.c
+index f2b7046d0fa..e733e7000d2 100644
+--- a/dlls/ntdll/unix/thread.c
++++ b/dlls/ntdll/unix/thread.c
+@@ -1746,6 +1746,7 @@ NTSTATUS WINAPI NtOpenThread( HANDLE *handle, ACCESS_MASK access,
+  */
+ NTSTATUS WINAPI NtSuspendThread( HANDLE handle, ULONG *count )
+ {
++    BOOL self = FALSE;
+     unsigned int ret;
+ 
+     SERVER_START_REQ( suspend_thread )
+@@ -1753,10 +1754,12 @@ NTSTATUS WINAPI NtSuspendThread( HANDLE handle, ULONG *count )
+         req->handle = wine_server_obj_handle( handle );
+         if (!(ret = wine_server_call( req )))
+         {
+-            if (count) *count = reply->count;
++            self = reply->count & 0x80000000;
++            if (count) *count = reply->count & 0x7fffffff;
+         }
+     }
+     SERVER_END_REQ;
++    if (self) usleep( 0 );
+     return ret;
+ }
+ 
+diff --git a/server/thread.c b/server/thread.c
+index 19349abd858..4518e8bb040 100644
+--- a/server/thread.c
++++ b/server/thread.c
+@@ -936,7 +936,7 @@ int suspend_thread( struct thread *thread )
+         thread->suspend++;
+     }
+     else set_error( STATUS_SUSPEND_COUNT_EXCEEDED );
+-    return old_count;
++    return thread == current ? old_count | 0x80000000 : old_count;
+ }
+ 
+ /* resume a thread */

@@ -1,0 +1,25 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Bernhard=20K=C3=B6lbl?= <bkoelbl@codeweavers.com>
+Date: Thu, 11 Dec 2025 16:03:08 +0100
+Subject: [PATCH] winedmo: Explicily set HEVC mf GUID.
+
+FFmpeg would provide 'hvc1' instead of 'HEVC'.
+
+CW-Bug-Id: #26327
+(cherry picked from commit c3b5f10412cc822a31b37c64a2b1e081048ac258)
+---
+ dlls/winedmo/unix_media_type.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/dlls/winedmo/unix_media_type.c b/dlls/winedmo/unix_media_type.c
+index 4caad649c3d..fa75c2b160a 100644
+--- a/dlls/winedmo/unix_media_type.c
++++ b/dlls/winedmo/unix_media_type.c
+@@ -257,6 +257,7 @@ static void mf_video_format_init( const AVCodecParameters *params, MFVIDEOFORMAT
+         else if (params->codec_id == AV_CODEC_ID_H264) format->guidFormat.Data1 = MFVideoFormat_H264.Data1;
+         else if (params->codec_id == AV_CODEC_ID_VP9) format->guidFormat.Data1 = MFVideoFormat_VP90.Data1;
+         else if (params->codec_id == AV_CODEC_ID_AV1) format->guidFormat.Data1 = MFVideoFormat_AV1.Data1;
++        else if (params->codec_id == AV_CODEC_ID_HEVC) format->guidFormat.Data1 = MFVideoFormat_HEVC.Data1;
+         else if (params->codec_tag) format->guidFormat.Data1 = params->codec_tag;
+         else format->guidFormat.Data1 = video_format_tag_from_codec_id( params->codec_id );
+     }

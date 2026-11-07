@@ -1,0 +1,44 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Wed, 3 Nov 2021 18:07:13 +0300
+Subject: [PATCH] HACK: ntdll: Enable WINESTEAMNOEXEC for Mafia II.
+
+CW-Bug-Id: #19605
+(cherry picked from commit 36b5e26b1e00d8fea3d021f446a6d0eb67b9593d)
+
+mproton-resolved: hacks_init() call placed after athei's msync_init() in the 11.20 start_main_thread()
+---
+ dlls/ntdll/unix/loader.c | 13 +++++++++++++
+ 1 file changed, 13 insertions(+)
+
+diff --git a/dlls/ntdll/unix/loader.c b/dlls/ntdll/unix/loader.c
+index b6fd12ee68f..95daebdedac 100644
+--- a/dlls/ntdll/unix/loader.c
++++ b/dlls/ntdll/unix/loader.c
+@@ -2114,6 +2114,18 @@ static ULONG_PTR get_image_address(void)
+     return 0;
+ }
+ 
++static void hacks_init(void)
++{
++    const char *sgi = getenv( "SteamGameId" );
++
++    switch (sgi ? atoi( sgi ) : -1)
++    {
++    case 50130: /* Mafia II */
++        setenv( "WINESTEAMNOEXEC", "1", 0 );
++        break;
++    }
++}
++
+ /***********************************************************************
+  *           load_compatdb
+  *
+@@ -2139,6 +2151,7 @@ static void start_main_thread(void)
+ 
+     server_init_process( data );
+     msync_init();
++    hacks_init();
+     virtual_map_user_shared_data();
+     init_cpu_info();
+     init_files();

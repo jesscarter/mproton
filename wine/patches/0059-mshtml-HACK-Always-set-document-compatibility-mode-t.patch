@@ -1,0 +1,34 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Charlotte Pabst <cpabst@codeweavers.com>
+Date: Wed, 13 Nov 2024 02:32:36 +0100
+Subject: [PATCH] mshtml: HACK: Always set document compatibility mode to IE11
+ in FFXIV Online.
+
+CW-Bug-Id: #24432
+(cherry picked from commit 6cb5e3a0932cd24657df7fb655ea734e67944e9a)
+---
+ dlls/mshtml/mutation.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/dlls/mshtml/mutation.c b/dlls/mshtml/mutation.c
+index 4b290d43ab0..4a5d7b5fa4f 100644
+--- a/dlls/mshtml/mutation.c
++++ b/dlls/mshtml/mutation.c
+@@ -438,6 +438,7 @@ compat_mode_t lock_document_mode(HTMLDocumentNode *doc)
+ static void set_document_mode(HTMLDocumentNode *doc, compat_mode_t document_mode, BOOL emulate_mode, BOOL lock)
+ {
+     compat_mode_t max_compat_mode;
++    const char *sgi;
+ 
+     if(doc->document_mode_locked) {
+         WARN("attempting to set document mode %d on locked document %p\n", document_mode, doc);
+@@ -455,6 +456,9 @@ static void set_document_mode(HTMLDocumentNode *doc, compat_mode_t document_mode
+         document_mode = max_compat_mode;
+     }
+ 
++    if ((sgi = getenv("SteamGameId")) && (!strcmp(sgi, "39210")))
++        document_mode = COMPAT_MODE_IE11;
++
+     doc->document_mode = document_mode;
+     doc->emulate_mode = emulate_mode;
+     if(lock)

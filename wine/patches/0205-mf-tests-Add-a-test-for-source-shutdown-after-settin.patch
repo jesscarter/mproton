@@ -1,0 +1,50 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Conor McCarthy <cmccarthy@codeweavers.com>
+Date: Tue, 10 Dec 2024 00:30:14 +1000
+Subject: [PATCH] mf/tests: Add a test for source shutdown after setting the
+ topology.
+
+(cherry picked from commit 4e26273bf7b69f504ed04dcb885f1de4eed02254)
+---
+ dlls/mf/tests/mf.c | 7 +++++--
+ 1 file changed, 5 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/mf/tests/mf.c b/dlls/mf/tests/mf.c
+index 1816a3e80d6..0aa438a5c20 100644
+--- a/dlls/mf/tests/mf.c
++++ b/dlls/mf/tests/mf.c
+@@ -9918,6 +9918,7 @@ static void test_media_session_source_shutdown(void)
+     HRESULT hr;
+     enum
+     {
++        TEST_TOPOLOGY,
+         TEST_START,
+         TEST_RESTART,
+         TEST_PAUSE,
+@@ -9930,7 +9931,7 @@ static void test_media_session_source_shutdown(void)
+ 
+     /* These tests don't cover asynchronous shutdown, which is difficult to consistently test. */
+ 
+-    for (shutdown_point = TEST_START; shutdown_point <= TEST_CLOSE; ++shutdown_point)
++    for (shutdown_point = TEST_TOPOLOGY; shutdown_point <= TEST_CLOSE; ++shutdown_point)
+     {
+         winetest_push_context("Test %d", shutdown_point);
+ 
+@@ -9954,6 +9955,8 @@ static void test_media_session_source_shutdown(void)
+         hr = MFCreateMediaSession(NULL, &session);
+         ok(hr == S_OK, "Unexpected hr %#lx.\n", hr);
+         topology = create_test_topology(source, sink_activate, &duration);
++        if (shutdown_point == TEST_TOPOLOGY)
++            IMFMediaSource_Shutdown(source);
+         hr = IMFMediaSession_SetTopology(session, 0, topology);
+         ok(hr == S_OK, "Unexpected hr %#lx.\n", hr);
+         IMFTopology_Release(topology);
+@@ -9966,7 +9969,7 @@ static void test_media_session_source_shutdown(void)
+             IMFMediaSource_Shutdown(source);
+         ok(hr == S_OK, "Unexpected hr %#lx.\n", hr);
+         hr = wait_media_event(session, callback, MESessionStarted, 5000, &propvar);
+-        ok(hr == (shutdown_point == TEST_START ? MF_E_INVALIDREQUEST : S_OK), "Unexpected hr %#lx.\n", hr);
++        ok(hr == (shutdown_point <= TEST_START ? MF_E_INVALIDREQUEST : S_OK), "Unexpected hr %#lx.\n", hr);
+ 
+         switch (shutdown_point)
+         {

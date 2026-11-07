@@ -1,0 +1,23 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Fri, 5 Jun 2026 17:59:46 -0600
+Subject: [PATCH] wine.inf.in: Set XP Windows version for Dark Omen.
+
+CW-Bug-Id: #27184
+(cherry picked from commit 1d4307549fd42375a7a4756b079b27cad52fd0f2)
+---
+ loader/wine.inf.in | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/loader/wine.inf.in b/loader/wine.inf.in
+index 04a46f6a448..fb1e82ea3f4 100644
+--- a/loader/wine.inf.in
++++ b/loader/wine.inf.in
+@@ -1516,6 +1516,7 @@ HKLM,Software\Wow6432Node\lucasarts entertainment company llc\Star Wars: Episode
+ HKLM,Software\Wow6432Node\lucasarts entertainment company llc\Star Wars: Episode I Racer\v1.0,"Display Width",0x10001,640
+ HKCU,Software\Wine\AppDefaults\RDR2.exe\DllOverrides,"vulkan-1",,"native"
+ HKCU,Software\Wine\AppDefaults\ActOfWar.exe,"Version",,"winxp"
++HKCU,Software\Wine\AppDefaults\DarkOmen.exe,"Version",,"winxp"
+ HKLM,Software\Khronos\OpenXR\1,"ActiveRuntime",,"C:\openxr\wineopenxr64.json"
+ ;;Other app-specific overrides
+ HKCU,Software\Wine\AppDefaults\Pentiment.exe\DllOverrides,"SpeechSynthesisWrapper",4,

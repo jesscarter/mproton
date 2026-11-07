@@ -1,0 +1,24 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Thu, 4 Apr 2024 17:51:39 -0600
+Subject: [PATCH] kernelbase: HACK: Force disable direct composition for Bloody
+ Walls.
+
+CW-Bug-Id: #23651
+(cherry picked from commit 7d2f6ca18950ea7e1d9cfe6b967709df74ae7bfc)
+---
+ dlls/kernelbase/process.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/dlls/kernelbase/process.c b/dlls/kernelbase/process.c
+index f8a75122718..3b7ad0d5417 100644
+--- a/dlls/kernelbase/process.c
++++ b/dlls/kernelbase/process.c
+@@ -607,6 +607,7 @@ static const WCHAR *hack_append_command_line( const WCHAR *cmd )
+     }
+     options[] =
+     {
++        {L"Bloody Walls\\game.exe", L" --disable_direct_composition=1"},
+         {L"Insanitys Blade\\nw.exe", L" --use-gl=swiftshader"},
+         {L"Warhammer2.exe", L" --in-process-gpu"},
+         {L"SummerIslands.exe", L" --in-process-gpu"},

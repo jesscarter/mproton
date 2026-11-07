@@ -1,0 +1,155 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Fri, 10 Oct 2025 09:51:13 -0600
+Subject: [PATCH] ntdll: HACK: Export a function to set a Unix environment
+ variable.
+
+Replaces "HACK: proton: ntdll: Export a function to set a Unix environment variable"
+with a non-syscall exported function.
+
+CW-Bug-Id: #26049
+(cherry picked from commit 1d4a019a8c6558928aa0293384be7046c55d5c1b)
+
+mproton-resolved: union in winternl.h with 11.20's Ps* unix-lib prototypes
+---
+ dlls/ntdll/env.c         | 14 ++++++++++++++
+ dlls/ntdll/ntdll.spec    |  1 +
+ dlls/ntdll/unix/loader.c | 29 +++++++++++++++++++++++++++++
+ dlls/ntdll/unixlib.h     |  7 +++++++
+ include/winternl.h       |  3 +++
+ 5 files changed, 54 insertions(+)
+
+diff --git a/dlls/ntdll/env.c b/dlls/ntdll/env.c
+index 6aae4ed0045..d9cf900cf92 100644
+--- a/dlls/ntdll/env.c
++++ b/dlls/ntdll/env.c
+@@ -730,3 +730,17 @@ void init_user_process_params(void)
+     set_wow64_environment( &new_params->Environment );
+     new_params->EnvironmentSize = RtlSizeHeap( GetProcessHeap(), 0, new_params->Environment );
+ }
++
++
++/**********************************************************************
++ *      __wine_set_unix_env
++ */
++NTSTATUS WINAPI __wine_set_unix_env( const char *var, const char *val )
++{
++    struct wine_set_unix_env_params params =
++    {
++        .name = var, .val = val
++    };
++
++    return WINE_UNIX_CALL( unix___wine_set_unix_env, &params );
++}
+diff --git a/dlls/ntdll/ntdll.spec b/dlls/ntdll/ntdll.spec
+index f3811b15450..fbae862b90f 100644
+--- a/dlls/ntdll/ntdll.spec
++++ b/dlls/ntdll/ntdll.spec
+@@ -1778,6 +1778,7 @@
+ @ extern -private __wine_unix_call_dispatcher
+ @ extern -private -arch=arm64ec __wine_unix_call_dispatcher_arm64ec
+ @ extern -private __wine_unixlib_handle
++@ stdcall __wine_set_unix_env(ptr ptr)
+ 
+ # Debugging
+ @ stdcall -norelay __wine_dbg_write(ptr long)
+diff --git a/dlls/ntdll/unix/loader.c b/dlls/ntdll/unix/loader.c
+index b4f2b4e4f25..f8a55adb096 100644
+--- a/dlls/ntdll/unix/loader.c
++++ b/dlls/ntdll/unix/loader.c
+@@ -1277,6 +1277,18 @@ static ULONG_PTR find_named_export( HMODULE module, const IMAGE_EXPORT_DIRECTORY
+ static void *get_rva( void *module, ULONG_PTR addr );
+ static const void *get_module_data_dir( HMODULE module, ULONG dir, ULONG *size );
+ 
++/**********************************************************************
++ *      __wine_set_unix_env
++ */
++NTSTATUS WINAPI wine_set_unix_env( void *args )
++{
++    struct wine_set_unix_env_params *params = args;
++
++    if (!params->val) unsetenv( params->name );
++    else setenv( params->name, params->val, 1 );
++    return 0;
++}
++
+ static void *steamclient_srcs[128];
+ static void *steamclient_tgts[128];
+ static int steamclient_count;
+@@ -1439,6 +1451,7 @@ static const unixlib_entry_t unix_call_funcs[] =
+     unixcall_wine_server_handle_to_fd,
+     unixcall_wine_spawnvp,
+     system_time_precise,
++    wine_set_unix_env,
+     steamclient_setup_trampolines,
+     debugstr_pc,
+ };
+@@ -1449,6 +1462,21 @@ static const unixlib_entry_t unix_call_funcs[] =
+ static NTSTATUS wow64_load_so_dll( void *args ) { return STATUS_INVALID_IMAGE_FORMAT; }
+ static NTSTATUS wow64_unwind_builtin_dll( void *args ) { return STATUS_UNSUCCESSFUL; }
+ 
++static NTSTATUS wow64___wine_set_unix_env( void *args )
++{
++    struct
++    {
++        ULONG name;
++        ULONG val;
++    } const *params32 = args;
++    struct wine_set_unix_env_params params =
++    {
++        .name = ULongToPtr( params32->name ),
++        .val = ULongToPtr( params32->val ),
++    };
++    return wine_set_unix_env( &params );
++}
++
+ static NTSTATUS wow64_steamclient_setup_trampolines( void *args )
+ {
+     struct
+@@ -1484,6 +1512,7 @@ const unixlib_entry_t unix_call_wow64_funcs[] =
+     wow64_wine_server_handle_to_fd,
+     wow64_wine_spawnvp,
+     system_time_precise,
++    wow64___wine_set_unix_env,
+     wow64_steamclient_setup_trampolines,
+     wow64_debugstr_pc,
+ };
+diff --git a/dlls/ntdll/unixlib.h b/dlls/ntdll/unixlib.h
+index 868859180c6..ca70223a921 100644
+--- a/dlls/ntdll/unixlib.h
++++ b/dlls/ntdll/unixlib.h
+@@ -66,6 +66,12 @@ struct unwind_builtin_dll_params
+     CONTEXT                    *context;
+ };
+ 
++struct wine_set_unix_env_params
++{
++    const char *name;
++    const char *val;
++};
++
+ struct steamclient_setup_trampolines_params
+ {
+     HMODULE src_mod;
+@@ -89,6 +95,7 @@ enum ntdll_unix_funcs
+     unix_wine_server_handle_to_fd,
+     unix_wine_spawnvp,
+     unix_system_time_precise,
++    unix___wine_set_unix_env,
+     unix_steamclient_setup_trampolines,
+     unix_debugstr_pc,
+ };
+diff --git a/include/winternl.h b/include/winternl.h
+index 11fc8a9847b..457a9138d95 100644
+--- a/include/winternl.h
++++ b/include/winternl.h
+@@ -5558,6 +5558,9 @@ NTSYSAPI HANDLE    WINAPI PsGetCurrentProcessId(void);
+ NTSYSAPI HANDLE    WINAPI PsGetCurrentThreadId(void);
+ NTSYSAPI NTSTATUS  WINAPI PsTerminateSystemThread(NTSTATUS);
+ #endif
++/* Wine internal functions */
++
++NTSYSAPI NTSTATUS WINAPI __wine_set_unix_env( const char *var, const char *val );
+ 
+ /***********************************************************************
+  * Inline functions

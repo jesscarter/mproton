@@ -1,0 +1,51 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Esme Povirk <esme@codeweavers.com>
+Date: Sat, 6 Dec 2025 19:14:25 +0000
+Subject: [PATCH] mscoree: HACK: Accept outdated support msi outside prefix.
+
+This prevents Wine from downloading and installing the runtime msi
+when the Wine tree has a newer Wine Mono version than the Proton
+tree.
+
+(cherry picked from commit 10c36572cbcefa88346c05a6a89ea45b69e06e8a)
+---
+ dlls/mscoree/mscoree_main.c | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/dlls/mscoree/mscoree_main.c b/dlls/mscoree/mscoree_main.c
+index d65cc25993c..5758b35cf84 100644
+--- a/dlls/mscoree/mscoree_main.c
++++ b/dlls/mscoree/mscoree_main.c
+@@ -796,7 +796,7 @@ static BOOL invoke_appwiz(void)
+     return ret;
+ }
+ 
+-static BOOL get_support_msi(LPCWSTR mono_path, LPWSTR msi_path)
++static BOOL get_support_msi(LPCWSTR mono_path, LPWSTR msi_path, BOOL ignore_version)
+ {
+     static const WCHAR support_msi_relative[] = {'\\','s','u','p','p','o','r','t','\\','w','i','n','e','m','o','n','o','-','s','u','p','p','o','r','t','.','m','s','i',0};
+     UINT (WINAPI *pMsiOpenPackageW)(LPCWSTR,ULONG*);
+@@ -834,7 +834,7 @@ static BOOL get_support_msi(LPCWSTR mono_path, LPWSTR msi_path)
+     if (res == ERROR_SUCCESS) {
+         TRACE("found support msi version %s at %s\n", versionstringbuf, debugstr_w(msi_path));
+ 
+-        if (compare_versions(WINE_MONO_VERSION, versionstringbuf) <= 0)
++        if (ignore_version || compare_versions(WINE_MONO_VERSION, versionstringbuf) <= 0)
+         {
+             ret = TRUE;
+         }
+@@ -918,12 +918,12 @@ static BOOL install_wine_mono(void)
+ 
+     initresult = CoInitialize(NULL);
+ 
+-    ret = get_support_msi(mono_path, support_msi_path);
++    ret = get_support_msi(mono_path, support_msi_path, FALSE);
+     if (!ret)
+     {
+         /* Try looking outside c:\windows\mono */
+         ret = (get_mono_path(mono_path, TRUE) &&
+-            get_support_msi(mono_path, support_msi_path));
++            get_support_msi(mono_path, support_msi_path, TRUE));
+     }
+ 
+     if (ret)

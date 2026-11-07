@@ -1,0 +1,23 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arkadiusz Hiler <ahiler@codeweavers.com>
+Date: Tue, 6 Jun 2023 11:30:37 +0300
+Subject: [PATCH] wine.inf: HACK: Disable SpeechSynthWrapper.dll for Grounded.
+
+The game crashes when utilizing it and works without it, like seen
+already on the Steam Deck with its specific depot.
+
+CW-Bug-Id: #20918
+(cherry picked from commit 82bbb0a7735d8f9df62da04a154a83150eb67749)
+---
+ loader/wine.inf.in | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/loader/wine.inf.in b/loader/wine.inf.in
+index bcc5909ee9c..e1684139e36 100644
+--- a/loader/wine.inf.in
++++ b/loader/wine.inf.in
+@@ -1518,3 +1518,4 @@ HKCU,Software\Wine\AppDefaults\ActOfWar.exe,"Version",,"winxp"
+ HKLM,Software\Khronos\OpenXR\1,"ActiveRuntime",,"C:\openxr\wineopenxr64.json"
+ ;;Other app-specific overrides
+ HKCU,Software\Wine\AppDefaults\Pentiment.exe\DllOverrides,"SpeechSynthesisWrapper",,"disabled"
++HKCU,Software\Wine\AppDefaults\Maine-Win64-Shipping.exe\DllOverrides,"SpeechSynthWrapper",0x2,"disabled"

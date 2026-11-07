@@ -1,0 +1,25 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Fri, 24 Jun 2022 13:03:05 -0500
+Subject: [PATCH] HACK: ntdll: Enable WINESTEAMNOEXEC for CoD Black Ops II
+ Multiplayer and Zombies.
+
+CW-Bug-Id: #20869
+(cherry picked from commit eeaa952f103b96d788db2796b5ed33b8b7a2e418)
+---
+ dlls/ntdll/unix/loader.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/dlls/ntdll/unix/loader.c b/dlls/ntdll/unix/loader.c
+index 95daebdedac..921b9f5e3a1 100644
+--- a/dlls/ntdll/unix/loader.c
++++ b/dlls/ntdll/unix/loader.c
+@@ -2121,6 +2121,8 @@ static void hacks_init(void)
+     switch (sgi ? atoi( sgi ) : -1)
+     {
+     case 50130: /* Mafia II */
++    case 202990: /* CoD Black Ops II Multiplayer */
++    case 212910: /* CoD Black Ops II Zombies */
+         setenv( "WINESTEAMNOEXEC", "1", 0 );
+         break;
+     }

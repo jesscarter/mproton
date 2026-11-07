@@ -1,0 +1,24 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Wed, 18 Jun 2025 18:01:08 -0600
+Subject: [PATCH] mmdevapi/tests: Remove a test which crashes on up to date
+ Windows 11.
+
+CW-Bug-Id: #25561
+(cherry picked from commit 27b991aed0c5166b0372be4aa5d1c310a729759a)
+---
+ dlls/mmdevapi/tests/render.c | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/dlls/mmdevapi/tests/render.c b/dlls/mmdevapi/tests/render.c
+index 43059955bda..ddf724db101 100644
+--- a/dlls/mmdevapi/tests/render.c
++++ b/dlls/mmdevapi/tests/render.c
+@@ -186,7 +186,6 @@ static void test_audioclient(void)
+         ref = IUnknown_Release(unk);
+         ok(ref == 1, "Released count is %lu\n", ref);
+     }
+-
+     hr = IAudioClient_QueryInterface(ac, &IID_IAudioClient, (void**)&unk);
+     ok(hr == S_OK, "QueryInterface(IID_IAudioClient) returned %08lx\n", hr);
+     if (unk)

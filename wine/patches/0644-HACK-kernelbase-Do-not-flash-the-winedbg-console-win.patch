@@ -1,0 +1,33 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arkadiusz Hiler <ahiler@codeweavers.com>
+Date: Thu, 9 Feb 2023 21:24:57 +0200
+Subject: [PATCH] HACK: kernelbase: Do not flash the winedbg console window.
+
+Depending on what the crashing software does with the handles / own
+console we may end up creating a new console window for windbg.
+
+Since Proton defaults to starting windbg in a non-interactive mode
+without displaying the crash dialog and redirects the log to unix's
+stderr we want to avoid confusing users.
+
+CW-Bug-Id: #21872
+(cherry picked from commit ff29c0163d5d990a08e5a3ba9593e5965db6f9d6)
+
+mproton-resolved: kept athei's STARTF_USESTDHANDLES handles, added CREATE_NO_WINDOW
+---
+ dlls/kernelbase/debug.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/dlls/kernelbase/debug.c b/dlls/kernelbase/debug.c
+index 0a03bc9a5e6..4247c91ba7e 100644
+--- a/dlls/kernelbase/debug.c
++++ b/dlls/kernelbase/debug.c
+@@ -581,7 +581,7 @@ static BOOL start_debugger( EXCEPTION_POINTERS *epointers, HANDLE event )
+     startup.hStdInput = GetStdHandle( STD_INPUT_HANDLE );
+     startup.hStdOutput = GetStdHandle( STD_OUTPUT_HANDLE );
+     startup.hStdError = GetStdHandle( STD_ERROR_HANDLE );
+-    ret = CreateProcessW( NULL, cmdline, NULL, NULL, TRUE, CREATE_UNICODE_ENVIRONMENT, env, NULL, &startup, &info );
++    ret = CreateProcessW( NULL, cmdline, NULL, NULL, TRUE, CREATE_UNICODE_ENVIRONMENT | CREATE_NO_WINDOW, env, NULL, &startup, &info );
+     FreeEnvironmentStringsW( env );
+ 
+     if (ret)

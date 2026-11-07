@@ -1,0 +1,24 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Yuxuan Shui <yshui@codeweavers.com>
+Date: Tue, 12 Mar 2024 13:50:23 +0000
+Subject: [PATCH] wm_reader: Fix order of streams in reinit_stream.
+
+CW-Bug-Id: #23483
+(cherry picked from commit ed0f2cc6a9111f518951b365f61c6f8de1b8e758)
+---
+ dlls/winegstreamer/wm_reader.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/dlls/winegstreamer/wm_reader.c b/dlls/winegstreamer/wm_reader.c
+index 54f385de9f2..671e3597670 100644
+--- a/dlls/winegstreamer/wm_reader.c
++++ b/dlls/winegstreamer/wm_reader.c
+@@ -1663,7 +1663,7 @@ static HRESULT reinit_stream(struct wm_reader *reader, bool read_compressed)
+         struct wm_stream *stream = &reader->streams[i];
+         struct wg_format format;
+ 
+-        stream->wg_stream = wg_parser_get_stream(reader->wg_parser, i);
++        stream->wg_stream = wg_parser_get_stream(reader->wg_parser, reader->stream_count - i - 1);
+         stream->reader = reader;
+         wg_parser_stream_get_current_format(stream->wg_stream, &format);
+         if (stream->selection == WMT_ON)

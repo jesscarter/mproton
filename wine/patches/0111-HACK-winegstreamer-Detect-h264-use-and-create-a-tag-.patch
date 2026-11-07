@@ -1,0 +1,113 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arkadiusz Hiler <ahiler@codeweavers.com>
+Date: Thu, 3 Nov 2022 18:54:06 +0200
+Subject: [PATCH] HACK: winegstreamer: Detect h264 use and create a tag file.
+
+CW-Bug-Id: #21473
+
+CW-Bug-Id: #20833
+(cherry picked from commit 3a1172708e7249fc195791b3093f4fcd493c341a)
+---
+ dlls/winegstreamer/unix_private.h | 35 +++++++++++++++++++++++++++++++
+ dlls/winegstreamer/wg_parser.c    | 15 +++++++++++++
+ dlls/winegstreamer/wg_transform.c |  3 +++
+ 3 files changed, 53 insertions(+)
+
+diff --git a/dlls/winegstreamer/unix_private.h b/dlls/winegstreamer/unix_private.h
+index 3199e362fe6..8fdd2f8b203 100644
+--- a/dlls/winegstreamer/unix_private.h
++++ b/dlls/winegstreamer/unix_private.h
+@@ -27,6 +27,11 @@
+ #include <gst/gst.h>
+ #include <gst/audio/audio.h>
+ 
++#include <stdio.h>
++#include <unistd.h>
++#include <fcntl.h>
++#include <sys/stat.h>
++
+ /* unixlib.c */
+ 
+ GST_DEBUG_CATEGORY_EXTERN(wine);
+@@ -112,4 +117,34 @@ extern void wg_allocator_release_sample(GstAllocator *allocator, struct wg_sampl
+ 
+ extern gboolean gst_element_register_winegstreamerstepper(GstPlugin *plugin);
+ 
++static inline void touch_h264_used_tag(void)
++{
++    const char *e;
++
++    GST_LOG("h264 is used");
++
++    if ((e = getenv("STEAM_COMPAT_TRANSCODED_MEDIA_PATH")))
++    {
++        char buffer[PATH_MAX];
++        int fd;
++
++        snprintf(buffer, sizeof(buffer), "%s/h264-used", e);
++
++        fd = open(buffer, O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
++        if (fd == -1)
++        {
++            GST_WARNING("Failed to open/create \"%s/h264-used\"", e);
++            return;
++        }
++
++        futimens(fd, NULL);
++
++        close(fd);
++    }
++    else
++    {
++        GST_WARNING("STEAM_COMPAT_TRANSCODED_MEDIA_PATH not set, cannot create h264-used file");
++    }
++}
++
+ #endif /* __WINE_WINEGSTREAMER_UNIX_PRIVATE_H */
+diff --git a/dlls/winegstreamer/wg_parser.c b/dlls/winegstreamer/wg_parser.c
+index b3d5bbceb56..3ff89f818bd 100644
+--- a/dlls/winegstreamer/wg_parser.c
++++ b/dlls/winegstreamer/wg_parser.c
+@@ -542,6 +542,19 @@ static gboolean autoplug_continue_cb(GstElement * decodebin, GstPad *pad, GstCap
+     return !caps_is_compressed(caps);
+ }
+ 
++gboolean caps_detect_h264(GstCapsFeatures *features, GstStructure *structure, gpointer user_data)
++{
++    const char *cap_name = gst_structure_get_name(structure);
++
++    if (!strcmp(cap_name, "video/x-h264"))
++    {
++        touch_h264_used_tag();
++        return FALSE;
++    }
++
++    return TRUE;
++}
++
+ static GstAutoplugSelectResult autoplug_select_cb(GstElement *bin, GstPad *pad,
+         GstCaps *caps, GstElementFactory *fact, gpointer user)
+ {
+@@ -551,6 +564,8 @@ static GstAutoplugSelectResult autoplug_select_cb(GstElement *bin, GstPad *pad,
+ 
+     GST_INFO("Using \"%s\".", name);
+ 
++    gst_caps_foreach(caps, caps_detect_h264, NULL);
++
+     if (strstr(name, "Player protection"))
+     {
+         GST_WARNING("Blacklisted a/52 decoder because it only works in Totem.");
+diff --git a/dlls/winegstreamer/wg_transform.c b/dlls/winegstreamer/wg_transform.c
+index c19c2c89293..8fb24f47acd 100644
+--- a/dlls/winegstreamer/wg_transform.c
++++ b/dlls/winegstreamer/wg_transform.c
+@@ -711,6 +711,9 @@ NTSTATUS wg_transform_create(void *args)
+     GST_INFO("transform %p input caps %"GST_PTR_FORMAT, transform, transform->input_caps);
+     input_mime = gst_structure_get_name(gst_caps_get_structure(transform->input_caps, 0));
+ 
++    if (!strcmp(input_mime, "video/x-h264"))
++        touch_h264_used_tag();
++
+     if (!(transform->output_caps = caps_from_media_type(&params->output_type)))
+         goto out;
+     GST_INFO("transform %p output caps %"GST_PTR_FORMAT, transform, transform->output_caps);

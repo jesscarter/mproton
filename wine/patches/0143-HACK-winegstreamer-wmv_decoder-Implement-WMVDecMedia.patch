@@ -1,0 +1,71 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Tue, 21 Nov 2023 14:11:01 +0100
+Subject: [PATCH] HACK: winegstreamer/wmv_decoder: Implement WMVDecMediaObject
+ pass-through DMO.
+
+CW-Bug-Id: #18799
+CW-Bug-Id: #18994
+CW-Bug-Id: #20182
+
+CW-Bug-Id: #20833
+(cherry picked from commit 0031d1bcfb5103c9c19e59f786ed2ad0dd2631d9)
+---
+ dlls/winegstreamer/video_decoder.c | 25 -------------------------
+ 1 file changed, 25 deletions(-)
+
+diff --git a/dlls/winegstreamer/video_decoder.c b/dlls/winegstreamer/video_decoder.c
+index 00babc90abe..b4cb0a86440 100644
+--- a/dlls/winegstreamer/video_decoder.c
++++ b/dlls/winegstreamer/video_decoder.c
+@@ -1219,7 +1219,6 @@ static HRESULT WINAPI media_object_SetInputType(IMediaObject *iface, DWORD index
+ {
+     struct video_decoder *decoder = impl_from_IMediaObject(iface);
+     IMFMediaType *media_type;
+-    unsigned int i;
+ 
+     TRACE("iface %p, index %lu, type %p, flags %#lx.\n", iface, index, type, flags);
+ 
+@@ -1245,12 +1244,6 @@ static HRESULT WINAPI media_object_SetInputType(IMediaObject *iface, DWORD index
+     if (!IsEqualGUID(&type->majortype, &MEDIATYPE_Video))
+         return DMO_E_TYPE_NOT_ACCEPTED;
+ 
+-    for (i = 0; i < decoder->input_type_count; ++i)
+-        if (IsEqualGUID(&type->subtype, get_dmo_subtype(decoder->input_types[i])))
+-            break;
+-    if (i == decoder->input_type_count)
+-        return DMO_E_TYPE_NOT_ACCEPTED;
+-
+     if (FAILED(MFCreateMediaTypeFromRepresentation(AM_MEDIA_TYPE_REPRESENTATION,
+             (void *)type, &media_type)))
+         return DMO_E_TYPE_NOT_ACCEPTED;
+@@ -1824,29 +1817,11 @@ static const GUID *const wmv_decoder_output_types[] =
+ 
+ HRESULT wmv_decoder_create(IUnknown *outer, IUnknown **out)
+ {
+-    const MFVIDEOFORMAT output_format =
+-    {
+-        .dwSize = sizeof(MFVIDEOFORMAT),
+-        .videoInfo = {.dwWidth = 1920, .dwHeight = 1080},
+-        .guidFormat = MFVideoFormat_I420,
+-    };
+-    const MFVIDEOFORMAT input_format =
+-    {
+-        .dwSize = sizeof(MFVIDEOFORMAT),
+-        .videoInfo = {.dwWidth = 1920, .dwHeight = 1080},
+-        .guidFormat = MFVideoFormat_WMV3,
+-    };
+     struct video_decoder *decoder;
+     HRESULT hr;
+ 
+     TRACE("outer %p, out %p.\n", outer, out);
+ 
+-    if (FAILED(hr = check_video_transform_support(&input_format, &output_format)))
+-    {
+-        ERR_(winediag)("GStreamer doesn't support WMV decoding, please install appropriate plugins\n");
+-        return hr;
+-    }
+-
+     if (FAILED(hr = video_decoder_create_with_types(wmv_decoder_input_types, ARRAY_SIZE(wmv_decoder_input_types),
+             wmv_decoder_output_types, ARRAY_SIZE(wmv_decoder_output_types), outer, &decoder)))
+         return hr;

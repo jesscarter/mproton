@@ -1,0 +1,25 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arkadiusz Hiler <ahiler@codeweavers.com>
+Date: Wed, 15 Apr 2026 14:22:56 +0300
+Subject: [PATCH] wine.inf: Remove registry entries disabling speech synthesis
+ for Grounded and Pentiment.
+
+CW-Bug-Id: #21959
+CW-Bug-Id: #20918
+(cherry picked from commit 79604fd6795ba6c774c4a3cc2044cab8fb22772e)
+---
+ loader/wine.inf.in | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/loader/wine.inf.in b/loader/wine.inf.in
+index 8752f70e5c6..04a46f6a448 100644
+--- a/loader/wine.inf.in
++++ b/loader/wine.inf.in
+@@ -1518,5 +1518,5 @@ HKCU,Software\Wine\AppDefaults\RDR2.exe\DllOverrides,"vulkan-1",,"native"
+ HKCU,Software\Wine\AppDefaults\ActOfWar.exe,"Version",,"winxp"
+ HKLM,Software\Khronos\OpenXR\1,"ActiveRuntime",,"C:\openxr\wineopenxr64.json"
+ ;;Other app-specific overrides
+-HKCU,Software\Wine\AppDefaults\Pentiment.exe\DllOverrides,"SpeechSynthesisWrapper",,"disabled"
+-HKCU,Software\Wine\AppDefaults\Maine-Win64-Shipping.exe\DllOverrides,"SpeechSynthWrapper",0x2,"disabled"
++HKCU,Software\Wine\AppDefaults\Pentiment.exe\DllOverrides,"SpeechSynthesisWrapper",4,
++HKCU,Software\Wine\AppDefaults\Maine-Win64-Shipping.exe\DllOverrides,"SpeechSynthWrapper",4,

@@ -1,0 +1,46 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Zhiyi Zhang <zzhang@codeweavers.com>
+Date: Tue, 1 Oct 2019 09:28:29 +0800
+Subject: [PATCH] amd_ags_x64: Add agsGetCrossfireGPUCount stub.
+
+Signed-off-by: Zhiyi Zhang <zzhang@codeweavers.com>
+(cherry picked from commit fc64021fe96b095c354f4bee757ab542765bc08f)
+---
+ dlls/amd_ags_x64/amd_ags_x64.spec   |  2 +-
+ dlls/amd_ags_x64/amd_ags_x64_main.c | 11 +++++++++++
+ 2 files changed, 12 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/amd_ags_x64/amd_ags_x64.spec b/dlls/amd_ags_x64/amd_ags_x64.spec
+index b4da6136a64..a302d2fc657 100644
+--- a/dlls/amd_ags_x64/amd_ags_x64.spec
++++ b/dlls/amd_ags_x64/amd_ags_x64.spec
+@@ -24,6 +24,6 @@
+ 24 stub agsDriverExtensionsDX11_SetViewBroadcastMasks
+ 25 stub agsDriverExtensionsDX12_DeInit
+ 26 stub agsDriverExtensionsDX12_Init
+-27 stub agsGetCrossfireGPUCount
++27 stdcall agsGetCrossfireGPUCount(ptr ptr)
+ 28 stdcall agsInit(ptr ptr ptr)
+ 29 stub agsSetDisplayMode
+diff --git a/dlls/amd_ags_x64/amd_ags_x64_main.c b/dlls/amd_ags_x64/amd_ags_x64_main.c
+index e6c0ceae2f1..4c9373298a3 100644
+--- a/dlls/amd_ags_x64/amd_ags_x64_main.c
++++ b/dlls/amd_ags_x64/amd_ags_x64_main.c
+@@ -178,6 +178,17 @@ AGSReturnCode WINAPI agsDeInit(AGSContext *context)
+     return AGS_SUCCESS;
+ }
+ 
++AGSReturnCode WINAPI agsGetCrossfireGPUCount(AGSContext *context, int *gpu_count)
++{
++    TRACE("context %p gpu_count %p stub!\n", context, gpu_count);
++
++    if (!context || !gpu_count)
++        return AGS_INVALID_ARGS;
++
++    *gpu_count = 1;
++    return AGS_SUCCESS;
++}
++
+ BOOL WINAPI DllMain(HINSTANCE instance, DWORD reason, void *reserved)
+ {
+     TRACE("%p, %u, %p.\n", instance, reason, reserved);

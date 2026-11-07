@@ -1,0 +1,30 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Brendan McGrath <bmcgrath@codeweavers.com>
+Date: Tue, 27 May 2025 19:17:02 +1000
+Subject: [PATCH] winegstreamer: Add support for the I420 10LE format.
+
+Windows doesn't have support for the I420 10LE format. Instead, a
+decoding MFT will offer P010 as an output format.
+
+Therefore this change translates GST_VIDEO_FORMAT_I420_10LE to
+WG_VIDEO_FORMAT_P010_10LE so that Wine also offers P010 as an output.
+
+CW-Bug-Id: #25430
+(cherry picked from commit ac2170517aaec84a97b9fb3c8ca1ba297473f565)
+---
+ dlls/winegstreamer/wg_format.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/dlls/winegstreamer/wg_format.c b/dlls/winegstreamer/wg_format.c
+index 52c3330e6a5..09fcccb0087 100644
+--- a/dlls/winegstreamer/wg_format.c
++++ b/dlls/winegstreamer/wg_format.c
+@@ -151,6 +151,8 @@ static enum wg_video_format wg_video_format_from_gst(GstVideoFormat format)
+             return WG_VIDEO_FORMAT_AYUV;
+         case GST_VIDEO_FORMAT_I420:
+             return WG_VIDEO_FORMAT_I420;
++        case GST_VIDEO_FORMAT_I420_10LE:
++            return WG_VIDEO_FORMAT_P010_10LE;
+         case GST_VIDEO_FORMAT_NV12:
+             return WG_VIDEO_FORMAT_NV12;
+         case GST_VIDEO_FORMAT_P010_10LE:

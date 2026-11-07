@@ -1,0 +1,168 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Thu, 16 May 2024 21:27:08 -0600
+Subject: [PATCH] ntdll: Fill object pointer in NtQueryInformation(
+ SystemHandleInformation / SystemExtendedHandleInformation ).
+
+CW-Bug-Id: #23813
+(cherry picked from commit 9a669bcf3be186c60ae7b32966af1b31080af101)
+---
+ dlls/ntdll/tests/info.c  | 37 +++++++++++++++++++++++++++++++------
+ dlls/ntdll/unix/system.c |  4 ++--
+ server/handle.c          |  1 +
+ server/protocol.def      |  2 ++
+ tools/make_requests      |  2 +-
+ 5 files changed, 37 insertions(+), 9 deletions(-)
+
+diff --git a/dlls/ntdll/tests/info.c b/dlls/ntdll/tests/info.c
+index 84e54a60f1f..f6cd5c03a7f 100644
+--- a/dlls/ntdll/tests/info.c
++++ b/dlls/ntdll/tests/info.c
+@@ -887,12 +887,17 @@ static void test_query_handle(void)
+     ULONG ExpectedLength, ReturnLength;
+     ULONG SystemInformationLength = sizeof(SYSTEM_HANDLE_INFORMATION);
+     SYSTEM_HANDLE_INFORMATION* shi = HeapAlloc(GetProcessHeap(), 0, SystemInformationLength);
+-    HANDLE EventHandle;
++    HANDLE EventHandle, handle_dup;
++    void *obj1, *obj2;
+     BOOL found, ret;
+     INT i;
+ 
+     EventHandle = CreateEventA(NULL, FALSE, FALSE, NULL);
+     ok( EventHandle != NULL, "CreateEventA failed %lu\n", GetLastError() );
++
++    ret = DuplicateHandle(GetCurrentProcess(), EventHandle, GetCurrentProcess(), &handle_dup, 0, TRUE, DUPLICATE_SAME_ACCESS);
++    ok(ret, "got error %lu\n", GetLastError());
++
+     ret = SetHandleInformation(EventHandle, HANDLE_FLAG_INHERIT | HANDLE_FLAG_PROTECT_FROM_CLOSE,
+             HANDLE_FLAG_INHERIT | HANDLE_FLAG_PROTECT_FROM_CLOSE);
+     ok(ret, "got error %lu\n", GetLastError());
+@@ -916,6 +921,7 @@ static void test_query_handle(void)
+         memset(shi, 0x55, SystemInformationLength);
+         status = pNtQuerySystemInformation(SystemHandleInformation, shi, SystemInformationLength, &ReturnLength);
+     }
++    CloseHandle(handle_dup);
+     ok( status == STATUS_SUCCESS, "Expected STATUS_SUCCESS, got %08lx\n", status );
+     ExpectedLength = FIELD_OFFSET(SYSTEM_HANDLE_INFORMATION, Handle[shi->Count]);
+     ok( ReturnLength == ExpectedLength || broken(ReturnLength == ExpectedLength - sizeof(DWORD)), /* Vista / 2008 */
+@@ -930,19 +936,37 @@ static void test_query_handle(void)
+         goto done;
+     }
+ 
+-    found = FALSE;
++    obj1 = obj2 = (void *)0xdeadbeef;
+     for (i = 0; i < shi->Count; i++)
+     {
+         if (shi->Handle[i].OwnerPid == GetCurrentProcessId() &&
+                 (HANDLE)(ULONG_PTR)shi->Handle[i].HandleValue == EventHandle)
+         {
++            ok(obj1 == (void *)0xdeadbeef, "Found duplicate.\n");
+             ok(shi->Handle[i].HandleFlags == (OBJ_INHERIT | OBJ_PROTECT_CLOSE),
+                     "got attributes %#x\n", shi->Handle[i].HandleFlags);
+-            found = TRUE;
+-            break;
++            obj1 = shi->Handle[i].ObjectPointer;
++        }
++        if (shi->Handle[i].OwnerPid == GetCurrentProcessId() &&
++                (HANDLE)(ULONG_PTR)shi->Handle[i].HandleValue == handle_dup)
++        {
++            ok(obj2 == (void *)0xdeadbeef, "Found duplicate.\n");
++            ok(shi->Handle[i].HandleFlags == OBJ_INHERIT, "got attributes %#x\n", shi->Handle[i].HandleFlags);
++            obj2 = shi->Handle[i].ObjectPointer;
+         }
++        ok((ULONG_PTR)shi->Handle[i].ObjectPointer > (ULONG_PTR)0xffff800000000000, "got %p.\n",
++                shi->Handle[i].ObjectPointer);
++    }
++    ok(obj1 != (void *)0xdeadbeef, "Didn't find %p (pid %lx).\n", EventHandle, GetCurrentProcessId());
++    ok(obj1 == obj2, "got %p, %p.\n", obj1, obj2);
++
++    for (i = 0; i < shi->Count; i++)
++    {
++        if (!(shi->Handle[i].OwnerPid == GetCurrentProcessId()
++              && ((HANDLE)(ULONG_PTR)shi->Handle[i].HandleValue == EventHandle
++              || (HANDLE)(ULONG_PTR)shi->Handle[i].HandleValue == handle_dup)))
++            ok(shi->Handle[i].ObjectPointer != obj1, "Got same object.\n");
+     }
+-    ok( found, "Expected to find event handle %p (pid %lx) in handle list\n", EventHandle, GetCurrentProcessId() );
+ 
+     ret = SetHandleInformation(EventHandle, HANDLE_FLAG_PROTECT_FROM_CLOSE, 0);
+     ok(ret, "got error %lu\n", GetLastError());
+@@ -1032,11 +1056,12 @@ static void test_query_handle_ex(void)
+     found = FALSE;
+     for (i = 0; i < info->NumberOfHandles; ++i)
+     {
++        ok((ULONG_PTR)info->Handles[i].Object > (ULONG_PTR)0xffff800000000000, "got %p.\n", info->Handles[i].Object);
+         if (info->Handles[i].UniqueProcessId == GetCurrentProcessId()
+                 && (HANDLE)info->Handles[i].HandleValue == event)
+         {
++            ok(!found, "Found duplicate.\n");
+             found = TRUE;
+-            break;
+         }
+     }
+     ok(!found, "event handle found\n");
+diff --git a/dlls/ntdll/unix/system.c b/dlls/ntdll/unix/system.c
+index a548a0b8802..b465117880d 100644
+--- a/dlls/ntdll/unix/system.c
++++ b/dlls/ntdll/unix/system.c
+@@ -3746,7 +3746,7 @@ NTSTATUS WINAPI NtQuerySystemInformation( SYSTEM_INFORMATION_CLASS class,
+                     shi->Handle[i].AccessMask   = handle_info[i].access;
+                     shi->Handle[i].HandleFlags  = handle_info[i].attributes;
+                     shi->Handle[i].ObjectType   = handle_info[i].type;
+-                    /* FIXME: Fill out ObjectPointer */
++                    shi->Handle[i].ObjectPointer = wine_server_get_ptr( handle_info[i].object );
+                 }
+             }
+             else if (ret == STATUS_BUFFER_TOO_SMALL)
+@@ -3975,7 +3975,7 @@ NTSTATUS WINAPI NtQuerySystemInformation( SYSTEM_INFORMATION_CLASS class,
+                     shi->Handles[i].GrantedAccess    = handle_info[i].access;
+                     shi->Handles[i].HandleAttributes = handle_info[i].attributes;
+                     shi->Handles[i].ObjectTypeIndex  = handle_info[i].type;
+-                    /* FIXME: Fill out Object */
++                    shi->Handles[i].Object           = wine_server_get_ptr( handle_info[i].object );
+                 }
+             }
+             else if (ret == STATUS_BUFFER_TOO_SMALL)
+diff --git a/server/handle.c b/server/handle.c
+index 1933b2f6a43..d64f1756cca 100644
+--- a/server/handle.c
++++ b/server/handle.c
+@@ -848,6 +848,7 @@ static int enum_handles( struct process *process, void *user )
+         handle->access     = entry->access & ~RESERVED_ALL;
+         handle->type       = entry->ptr->ops->type->index;
+         handle->attributes = 0;
++        handle->object     = (client_ptr_t)(ULONG_PTR)entry->ptr | (client_ptr_t)0xffff800000000000;
+         if (entry->access & RESERVED_INHERIT) handle->attributes |= OBJ_INHERIT;
+         if (entry->access & RESERVED_CLOSE_PROTECT) handle->attributes |= OBJ_PROTECT_CLOSE;
+         info->count--;
+diff --git a/server/protocol.def b/server/protocol.def
+index 710ff26ce57..5877652c70f 100644
+--- a/server/protocol.def
++++ b/server/protocol.def
+@@ -3644,11 +3644,13 @@ enum caret_state
+ 
+ struct handle_info
+ {
++    client_ptr_t object;
+     process_id_t owner;
+     obj_handle_t handle;
+     unsigned int access;
+     unsigned int attributes;
+     unsigned int type;
++    unsigned int __pad;
+ };
+ 
+ /* Return a list of all opened handles */
+diff --git a/tools/make_requests b/tools/make_requests
+index 4b8139596a3..e6a1ebee955 100755
+--- a/tools/make_requests
++++ b/tools/make_requests
+@@ -48,7 +48,7 @@ my %formats =
+     "union debug_event_data"   => [ 160, 8 ],
+     "struct filesystem_event"  => [ 12, 4 ],
+     "struct generic_map"       => [ 16, 4 ],
+-    "struct handle_info"       => [ 20, 4 ],
++    "struct handle_info"       => [ 32, 8 ],
+     "union hw_input"           => [ 40, 8 ],
+     "union irp_params"         => [ 32, 8 ],
+     "struct luid"              => [  8, 4 ],

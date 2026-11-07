@@ -1,0 +1,51 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Mon, 10 Apr 2023 21:07:10 -0600
+Subject: [PATCH] ntdll: Add PROTON_DISABLE_LSTEAMCLIENT config option.
+
+CW-Bug-Id: #22126
+(cherry picked from commit 1788b2350212afa123fc15efa817d5d8ab3ded5c)
+
+mproton-resolved: Proton's get_env(name, buf, size) helper is not carried: query the variable with RtlQueryEnvironmentVariable_U
+---
+ dlls/ntdll/loader.c | 20 +++++++++++++++++++-
+ 1 file changed, 19 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/ntdll/loader.c b/dlls/ntdll/loader.c
+index 7c82b84d4ce..3d3aae50ded 100644
+--- a/dlls/ntdll/loader.c
++++ b/dlls/ntdll/loader.c
+@@ -2259,6 +2259,24 @@ done:
+     return status;
+ }
+ 
++static int use_lsteamclient(void)
++{
++    WCHAR env[32];
++    static int use = -1;
++
++    if (use != -1) return use;
++
++    {
++        UNICODE_STRING name = RTL_CONSTANT_STRING( L"PROTON_DISABLE_LSTEAMCLIENT" );
++        UNICODE_STRING value = { 0, sizeof(env) - sizeof(WCHAR), env };
++
++        env[0] = 0;
++        use = RtlQueryEnvironmentVariable_U( NULL, &name, &value ) || *env == '0';
++    }
++    if (!use)
++        ERR("lsteamclient disabled.\n");
++    return use;
++}
+ 
+ /*************************************************************************
+  *		build_module
+@@ -2307,7 +2325,7 @@ static NTSTATUS build_module( LPCWSTR load_path, const UNICODE_STRING *nt_name,
+     basename_len = wcslen(basename);
+     if (basename_len >= 4 && !wcscmp(basename + basename_len - 4, L".dll")) basename_len -= 4;
+ 
+-    if ((!RtlCompareUnicodeStrings(basename, basename_len, L"steamclient", 11, TRUE) ||
++    if (use_lsteamclient() && (!RtlCompareUnicodeStrings(basename, basename_len, L"steamclient", 11, TRUE) ||
+          !RtlCompareUnicodeStrings(basename, basename_len, L"steamclient64", 13, TRUE) ||
+          !RtlCompareUnicodeStrings(basename, basename_len, L"gameoverlayrenderer", 19, TRUE) ||
+          !RtlCompareUnicodeStrings(basename, basename_len, L"gameoverlayrenderer64", 21, TRUE)) &&

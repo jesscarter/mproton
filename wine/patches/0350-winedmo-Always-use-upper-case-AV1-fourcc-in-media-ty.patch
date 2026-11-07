@@ -1,0 +1,23 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Thu, 11 Dec 2025 11:03:48 +0100
+Subject: [PATCH] winedmo: Always use upper case AV1 fourcc in media types.
+
+CW-Bug-Id: #26348
+(cherry picked from commit 65738183e697572702ac99e128dad92b1d17bc8b)
+---
+ dlls/winedmo/unix_media_type.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/dlls/winedmo/unix_media_type.c b/dlls/winedmo/unix_media_type.c
+index 7ace5443d9a..4caad649c3d 100644
+--- a/dlls/winedmo/unix_media_type.c
++++ b/dlls/winedmo/unix_media_type.c
+@@ -256,6 +256,7 @@ static void mf_video_format_init( const AVCodecParameters *params, MFVIDEOFORMAT
+         if (params->codec_id == AV_CODEC_ID_MPEG1VIDEO) format->guidFormat = MEDIASUBTYPE_MPEG1Payload;
+         else if (params->codec_id == AV_CODEC_ID_H264) format->guidFormat.Data1 = MFVideoFormat_H264.Data1;
+         else if (params->codec_id == AV_CODEC_ID_VP9) format->guidFormat.Data1 = MFVideoFormat_VP90.Data1;
++        else if (params->codec_id == AV_CODEC_ID_AV1) format->guidFormat.Data1 = MFVideoFormat_AV1.Data1;
+         else if (params->codec_tag) format->guidFormat.Data1 = params->codec_tag;
+         else format->guidFormat.Data1 = video_format_tag_from_codec_id( params->codec_id );
+     }

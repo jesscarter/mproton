@@ -1,0 +1,34 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Sat, 28 Sep 2024 21:28:09 -0600
+Subject: [PATCH] atiadlxx: Bump driver version to 99.
+
+CW-Bug-Id: #24315
+(cherry picked from commit 3a16cd90050386e0eecabeede213c15e59f96806)
+---
+ dlls/atiadlxx/atiadlxx_main.c | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/dlls/atiadlxx/atiadlxx_main.c b/dlls/atiadlxx/atiadlxx_main.c
+index 8fdd2e55d02..9399025f94b 100644
+--- a/dlls/atiadlxx/atiadlxx_main.c
++++ b/dlls/atiadlxx/atiadlxx_main.c
+@@ -172,15 +172,15 @@ typedef struct ADLDisplayMap
+ } ADLDisplayMap, *LPADLDisplayMap;
+ 
+ static const ADLVersionsInfo version = {
+-    "23.19.02-230831a-396538C-AMD-Software-Adrenalin-Edition",
++    "99.19.02-230831a-396538C-AMD-Software-Adrenalin-Edition",
+     "",
+     "http://support.amd.com/drivers/xml/driver_09_us.xml",
+ };
+ 
+ static const ADLVersionsInfoX2 version2 = {
+-    "23.19.02-230831a-396538C-AMD-Software-Adrenalin-Edition",
++    "99.19.02-230831a-396538C-AMD-Software-Adrenalin-Edition",
+     "",
+-    "23.10.2",
++    "99.10.2",
+     "http://support.amd.com/drivers/xml/driver_09_us.xml",
+ };
+ 

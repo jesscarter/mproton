@@ -1,0 +1,39 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Andrew Eikum <aeikum@codeweavers.com>
+Date: Mon, 20 Aug 2018 10:58:09 -0500
+Subject: [PATCH] HACK: proton: secur32: Return real Unix username from
+ GetUserNameEx(NameDisplay)
+
+(cherry picked from commit 0582a1718b15eeda8d48cfca57ddc040928df253)
+---
+ dlls/secur32/secur32.c | 15 ++++++++++++++-
+ 1 file changed, 14 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/secur32/secur32.c b/dlls/secur32/secur32.c
+index 4ceb646ba95..af9a7f3f42a 100644
+--- a/dlls/secur32/secur32.c
++++ b/dlls/secur32/secur32.c
+@@ -1155,9 +1155,22 @@ BOOLEAN WINAPI GetUserNameExW(
+             return FALSE;
+         }
+ 
++    case NameDisplay:
++        {
++            static const WCHAR wineusernameW[] = {'W','I','N','E','U','S','E','R','N','A','M','E',0};
++
++            DWORD needed = GetEnvironmentVariableW(wineusernameW, NULL, 0);
++            if (*nSize < needed) {
++                *nSize = needed;
++                SetLastError(ERROR_MORE_DATA);
++                return FALSE;
++            }
++            *nSize = GetEnvironmentVariableW(wineusernameW, lpNameBuffer, *nSize);
++            return TRUE;
++        }
++
+     case NameUnknown:
+     case NameFullyQualifiedDN:
+-    case NameDisplay:
+     case NameUniqueId:
+     case NameCanonical:
+     case NameUserPrincipal:

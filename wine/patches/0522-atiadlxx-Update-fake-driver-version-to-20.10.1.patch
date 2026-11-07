@@ -1,0 +1,35 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=A9mi=20Bernon?= <rbernon@codeweavers.com>
+Date: Tue, 3 Nov 2020 16:26:52 +0100
+Subject: [PATCH] atiadlxx: Update fake driver version to 20.10.1.
+
+(cherry picked from commit 822143a6c09a7b17040c99f38b5fdfa5dd615b26)
+---
+ dlls/atiadlxx/atiadlxx_main.c | 10 +++++-----
+ 1 file changed, 5 insertions(+), 5 deletions(-)
+
+diff --git a/dlls/atiadlxx/atiadlxx_main.c b/dlls/atiadlxx/atiadlxx_main.c
+index b1e7551ac82..f85c7f8ba62 100644
+--- a/dlls/atiadlxx/atiadlxx_main.c
++++ b/dlls/atiadlxx/atiadlxx_main.c
+@@ -136,15 +136,15 @@ typedef struct ADLMemoryInfo
+ } ADLMemoryInfo, *LPADLMemoryInfo;
+ 
+ static const ADLVersionsInfo version = {
+-    "16.11.2",
+-    "16.11.2",
++    "20.10.1",
++    "20.10.1",
+     "",
+ };
+ 
+ static const ADLVersionsInfoX2 version2 = {
+-    "16.11.2",
+-    "16.11.2",
+-    "16.11.2",
++    "20.10.1",
++    "20.10.1",
++    "20.10.1",
+     "",
+ };
+ 

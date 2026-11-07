@@ -1,0 +1,105 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Esme Povirk <esme@codeweavers.com>
+Date: Sat, 20 Dec 2025 22:54:00 +0000
+Subject: [PATCH] win32u: Implement cross-thread SetScrollInfo.
+
+Needed by Xalia to properly scroll some winforms controls.
+
+(cherry picked from commit 666ac6e443c738db4bfe300cd2a16ac5258a3721)
+---
+ dlls/win32u/message.c        | 6 ++++++
+ dlls/win32u/scroll.c         | 5 ++++-
+ dlls/win32u/win32u_private.h | 1 +
+ include/ntuser.h             | 1 +
+ 4 files changed, 12 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/win32u/message.c b/dlls/win32u/message.c
+index 7906c6911e6..019811ec071 100644
+--- a/dlls/win32u/message.c
++++ b/dlls/win32u/message.c
+@@ -771,6 +771,7 @@ static BOOL unpack_message( HWND hwnd, UINT message, WPARAM *wparam, LPARAM *lpa
+         }
+         return TRUE;
+     case SBM_SETSCROLLINFO:
++    case WM_WINE_SETSCROLLINFO:
+         minsize = sizeof(SCROLLINFO);
+         break;
+     case SBM_GETSCROLLINFO:
+@@ -1171,6 +1172,7 @@ static size_t pack_message( HWND hwnd, UINT message, WPARAM wparam, LPARAM lpara
+         }
+         return 0;
+     case SBM_SETSCROLLINFO:
++    case WM_WINE_SETSCROLLINFO:
+         push_data( data, (SCROLLINFO *)lparam, sizeof(SCROLLINFO) );
+         return 0;
+     case SBM_GETSCROLLINFO:
+@@ -1768,6 +1770,7 @@ size_t user_message_size( HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam,
+         break;
+     case SBM_SETSCROLLINFO:
+     case SBM_GETSCROLLINFO:
++    case WM_WINE_SETSCROLLINFO:
+     case WM_WINE_GETSCROLLINFO:
+         size = sizeof(SCROLLINFO);
+         break;
+@@ -2055,6 +2058,7 @@ static void copy_user_result( void *buffer, size_t size, LRESULT result, UINT me
+         break;
+     case SBM_SETSCROLLINFO:
+     case SBM_GETSCROLLINFO:
++    case WM_WINE_SETSCROLLINFO:
+     case WM_WINE_GETSCROLLINFO:
+         copy_size = sizeof(SCROLLINFO);
+         break;
+@@ -2297,6 +2301,8 @@ static LRESULT handle_internal_message( HWND hwnd, UINT msg, WPARAM wparam, LPAR
+         return get_scroll_bar_info( hwnd, (LONG)wparam, (SCROLLBARINFO *)lparam );
+     case WM_WINE_GETSCROLLINFO:
+         return get_scroll_info( hwnd, (int)wparam, (SCROLLINFO *)lparam );
++    case WM_WINE_SETSCROLLINFO:
++        return set_scroll_info( hwnd, LOWORD(wparam), (SCROLLINFO *)lparam, HIWORD(wparam) );
+     default:
+         if (msg >= WM_WINE_FIRST_DRIVER_MSG && msg <= WM_WINE_LAST_DRIVER_MSG)
+             return user_driver->pWindowMessage( hwnd, msg, wparam, lparam );
+diff --git a/dlls/win32u/scroll.c b/dlls/win32u/scroll.c
+index 16a64c45eed..b6563de7d16 100644
+--- a/dlls/win32u/scroll.c
++++ b/dlls/win32u/scroll.c
+@@ -910,12 +910,15 @@ BOOL get_scroll_info( HWND hwnd, int bar, SCROLLINFO *info )
+     return (info->fMask & SIF_ALL) != 0;
+ }
+ 
+-static int set_scroll_info( HWND hwnd, int bar, const SCROLLINFO *info, BOOL redraw )
++int set_scroll_info( HWND hwnd, int bar, const SCROLLINFO *info, BOOL redraw )
+ {
+     struct scroll_info *scroll;
+     UINT new_flags;
+     int action = 0, ret = 0;
+ 
++    if (bar != SB_CTL && !is_current_thread_window( hwnd ))
++        return send_message( hwnd, WM_WINE_SETSCROLLINFO, MAKEWPARAM(bar, redraw), (LPARAM)info );
++
+     /* handle invalid data structure */
+     if (!validate_scroll_info( info ) ||
+         !(scroll = get_scroll_info_ptr( hwnd, bar, TRUE )))
+diff --git a/dlls/win32u/win32u_private.h b/dlls/win32u/win32u_private.h
+index 2c3a5290bb7..6e17067d535 100644
+--- a/dlls/win32u/win32u_private.h
++++ b/dlls/win32u/win32u_private.h
+@@ -156,6 +156,7 @@ extern BOOL get_scroll_info( HWND hwnd, INT bar, SCROLLINFO *info );
+ extern void handle_scroll_event( HWND hwnd, INT bar, UINT msg, POINT pt );
+ extern LRESULT scroll_bar_window_proc( HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam,
+                                        BOOL ansi );
++extern int set_scroll_info( HWND hwnd, INT bar, const SCROLLINFO *info, BOOL redraw );
+ extern void set_standard_scroll_painted( HWND hwnd, int bar, BOOL painted );
+ extern void track_scroll_bar( HWND hwnd, int scrollbar, POINT pt );
+ 
+diff --git a/include/ntuser.h b/include/ntuser.h
+index 27588c438c0..45dee557cd7 100644
+--- a/include/ntuser.h
++++ b/include/ntuser.h
+@@ -642,6 +642,7 @@ enum wine_internal_message
+     WM_WINE_SETPIXELFORMAT,
+     WM_WINE_GETSCROLLBARINFO,
+     WM_WINE_GETSCROLLINFO,
++    WM_WINE_SETSCROLLINFO,
+     WM_WINE_FIRST_DRIVER_MSG = 0x80001000,  /* range of messages reserved for the USER driver */
+     WM_WINE_CLIPCURSOR = 0x80001ff0, /* internal driver notification messages */
+     WM_WINE_SETCURSOR,

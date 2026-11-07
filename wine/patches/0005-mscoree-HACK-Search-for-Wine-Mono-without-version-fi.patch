@@ -1,0 +1,49 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Esme Povirk <esme@codeweavers.com>
+Date: Sat, 6 Dec 2025 17:22:36 +0000
+Subject: [PATCH] mscoree: HACK: Search for Wine Mono without version first.
+
+This means that in case of a "desync" between the Proton tree and
+the Wine tree, the Wine Mono version from the Proton tree will be
+used, instead of failing to load.
+
+(cherry picked from commit c3ac197705fefd1c8538136b8bed8291da7c2f67)
+---
+ dlls/mscoree/metahost.c | 17 ++++++++++++++++-
+ 1 file changed, 16 insertions(+), 1 deletion(-)
+
+diff --git a/dlls/mscoree/metahost.c b/dlls/mscoree/metahost.c
+index 262a9851c69..dabab954c7b 100644
+--- a/dlls/mscoree/metahost.c
++++ b/dlls/mscoree/metahost.c
+@@ -793,7 +793,8 @@ static BOOL get_mono_path_registry(LPWSTR path)
+ 
+ static BOOL get_mono_path_dos(const WCHAR *dir, LPWSTR path)
+ {
+-    static const WCHAR basedir[] = L"\\wine-mono-" WINE_MONO_VERSION;
++    static const WCHAR basedir[] = L"\\wine-mono";
++    static const WCHAR basedir2[] = L"\\wine-mono-" WINE_MONO_VERSION;
+     LPWSTR dos_dir;
+     WCHAR mono_dll_path[MAX_PATH];
+     DWORD len;
+@@ -810,6 +811,20 @@ static BOOL get_mono_path_dos(const WCHAR *dir, LPWSTR path)
+ 
+     free(dos_dir);
+ 
++    if (!ret)
++    {
++        len = lstrlenW( dir ) + lstrlenW( basedir2 ) + 1;
++        if (!(dos_dir = malloc( len * sizeof(WCHAR) ))) return FALSE;
++        lstrcpyW( dos_dir, dir );
++        lstrcatW( dos_dir, basedir2 );
++
++        ret = find_mono_dll(dos_dir, mono_dll_path);
++        if (ret)
++            lstrcpyW(path, dos_dir);
++
++        free(dos_dir);
++    }
++
+     return ret;
+ }
+ 

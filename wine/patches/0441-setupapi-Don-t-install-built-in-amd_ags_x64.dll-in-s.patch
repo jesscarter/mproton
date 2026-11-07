@@ -1,0 +1,36 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arkadiusz Hiler <ahiler@codeweavers.com>
+Date: Wed, 21 Apr 2021 16:16:55 +0300
+Subject: [PATCH] setupapi: Don't install built-in amd_ags_x64.dll in
+ system32/syswow64.
+
+The DLL ships with the games and having the built-in version in
+system32/syswow64 has unexpected consequences.
+
+If the game is launched from a subdirectory, but the DLL is in current
+working directory, the built-in takes precedence as CWD has lower search
+priority than system directories (with the default SafeDllSearchMode).
+
+By not installing amd_ags_x64.dll in system32/syswow64 the built-in is
+still picked up correctly from lib/ when necessary.
+
+This fixes Evil Genius 2.
+
+CW-Bug-Id: 18804
+(cherry picked from commit ee792f97e317b890edc238340f636e420b63aab0)
+---
+ dlls/setupapi/fakedll.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/dlls/setupapi/fakedll.c b/dlls/setupapi/fakedll.c
+index 72473060081..88d2246ad10 100644
+--- a/dlls/setupapi/fakedll.c
++++ b/dlls/setupapi/fakedll.c
+@@ -1123,6 +1123,7 @@ static void install_lib_dir( WCHAR *dest, WCHAR *file, const WCHAR *wildcard,
+         if (lstrlenW( data.name ) > max_dll_name_len) continue;
+         if (!wcscmp( data.name, L"." )) continue;
+         if (!wcscmp( data.name, L".." )) continue;
++        if (!wcscmp( data.name, L"amd_ags_x64.dll" )) continue;
+         lstrcpyW( name, data.name );
+         if (default_ext)  /* inside build dir */
+         {
