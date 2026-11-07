@@ -75,6 +75,12 @@ athei/mach9's loader refuses to start without `com.apple.developer.cross-archite
 - `com.apple.developer.cross-architecture-support`: "Personal development teams … do not support the Cross-architecture Compatibility Framework capability". Xcode's name for this capability is **Cross-architecture Compatibility Framework**.
 - So a paid membership is required (or SIP disabled, which we're not doing). Once the paid team is active, the same stub project should work. Pick the paid team in Signing & Capabilities and click Try Again; Xcode then creates a Mac App Development profile for this Mac, which is enough to run locally. A Developer ID profile is only needed for distribution.
 
+**SIP disabled alone: tested 2026-11-07, doesn't work.**
+- Setup: `csrutil status` reports disabled, no boot-args set, macOS 27.2.
+- Test: `probes/macos_compat_probe.c` built and signed ad hoc, claiming `com.apple.developer.cross-architecture-support`.
+- Result: killed at launch with exit 137. The crash report says `"signal":"SIGKILL (Code Signature Invalid)"`, namespace `CODESIGNING`, indicator `"Taskgated Invalid Signature"`. AMFI still rejects a restricted entitlement that no profile backs.
+- Next local-only option: the `amfi_get_out_of_my_way=1` boot-arg plus Permissive Security in Recovery. It's widely documented, but it's unverified on macOS 27, reportedly breaks Private Cloud Compute, and weakens security a lot more than SIP alone.
+
 ### ARM64 build from source (in progress)
 
 athei/mach9 checks out its sources into `work/mach9/` (gitignored):
