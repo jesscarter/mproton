@@ -16,3 +16,11 @@ Experimental: Proton-style Windows game compatibility for Apple Silicon Macs (M1
 - `graphics/dxvk/`: reproducible DXVK build (ARM64X + i386, llvm-mingw) and KosmicKrisp audit ([docs/graphics-dxvk.md](docs/graphics-dxvk.md))
 - `tests/ladder/`: the correctness ladder, small Windows programs (threads/TLS/APC, SEH, callbacks, 16K-page memory and self-modifying code, memory-ordering litmus tests, D3D9/11/12, OpenGL, Vulkan with exact pixel checks) run by `tests/ladder/run.sh BUNDLE_DIR` ([docs/testing.md](docs/testing.md))
 - `scripts/validate-lavapipe.sh`: correctness-only run of mpbench on Linux (Wine + DXVK + vkd3d-proton on lavapipe)
+
+## License
+
+mproton's own code is under the BSD 3-Clause License ([LICENSE](LICENSE)). Parts that come from other projects keep their licences:
+
+- `steam/` (lsteamclient, steam_helper) and `launcher/` (a port of Proton's `proton` script): Valve's Proton licence, BSD 3-Clause ([steam/LICENSE.proton](steam/LICENSE.proton), [launcher/LICENSE.proton](launcher/LICENSE.proton)); `steam/lsteamclient/` also carries its own [LICENSE](steam/lsteamclient/LICENSE).
+- `wine/patches/` and `wine-patches/`: patches to Wine, under Wine's LGPL 2.1 or later, by their authors as recorded in each patch.
+- `build/mach9-patches/`: patches to athei's mach9 scripts, under mach9's zlib-style licence.
