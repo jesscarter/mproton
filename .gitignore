@@ -12,3 +12,7 @@ xcuserdata/
 steam/build/
 graphics/dxvk/out/
 tests/ladder/out/
+
+# raw test logs stay local; summaries, TSVs and JSON results are committed
+results/*/logs/
+results/*.log

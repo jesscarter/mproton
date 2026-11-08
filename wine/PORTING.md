@@ -1,6 +1,6 @@
-# Handoff: porting the rest of Proton's Wine commits
+# Porting the rest of Proton's Wine commits
 
-For the next session that continues [docs/wine-tree.md](../docs/wine-tree.md). Read that doc first: it explains the series, the statuses and what still needs a Mac.
+A guide for anyone continuing the port described in [docs/wine-tree.md](../docs/wine-tree.md). Read that doc first: it explains the series, the statuses and what still needs a Mac.
 
 ## Where things stand
 

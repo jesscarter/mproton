@@ -1,5 +1,0 @@
-cpu.scalar                 157.45 Miter/s      
-cpu.vector                   8.06 GFLOP/s(x2)  
-cpu.memcpy                  20.34 GB/s         
-cpu.atomic                  59.53 Mops/s       
-cpu.pingpong             11319.90 Krt/s        "ordering_errors": 0
