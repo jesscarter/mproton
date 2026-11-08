@@ -1,0 +1,143 @@
+ladder: /Users/jess/mproton/work/mach9/dist/wine/bin/wine (wine-11.20-763-g5e24945f247), archs: aarch64 arm64ec x86_64 i686, output /Users/jess/mproton/results/ladder-2026-11-07-mproton
+== setup
+   setup - prefix                               ok (exit 0, 0s), pass=2 fail=0 skip=0 info=0
+== serial
+   serial aarch64 threads                       ok (exit 0, 2s), pass=12 fail=0 skip=0 info=1
+   serial aarch64 seh                           crash (exit 9, 1s)
+   serial aarch64 callbacks                     ok (exit 0, 4s), pass=14 fail=0 skip=0 info=1
+   serial aarch64 memory                        ok (exit 0, 0s), pass=25 fail=0 skip=1 info=1
+   serial aarch64 ordering                      ok (exit 0, 2s), pass=8 fail=0 skip=0 info=10
+   serial aarch64 d3d9 dxvk                     ok (exit 0, 5s), pass=9 fail=0 skip=0 info=3
+   serial aarch64 d3d9 mtld3d                   ok (exit 0, 1s), pass=9 fail=0 skip=0 info=3
+   serial aarch64 d3d9 wined3d                  ok (exit 0, 2s), pass=9 fail=0 skip=0 info=3
+   serial aarch64 d3d11 wined3d                 ok (exit 0, 1s), pass=9 fail=0 skip=0 info=3
+   serial aarch64 d3d11 dxmt                    ok (exit 0, 1s), pass=9 fail=0 skip=0 info=3
+   serial aarch64 d3d11 dxvk                    ok (exit 0, 1s), pass=9 fail=0 skip=0 info=3
+   serial aarch64 d3d12 wined3d                 ok (exit 0, 0s), pass=0 fail=0 skip=1 info=1
+   serial aarch64 d3d12 dxmt                    ok (exit 0, 2s), pass=11 fail=0 skip=0 info=3
+   serial aarch64 d3d12 dxvk                    ok (exit 0, 1s), pass=11 fail=0 skip=0 info=3
+   serial aarch64 opengl egl                    ok (exit 0, 1s), pass=8 fail=0 skip=0 info=2
+   serial aarch64 opengl cgl                    ok (exit 0, 1s), pass=8 fail=0 skip=0 info=2
+   serial aarch64 vulkan default                fail (exit 1, 0s), pass=8 fail=1 skip=0 info=2
+   serial arm64ec threads                       ok (exit 0, 1s), pass=12 fail=0 skip=0 info=1
+   serial arm64ec seh                           crash (exit 9, 0s)
+   serial arm64ec callbacks                     ok (exit 0, 3s), pass=14 fail=0 skip=0 info=1
+   serial arm64ec memory                        ok (exit 0, 2s), pass=26 fail=0 skip=0 info=1
+   serial arm64ec ordering                      ok (exit 0, 3s), pass=8 fail=0 skip=0 info=10
+   serial arm64ec d3d9 dxvk                     ok (exit 0, 3s), pass=9 fail=0 skip=0 info=3
+   serial arm64ec d3d9 mtld3d                   ok (exit 0, 0s), pass=9 fail=0 skip=0 info=3
+   serial arm64ec d3d9 wined3d                  ok (exit 0, 2s), pass=9 fail=0 skip=0 info=3
+   serial arm64ec d3d11 wined3d                 ok (exit 0, 1s), pass=9 fail=0 skip=0 info=3
+   serial arm64ec d3d11 dxmt                    ok (exit 0, 1s), pass=9 fail=0 skip=0 info=3
+   serial arm64ec d3d11 dxvk                    ok (exit 0, 0s), pass=9 fail=0 skip=0 info=3
+   serial arm64ec d3d12 wined3d                 ok (exit 0, 1s), pass=0 fail=0 skip=1 info=1
+   serial arm64ec d3d12 dxmt                    ok (exit 0, 6s), pass=11 fail=0 skip=0 info=3
+   serial arm64ec d3d12 dxvk                    ok (exit 0, 1s), pass=11 fail=0 skip=0 info=3
+   serial arm64ec opengl egl                    ok (exit 0, 1s), pass=8 fail=0 skip=0 info=2
+   serial arm64ec opengl cgl                    ok (exit 0, 1s), pass=8 fail=0 skip=0 info=2
+   serial arm64ec vulkan default                fail (exit 1, 0s), pass=8 fail=1 skip=0 info=2
+   serial x86_64 threads                        ok (exit 0, 1s), pass=12 fail=0 skip=0 info=1
+   serial x86_64 seh                            fail (exit 1, 0s), pass=13 fail=2 skip=0 info=1
+   serial x86_64 callbacks                      ok (exit 0, 4s), pass=14 fail=0 skip=0 info=1
+   serial x86_64 memory                         ok (exit 0, 1s), pass=26 fail=0 skip=0 info=1
+   serial x86_64 ordering                       ok (exit 0, 3s), pass=13 fail=0 skip=0 info=4
+   serial x86_64 d3d9 dxvk                      ok (exit 0, 3s), pass=9 fail=0 skip=0 info=3
+   serial x86_64 d3d9 mtld3d                    ok (exit 0, 1s), pass=9 fail=0 skip=0 info=3
+   serial x86_64 d3d9 wined3d                   ok (exit 0, 1s), pass=9 fail=0 skip=0 info=3
+   serial x86_64 d3d11 wined3d                  ok (exit 0, 1s), pass=9 fail=0 skip=0 info=3
+   serial x86_64 d3d11 dxmt                     ok (exit 0, 1s), pass=9 fail=0 skip=0 info=3
+   serial x86_64 d3d11 dxvk                     ok (exit 0, 0s), pass=9 fail=0 skip=0 info=3
+   serial x86_64 d3d12 wined3d                  ok (exit 0, 1s), pass=0 fail=0 skip=1 info=1
+   serial x86_64 d3d12 dxmt                     ok (exit 0, 1s), pass=11 fail=0 skip=0 info=3
+   serial x86_64 d3d12 dxvk                     ok (exit 0, 1s), pass=11 fail=0 skip=0 info=3
+   serial x86_64 opengl egl                     ok (exit 0, 1s), pass=8 fail=0 skip=0 info=2
+   serial x86_64 opengl cgl                     ok (exit 0, 1s), pass=8 fail=0 skip=0 info=2
+   serial x86_64 vulkan default                 fail (exit 1, 1s), pass=8 fail=1 skip=0 info=2
+   serial i686 threads                          ok (exit 0, 1s), pass=12 fail=0 skip=0 info=1
+   serial i686 seh                              fail (exit 1, 0s), pass=14 fail=1 skip=0 info=1
+   serial i686 callbacks                        ok (exit 0, 3s), pass=14 fail=0 skip=0 info=1
+   serial i686 memory                           ok (exit 0, 1s), pass=26 fail=0 skip=0 info=1
+   serial i686 ordering                         ok (exit 0, 3s), pass=13 fail=0 skip=0 info=4
+   serial i686 d3d9 dxvk                        ok (exit 0, 4s), pass=9 fail=0 skip=0 info=3
+   serial i686 d3d9 mtld3d                      ok (exit 0, 0s), pass=9 fail=0 skip=0 info=3
+   serial i686 d3d9 wined3d                     ok (exit 0, 2s), pass=9 fail=0 skip=0 info=3
+   serial i686 d3d11 wined3d                    ok (exit 0, 1s), pass=9 fail=0 skip=0 info=3
+   serial i686 d3d11 dxmt                       ok (exit 0, 2s), pass=9 fail=0 skip=0 info=3
+   serial i686 d3d11 dxvk                       ok (exit 0, 1s), pass=9 fail=0 skip=0 info=3
+   serial i686 d3d12 wined3d                    ok (exit 0, 0s), pass=0 fail=0 skip=1 info=1
+   serial i686 d3d12 dxmt                       ok (exit 0, 2s), pass=11 fail=0 skip=0 info=3
+   serial i686 d3d12 dxvk                       ok (exit 0, 1s), pass=11 fail=0 skip=0 info=3
+   serial i686 opengl egl                       ok (exit 0, 1s), pass=8 fail=0 skip=0 info=2
+   serial i686 opengl cgl                       ok (exit 0, 1s), pass=8 fail=0 skip=0 info=2
+   serial i686 vulkan default                   fail (exit 1, 1s), pass=8 fail=1 skip=0 info=2
+== concurrent: aarch64 arm64ec x86_64 i686 at once in one wineserver
+   concurrent aarch64 threads                   ok (exit 0, 1s), pass=12 fail=0 skip=0 info=1
+   concurrent aarch64 seh                       crash (exit 9, 0s)
+   concurrent aarch64 callbacks                 ok (exit 0, 3s), pass=14 fail=0 skip=0 info=1
+   concurrent aarch64 memory                    ok (exit 0, 0s), pass=25 fail=0 skip=1 info=1
+   concurrent aarch64 ordering                  ok (exit 0, 21s), pass=8 fail=0 skip=0 info=10
+   concurrent aarch64 d3d9                      ok (exit 0, 1s), pass=9 fail=0 skip=0 info=3
+   concurrent aarch64 d3d11                     ok (exit 0, 1s), pass=9 fail=0 skip=0 info=3
+   concurrent aarch64 d3d12                     ok (exit 0, 1s), pass=11 fail=0 skip=0 info=3
+   concurrent aarch64 opengl                    ok (exit 0, 1s), pass=8 fail=0 skip=0 info=2
+   concurrent aarch64 vulkan                    fail (exit 1, 1s), pass=8 fail=1 skip=0 info=2
+   concurrent arm64ec threads                   ok (exit 0, 1s), pass=12 fail=0 skip=0 info=1
+   concurrent arm64ec seh                       crash (exit 9, 0s)
+   concurrent arm64ec callbacks                 ok (exit 0, 3s), pass=14 fail=0 skip=0 info=1
+   concurrent arm64ec memory                    ok (exit 0, 1s), pass=26 fail=0 skip=0 info=1
+   concurrent arm64ec ordering                  ok (exit 0, 20s), pass=8 fail=0 skip=0 info=10
+   concurrent arm64ec d3d9                      ok (exit 0, 1s), pass=9 fail=0 skip=0 info=3
+   concurrent arm64ec d3d11                     ok (exit 0, 1s), pass=9 fail=0 skip=0 info=3
+   concurrent arm64ec d3d12                     ok (exit 0, 1s), pass=11 fail=0 skip=0 info=3
+   concurrent arm64ec opengl                    ok (exit 0, 1s), pass=8 fail=0 skip=0 info=2
+   concurrent arm64ec vulkan                    fail (exit 1, 0s), pass=8 fail=1 skip=0 info=2
+   concurrent x86_64 threads                    ok (exit 0, 1s), pass=12 fail=0 skip=0 info=1
+   concurrent x86_64 seh                        fail (exit 1, 0s), pass=13 fail=2 skip=0 info=1
+   concurrent x86_64 callbacks                  ok (exit 0, 2s), pass=14 fail=0 skip=0 info=1
+   concurrent x86_64 memory                     ok (exit 0, 1s), pass=26 fail=0 skip=0 info=1
+   concurrent x86_64 ordering                   ok (exit 0, 13s), pass=13 fail=0 skip=0 info=4
+   concurrent x86_64 d3d9                       ok (exit 0, 1s), pass=9 fail=0 skip=0 info=3
+   concurrent x86_64 d3d11                      ok (exit 0, 1s), pass=9 fail=0 skip=0 info=3
+   concurrent x86_64 d3d12                      ok (exit 0, 1s), pass=11 fail=0 skip=0 info=3
+   concurrent x86_64 opengl                     ok (exit 0, 1s), pass=8 fail=0 skip=0 info=2
+   concurrent x86_64 vulkan                     fail (exit 1, 1s), pass=8 fail=1 skip=0 info=2
+   concurrent i686 threads                      ok (exit 0, 1s), pass=12 fail=0 skip=0 info=1
+   concurrent i686 seh                          fail (exit 1, 1s), pass=14 fail=1 skip=0 info=1
+   concurrent i686 callbacks                    ok (exit 0, 2s), pass=14 fail=0 skip=0 info=1
+   concurrent i686 memory                       ok (exit 0, 1s), pass=26 fail=0 skip=0 info=1
+   concurrent i686 ordering                     ok (exit 0, 12s), pass=13 fail=0 skip=0 info=4
+   concurrent i686 d3d9                         ok (exit 0, 1s), pass=9 fail=0 skip=0 info=3
+   concurrent i686 d3d11                        ok (exit 0, 1s), pass=9 fail=0 skip=0 info=3
+   concurrent i686 d3d12                        ok (exit 0, 2s), pass=11 fail=0 skip=0 info=3
+   concurrent i686 opengl                       ok (exit 0, 2s), pass=8 fail=0 skip=0 info=2
+   concurrent i686 vulkan                       fail (exit 1, 1s), pass=8 fail=1 skip=0 info=2
+   concurrent - server                          ok (exit 0, 0s), pass=2 fail=0 skip=0 info=0
+== tso: ordering suite for x86 builds with hardware TSO on and off
+   tso x86_64 ordering tso=1                    ok (exit 0, 2s), pass=13 fail=0 skip=0 info=4
+   tso i686 ordering tso=1                      ok (exit 0, 3s), pass=13 fail=0 skip=0 info=4
+   tso x86_64 ordering tso=0                    ok (exit 0, 3s), pass=13 fail=0 skip=0 info=4
+   tso i686 ordering tso=0                      ok (exit 0, 3s), pass=13 fail=0 skip=0 info=4
+== shutdown
+   shutdown - shutdown                          ok (exit 0, 0s), pass=2 fail=0 skip=0 info=0
+ladder: FAIL, 1248 pass, 20 fail, 0 known, 6 skip
+  FAIL serial aarch64 seh seh.run: crash (exit 9 after 1s); log tail: compatdb:   arguments = unset (upstream: the command line the process was started with) | compatdb:   debug_channels = unset (upstream: the WINEDEBUG the process was started with) | compatdb:   env FEX_X87REDUCEDPRECISION=1, built-in: set
+  FAIL serial aarch64 vulkan default vulkan.fill_copy_buffer: vkCmdFillBuffer x2 + vkCmdCopyBuffer at offsets: 64 of 1024 words wrong
+  FAIL serial arm64ec seh seh.av_exec_noaccess: code=c0000005 info=[0, 0000000000900200] want [8, 0000000000900200], ExceptionAddress=00006FFFFFEC9724 context pc=00006FFFFFEC9724 sp=000000000011FDE0
+  FAIL serial arm64ec seh seh.run: crash (exit 9 after 0s); log tail: compatdb:   arguments = unset (upstream: the command line the process was started with) | compatdb:   debug_channels = unset (upstream: the WINEDEBUG the process was started with) | compatdb:   env FEX_X87REDUCEDPRECISION=1, built-in: set
+  FAIL serial arm64ec vulkan default vulkan.fill_copy_buffer: vkCmdFillBuffer x2 + vkCmdCopyBuffer at offsets: 128 of 1024 words wrong
+  FAIL serial x86_64 seh seh.div0: caught=0 code=00000000 (want c0000094) address=0000000000000000 pc=0000000000000000
+  FAIL serial x86_64 seh seh.stack_overflow: caught code=00000000 (want c00000fd), thread wait=0 exit=00000000
+  FAIL serial x86_64 vulkan default vulkan.fill_copy_buffer: vkCmdFillBuffer x2 + vkCmdCopyBuffer at offsets: 128 of 1024 words wrong
+  FAIL serial i686 seh seh.div0: caught=0 code=00000000 (want c0000094) address=00000000 pc=00000000
+  FAIL serial i686 vulkan default vulkan.fill_copy_buffer: vkCmdFillBuffer x2 + vkCmdCopyBuffer at offsets: 80 of 1024 words wrong
+  FAIL concurrent aarch64 seh seh.run: crash (exit 9 after 0s); log tail: compatdb:   arguments = unset (upstream: the command line the process was started with) | compatdb:   debug_channels = unset (upstream: the WINEDEBUG the process was started with) | compatdb:   env FEX_X87REDUCEDPRECISION=1, built-in: set
+  FAIL concurrent aarch64 vulkan vulkan.fill_copy_buffer: vkCmdFillBuffer x2 + vkCmdCopyBuffer at offsets: 96 of 1024 words wrong
+  FAIL concurrent arm64ec seh seh.av_exec_noaccess: code=c0000005 info=[0, 0000000000900200] want [8, 0000000000900200], ExceptionAddress=00006FFFFFEC9724 context pc=00006FFFFFEC9724 sp=000000000011FDE0
+  FAIL concurrent arm64ec seh seh.run: crash (exit 9 after 0s); log tail: compatdb:   arguments = unset (upstream: the command line the process was started with) | compatdb:   debug_channels = unset (upstream: the WINEDEBUG the process was started with) | compatdb:   env FEX_X87REDUCEDPRECISION=1, built-in: set
+  FAIL concurrent arm64ec vulkan vulkan.fill_copy_buffer: vkCmdFillBuffer x2 + vkCmdCopyBuffer at offsets: 48 of 1024 words wrong
+  FAIL concurrent x86_64 seh seh.div0: caught=0 code=00000000 (want c0000094) address=0000000000000000 pc=0000000000000000
+  FAIL concurrent x86_64 seh seh.stack_overflow: caught code=00000000 (want c00000fd), thread wait=0 exit=00000000
+  FAIL concurrent x86_64 vulkan vulkan.fill_copy_buffer: vkCmdFillBuffer x2 + vkCmdCopyBuffer at offsets: 48 of 1024 words wrong
+  FAIL concurrent i686 seh seh.div0: caught=0 code=00000000 (want c0000094) address=00000000 pc=00000000
+  FAIL concurrent i686 vulkan vulkan.fill_copy_buffer: vkCmdFillBuffer x2 + vkCmdCopyBuffer at offsets: 48 of 1024 words wrong
+ladder: wrote /Users/jess/mproton/results/ladder-2026-11-07-mproton/summary.md

@@ -102,3 +102,15 @@ Runtime knobs pass straight through to the bundle:
 3. Does `lsof -p <pid> | grep -i dxgi.dll` show `lib/wine/dxgi/<impl>/`?
 4. Does the user directory come out as `drive_c/users/<your login>`? Proton prefixes use `steamuser`, which Steam Cloud path mapping expects. If the names differ, Cloud sync needs a fix.
 5. With `steam.exe` installed in the bundle ([jesscarter/mproton#5](https://github.com/jesscarter/mproton/pull/5)), does the game start through `c:\windows\system32\steam.exe`, and does `steam.exe` find `steamclient.dylib`?
+
+Answers from the first runs (2026-11-07): 1 yes; 4 it is `steamuser`; 5 yes, and `steamclient_init` loads the Mac `steamclient.dylib`.
+
+## Games tested
+
+Our bundle (signed with the paid-team profile), `launcher/mproton waitforexitandrun`, Windows depots fetched with the Steam console's `download_depot <appid> <depot>`, Mac Steam running. Apple M2, macOS 27.2.
+
+| Date | Game (app / depot) | Engine, arch, API | Result |
+|---|---|---|---|
+| 2026-11-07 | Queen's Domain Demo (4081520 / 4081521) | UE4, x86_64, D3D11 | Renders, sound works. Steam API connected after the steamclient stand-ins (pipe, user, persona, `BIsSubscribed`, stats received, callback loop) |
+| 2026-11-07 | ULTRAKILL Demo (1230260 / 1230261) | Unity 2019.4 (Mono), x86_64, D3D11 FL 11.1 | Plays fine. No Steam API in the demo. Player.log: Discord SDK init fails (Discord not running), 50 `NullReferenceException`s from game scripts, "Uploading Crash Report" is Unity's exception reporter, not a crash. Unity prints the GPU vendor as garbage (DXMT adapter vendor string) |
+| 2026-11-07 | Emily is Away (417860 / 417861) | Unity 2017, **i386** (WoW64), D3D11 | Looks right. First 32-bit game with Steam: i386 stand-in -> WoW64 lsteamclient -> Mac client (SteamClient020, user, stats, utils, callback loop). No achievement calls happened in the session |
