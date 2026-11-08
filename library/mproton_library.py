@@ -467,8 +467,10 @@ def build_env(appid, gs, paths):
     env.update(extra)
     if gs.get("winedebug", "").strip():
         env["WINEDEBUG"] = gs["winedebug"].strip()
+    # launcher/ carries its own filelock.py; ref/proton is only an optional override
+    if paths.get("proton_ref"):
+        env["PYTHONPATH"] = paths["proton_ref"]
     env.update({
-        "PYTHONPATH": paths["proton_ref"],
         "MPROTON_WINE_DIR": paths["wine_dir"],
         "STEAM_COMPAT_DATA_PATH": str(PREFIXES / str(appid)),
         "SteamAppId": str(appid),
@@ -496,7 +498,7 @@ class Runs:
     def start(self, game):
         appid = game["appid"]
         paths = resolve_paths()
-        missing = [k for k in ("launcher", "proton_ref", "wine_dir") if not paths[k]]
+        missing = [k for k in ("launcher", "wine_dir") if not paths[k]]
         if missing:
             raise RuntimeError("not found: " + ", ".join(missing) + " (set them in Paths)")
         launch = game["launch"]

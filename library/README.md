@@ -20,7 +20,7 @@ This creates `~/Applications/mproton Library.app`, a small script bundle that ru
 
 ## What you need
 
-- A built, signed mach9 bundle (`build/mproton-build.sh`, see [../docs/building.md](../docs/building.md)) and Proton's reference tree in `ref/proton` (`scripts/setup.sh`). The library looks for these in this checkout first, then in `~/mproton`, so it also works from a git worktree, which has no `ref/` or `work/`. You can change the paths with the **Paths** button.
+- A signed mproton Wine bundle: either a [release download](https://github.com/jesscarter/mproton/releases) (set its `wine` folder with the **Paths** button, or start the library with `MPROTON_WINE_DIR=/path/to/wine`), or your own build (`build/mproton-build.sh`, see [../docs/building.md](../docs/building.md)). The library looks for a build in this checkout first, then in `~/mproton`, so it also works from a git worktree, which has no `work/`. The launcher carries its own `filelock.py`; a Proton reference tree in `ref/proton` is optional and only used if present.
 - Steam for Mac, running and signed in, if the game uses the Steam API. The library never asks for or enters Steam credentials.
 - Nothing else. The library uses only the Python standard library. `mproton-library` uses Homebrew's `python3` if it is installed, otherwise `/usr/bin/python3`. The launcher runs under the same Python.
 
@@ -56,7 +56,7 @@ If there is no launch config, the library guesses: it picks the shallowest `.exe
 
 ```bash
 cd <exe folder or Steam's workingdir>
-PYTHONPATH=<ref/proton> MPROTON_WINE_DIR=<bundle> \
+MPROTON_WINE_DIR=<bundle> \
 STEAM_COMPAT_DATA_PATH=~/mproton-prefixes/<appid> SteamAppId=<appid> SteamGameId=<appid> PROTON_LOG=1 \
   <python3> launcher/mproton waitforexitandrun <exe> [Steam's args] [your extra args]
 ```

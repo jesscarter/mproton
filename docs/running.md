@@ -45,12 +45,6 @@ mkdir -p "$STEAM_COMPAT_DATA_PATH"
 
 `MPROTON_WINE_DIR` can be the bundle itself or a directory that contains it as `wine/`. If you don't set it, the launcher looks for `wine/`, then `files/`, next to itself.
 
-When running from a repo checkout rather than a dist, the launcher's `import filelock` needs Proton's copy on the path:
-
-```bash
-export PYTHONPATH=$PWD/ref/proton
-```
-
 Then start the game:
 
 ```bash
@@ -114,3 +108,5 @@ Our bundle (signed with the paid-team profile), `launcher/mproton waitforexitand
 | 2026-11-07 | Queen's Domain Demo (4081520 / 4081521) | UE4, x86_64, D3D11 | Renders, sound works. Steam API connected after the steamclient stand-ins (pipe, user, persona, `BIsSubscribed`, stats received, callback loop) |
 | 2026-11-07 | ULTRAKILL Demo (1230260 / 1230261) | Unity 2019.4 (Mono), x86_64, D3D11 FL 11.1 | Plays fine. No Steam API in the demo. Player.log: Discord SDK init fails (Discord not running), 50 `NullReferenceException`s from game scripts, "Uploading Crash Report" is Unity's exception reporter, not a crash. Unity prints the GPU vendor as garbage (DXMT adapter vendor string) |
 | 2026-11-07 | Emily is Away (417860 / 417861) | Unity 2017, **i386** (WoW64), D3D11 | Looks right. First 32-bit game with Steam: i386 stand-in -> WoW64 lsteamclient -> Mac client (SteamClient020, user, stats, utils, callback loop). No achievement calls happened in the session |
+| 2026-11-07 | Lunacid (1745510, Windows build installed by Steam) | Unity 2020.3 (Mono), x86_64, D3D11 | Works (run from mproton Library). Ships `steam_api64.dll`; Steam connection not checked (no `+steamclient` trace) |
+| 2026-11-07 | Castlevania: Belmont's Curse (4231820, Windows build installed by Steam) | Unity 2022.3 (IL2CPP), x86_64, D3D11 FL 11.1 | Works (run from mproton Library). **Bug:** the resolution setting in the video options shows no resolution; display-mode enumeration (winemac.drv / DXMT `GetDisplayModeList`) not yet investigated. Steam connection not checked |
