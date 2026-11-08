@@ -8,6 +8,7 @@ Experimental: Proton-style Windows game compatibility for Apple Silicon Macs (M1
 - `launcher/`: `mproton`, the macOS port of Proton's launcher script ([launcher/README.md](launcher/README.md)); tests in `tests/` (`python3 -m pytest tests`)
 - [docs/wine-patch-triage.md](docs/wine-patch-triage.md): Proton's Wine fork vs the macOS ARM64 patch stacks (`wine-patches/`)
 - [docs/wine-tree.md](docs/wine-tree.md): the mproton Wine tree, Proton's Wine patches on athei's arm64 Wine (`wine/`: patch series, `apply.sh`, per-commit status)
+- `library/`: mproton Library, a local web app with Play/Stop buttons, per-game settings, logs, reports and a Windows-downloads switch for games already on the Mac ([library/README.md](library/README.md))
 - [docs/building.md](docs/building.md): `build/mproton-build.sh` builds the whole Wine bundle on the Mac (mach9 + Proton Wine series + DXVK + lsteamclient)
 - `scripts/setup.sh`: fetch the toolchain (llvm-mingw) and the upstream Proton reference clone
 - `steam/`: Proton's `lsteamclient` and `steam_helper` (`steam.exe`) ported to arm64 macOS, with a standalone Wine-SDK build and struct-layout (ABI) checks against the macOS Steamworks ABI ([steam/README.md](steam/README.md))

@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>mproton Library</title>
+<style>
+:root {
+  --bg: #f5f5f7; --panel: #ffffff; --text: #1d1d1f; --muted: #6e6e73; --line: #d2d2d7;
+  --accent: #0a66d8; --accent-text: #fff; --ok: #1f8a3b; --warn: #b25e00; --bad: #c4231c;
+  --chip: #ececf0; --code: #f0f0f3;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #161618; --panel: #222225; --text: #f2f2f4; --muted: #a1a1a6; --line: #3a3a3e;
+    --accent: #3b8cff; --accent-text: #fff; --ok: #4cc66a; --warn: #f0a440; --bad: #ff6b60;
+    --chip: #313135; --code: #1a1a1c;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text);
+  font: 14px/1.45 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif; }
+header { position: sticky; top: 0; z-index: 5; background: var(--panel); border-bottom: 1px solid var(--line);
+  padding: 10px 20px; display: flex; flex-wrap: wrap; gap: 10px 22px; align-items: center; }
+header h1 { font-size: 17px; margin: 0 8px 0 0; }
+.stat { display: flex; align-items: center; gap: 6px; color: var(--muted); }
+.dot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); display: inline-block; }
+.dot.ok { background: var(--ok); } .dot.bad { background: var(--bad); } .dot.warn { background: var(--warn); }
+main { display: grid; grid-template-columns: minmax(260px, 380px) 1fr; gap: 18px; padding: 18px 20px; }
+@media (max-width: 820px) { main { grid-template-columns: 1fr; } }
+.list { display: flex; flex-direction: column; gap: 10px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; overflow: hidden;
+  display: flex; cursor: pointer; }
+.card.sel { outline: 2px solid var(--accent); }
+.card img, .card .ph { width: 140px; height: 66px; object-fit: cover; flex: none; background: var(--chip); }
+.card .ph { display: flex; align-items: center; justify-content: center; font-weight: 600; color: var(--muted); }
+.card .body { padding: 6px 10px; min-width: 0; flex: 1; display: flex; flex-direction: column; justify-content: center; }
+.card .name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card .meta { color: var(--muted); font-size: 12px; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; min-width: 0; }
+.panel h2 { margin: 0 0 2px; font-size: 20px; }
+.panel h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 20px 0 8px; }
+.hero { width: 100%; max-height: 180px; object-fit: cover; border-radius: 8px; margin-bottom: 12px; }
+button { font: inherit; border: 1px solid var(--line); background: var(--chip); color: var(--text);
+  border-radius: 7px; padding: 6px 12px; cursor: pointer; }
+button:hover { filter: brightness(0.96); }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); font-weight: 600; }
+button.danger { background: var(--bad); border-color: var(--bad); color: #fff; font-weight: 600; }
+button:disabled { opacity: .5; cursor: default; }
+.big { font-size: 16px; padding: 9px 26px; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+label { display: block; font-weight: 600; margin: 10px 0 4px; }
+.hint { color: var(--muted); font-size: 12px; font-weight: normal; }
+input[type=text], select, textarea { width: 100%; font: 13px ui-monospace, SFMono-Regular, Menlo, monospace;
+  padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--code); color: var(--text); }
+select { font-family: inherit; font-size: 14px; }
+textarea { min-height: 70px; }
+code, .mono { font: 12px ui-monospace, SFMono-Regular, Menlo, monospace; word-break: break-all; }
+.chip { display: inline-block; background: var(--chip); border-radius: 999px; padding: 1px 8px; font-size: 12px; color: var(--muted); }
+.state-running { color: var(--ok); font-weight: 600; } .state-bad { color: var(--bad); font-weight: 600; }
+table { border-collapse: collapse; width: 100%; } td { padding: 4px 6px; border-top: 1px solid var(--line); vertical-align: top; }
+pre.log { background: var(--code); border: 1px solid var(--line); border-radius: 6px; padding: 8px; max-height: 420px;
+  overflow: auto; font: 11.5px/1.35 ui-monospace, Menlo, monospace; white-space: pre-wrap; word-break: break-all; }
+.toggle { display: flex; align-items: center; gap: 8px; }
+.switch { position: relative; width: 40px; height: 22px; border-radius: 11px; background: var(--line); border: none; padding: 0; }
+.switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: #fff; transition: left .15s; }
+.switch.on { background: var(--warn); } .switch.on::after { left: 20px; }
+dialog { border: 1px solid var(--line); border-radius: 12px; background: var(--panel); color: var(--text); max-width: 560px; }
+dialog::backdrop { background: rgba(0,0,0,.35); }
+.banner { border-radius: 8px; padding: 8px 12px; margin: 0 20px; margin-top: 12px; background: var(--chip); }
+.banner.warn { border-left: 4px solid var(--warn); }
+.toast { position: fixed; bottom: 16px; right: 16px; background: var(--text); color: var(--bg); padding: 8px 14px;
+  border-radius: 8px; opacity: 0; transition: opacity .2s; max-width: 70vw; z-index: 20; }
+.toast.show { opacity: .95; }
+details summary { cursor: pointer; color: var(--muted); }
+</style>
+</head>
+<body>
+<header>
+  <h1>mproton Library</h1>
+  <span class="stat" id="st-steam"><span class="dot"></span><span>Steam…</span></span>
+  <span class="stat" id="st-bundle"><span class="dot"></span><span>Bundle…</span></span>
+  <span class="toggle" title="Mechanism A: @sSteamCmdForcePlatformType windows in steam_dev.cfg">
+    <button class="switch" id="dev-switch" aria-label="Windows downloads"></button>
+    <span id="dev-label">Windows downloads</span>
+  </span>
+  <span style="flex:1"></span>
+  <button id="btn-refresh" title="Rescan games and re-fetch Steam launch configs">Refresh</button>
+  <button id="btn-reports">Reports folder</button>
+  <button id="btn-paths">Paths</button>
+  <button id="btn-quit" title="Stop the library server. Running games keep running.">Quit</button>
+</header>
+<div id="banners"></div>
+<main>
+  <div class="list" id="games"><div class="hint">Scanning…</div></div>
+  <div class="panel" id="detail"><div class="hint">Pick a game.</div></div>
+</main>
+
+<dialog id="dev-dialog">
+  <h3 style="margin-top:0" id="dd-title">Turn on Windows downloads?</h3>
+  <div id="dd-body"></div>
+  <div class="row" style="justify-content:flex-end;margin-top:14px">
+    <button id="dd-cancel">Cancel</button>
+    <button class="primary" id="dd-ok">Turn on</button>
+  </div>
+</dialog>
+
+<dialog id="paths-dialog">
+  <h3 style="margin-top:0">Paths</h3>
+  <p class="hint">Leave a field empty to use the automatic choice (this checkout, then ~/mproton).</p>
+  <div id="paths-body"></div>
+  <div class="row" style="justify-content:flex-end;margin-top:14px">
+    <button id="pd-cancel">Close</button>
+    <button class="primary" id="pd-save">Save</button>
+  </div>
+</dialog>
+
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+const $ = (s, el = document) => el.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+let STATUS = null, GAMES = [], SEL = localStorage.getItem("sel") || null, OPENLOG = null;
+
+async function api(path, body) {
+  const opt = body === undefined ? {} : {method: "POST", headers: {"Content-Type": "application/json", "X-Mproton": "1"}, body: JSON.stringify(body)};
+  const r = await fetch(path, opt);
+  const j = await r.json().catch(() => ({error: r.statusText}));
+  if (!r.ok) throw new Error(j.error || r.statusText);
+  return j;
+}
+function toast(msg, ms = 3500) {
+  const t = $("#toast"); t.textContent = msg; t.classList.add("show");
+  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("show"), ms);
+}
+function fmtSize(n) { return n > 1e6 ? (n/1e6).toFixed(1) + " MB" : n > 1e3 ? (n/1e3).toFixed(0) + " kB" : n + " B"; }
+
+function renderStatus() {
+  const s = STATUS;
+  const st = $("#st-steam");
+  st.querySelector(".dot").className = "dot " + (s.steam.running ? "ok" : "bad");
+  st.lastElementChild.textContent = s.steam.running ? "Steam running" : "Steam not running";
+  st.title = s.steam.running ? "steam_osx pid " + s.steam.pid : "Games still start, but the Steam API won't work until Steam is running and signed in.";
+  const b = s.bundle, sig = b.signature || {};
+  const bOk = b.exists && sig.valid && !sig.adhoc;
+  const bd = $("#st-bundle");
+  bd.querySelector(".dot").className = "dot " + (bOk ? "ok" : b.exists ? "warn" : "bad");
+  bd.lastElementChild.textContent = !b.exists ? "No bundle" : !sig.valid ? "Bundle: signature invalid" :
+    sig.adhoc ? "Bundle: ad hoc signed" : "Bundle signed (" + (sig.team || "?") + ")";
+  bd.title = (b.path || "no bundle found") + "\n" + (b.build_info || "") + (sig.verify_output ? "\n" + sig.verify_output : "");
+  const d = s.dev_cfg;
+  $("#dev-switch").classList.toggle("on", d.enabled);
+  $("#dev-switch").setAttribute("aria-pressed", d.enabled);
+  $("#dev-label").innerHTML = "Windows downloads: <b>" + (d.enabled ? "ON" : "off") + "</b>";
+  const ban = [];
+  if (d.restart_needed) ban.push(`<div class="banner warn"><b>Restart Steam</b> to apply the Windows-downloads change (Steam reads steam_dev.cfg only at start). Quit it from the menu bar (Steam → Quit Steam), then open it again.</div>`);
+  if (d.enabled) ban.push(`<div class="banner warn"><b>Windows downloads is on.</b> Steam acts as a Windows client for every game and does not self-update while <code>steam_dev.cfg</code> exists. Turn it off when you're done downloading.</div>`);
+  else if (d.exists) ban.push(`<div class="banner">Note: <code>${esc(d.path)}</code> exists with other settings (${d.other_lines} line(s)) that the library did not write, so Steam self-updates stay paused.</div>`);
+  if (!b.exists) ban.push(`<div class="banner warn">No mach9 bundle found. Build it with <code>build/mproton-build.sh</code>, or set its path under Paths.</div>`);
+  $("#banners").innerHTML = ban.join("");
+}
+
+function renderList() {
+  const el = $("#games");
+  if (!GAMES.length) { el.innerHTML = `<div class="panel hint">No Windows games found. Download one in Steam's console with <code>download_depot &lt;appid&gt; &lt;depot&gt;</code>, or turn on Windows downloads and install one, then press Refresh.</div>`; return; }
+  el.innerHTML = GAMES.map(g => {
+    const r = g.run, st = r.state === "running" ? `<span class="state-running">● running</span>` : r.state === "stopping" ? "stopping…" :
+      r.state === "exited" ? `exited ${r.exit_code}` : "";
+    const img = g.has_icon ? `<img src="/api/icon/${g.appid}" alt="">` : `<div class="ph">${esc(g.name.slice(0,2))}</div>`;
+    return `<div class="card ${g.appid === SEL ? "sel" : ""}" data-appid="${g.appid}">${img}
+      <div class="body"><div class="name">${esc(g.name)}</div>
+      <div class="meta">${g.appid} · ${g.source === "library" ? "Steam library" : "download_depot"} ${st ? "· " + st : ""}</div></div></div>`;
+  }).join("");
+  el.querySelectorAll(".card").forEach(c => c.onclick = () => { SEL = c.dataset.appid; localStorage.setItem("sel", SEL); OPENLOG = null; renderList(); renderDetail(true); });
+}
+
+function runLine(r) {
+  if (r.state === "idle") return `<span class="hint">Not started from the library yet.</span>`;
+  if (r.state === "running") return `<span class="state-running">● Running</span> since ${esc(r.started)} · pid ${r.pid}`;
+  if (r.state === "stopping") return `Stopping… (wineserver -k sent)`;
+  const ok = r.exit_code === 0;
+  return `<span class="${ok ? "" : "state-bad"}">Exited with code ${r.exit_code}</span> at ${esc(r.ended)}${r.stopped_by_user ? " (stopped by you)" : ""}`;
+}
+
+let detailKey = null;
+async function renderDetail(full) {
+  const g = GAMES.find(x => x.appid === SEL);
+  const el = $("#detail");
+  if (!g) { el.innerHTML = `<div class="hint">Pick a game.</div>`; return; }
+  const running = g.run.state === "running" || g.run.state === "stopping";
+  // Partial update while polling so typing in fields isn't interrupted.
+  const stKey = g.run.state + "|" + g.prefix_exists + "|" + (g.run.started || "");
+  if (!full && detailKey === g.appid && $("#run-line") && renderDetail.stKey === stKey) {
+    $("#run-line").innerHTML = runLine(g.run);
+    $("#btn-play").disabled = running || !g.launch.ok;
+    $("#btn-stop").disabled = !running && !g.prefix_exists;
+    if (running) loadLogs(g);
+    return;
+  }
+  // State changed (started, exited, prefix created): re-render, but keep unsaved field edits.
+  const keep = (detailKey === g.appid && $("#f-env")) ? Object.fromEntries(["backend", "winedebug", "env", "args", "exe"].map(k => [k, $("#f-" + k).value])) : null;
+  renderDetail.stKey = stKey;
+  detailKey = g.appid;
+  const L = g.launch, S = g.settings;
+  const backends = Object.entries(STATUS.backends).map(([k, v]) => `<option value="${k}" ${S.backend === k ? "selected" : ""}>${esc(v)}</option>`).join("");
+  el.innerHTML = `
+    ${g.has_icon ? `<img class="hero" src="/api/icon/${g.appid}" alt="">` : ""}
+    <h2>${esc(g.name)}</h2>
+    <div class="hint">appid ${g.appid} · ${g.source === "library" ? "installed in a Steam library" : "fetched with download_depot"}${g.verified_windows ? "" : " · <b>Windows build not verified</b> (no Steam launch config)"}</div>
+    <div class="row" style="margin-top:14px">
+      <button class="primary big" id="btn-play" ${running || !L.ok ? "disabled" : ""}>▶ Play</button>
+      <button class="danger" id="btn-stop" ${!running && !g.prefix_exists ? "disabled" : ""} title="wineserver -k for this game's prefix">■ Stop</button>
+      <span id="run-line">${runLine(g.run)}</span>
+    </div>
+    <div style="margin-top:10px" class="hint">Exe: <code>${esc(L.exe || "none")}</code> <span class="chip">${esc(L.source === "steam" ? "from Steam launch config" : L.source || "")}</span> ${esc(L.note)}<br>
+    Prefix: <code>${esc(g.prefix)}</code> ${g.prefix_exists ? "" : "(created on first Play; the first start takes longer)"}</div>
+    <div class="row" style="margin-top:8px">
+      <button data-open="gamedir">Game folder</button>
+      <button data-open="prefix" ${g.prefix_exists ? "" : "disabled"}>Prefix folder</button>
+      <button id="btn-relaunch" title="Re-fetch the Steam launch config for this game">Re-check launch config</button>
+    </div>
+
+    <h3>Logs</h3>
+    <div id="logs" class="hint">…</div>
+    <div class="row" style="margin-top:8px">
+      <button id="btn-report">Save report</button>
+      <span id="report-out" class="hint"></span>
+    </div>
+    <pre class="log" id="logview" hidden></pre>
+
+    <h3>Settings</h3>
+    <label for="f-backend">Graphics backend</label>
+    <select id="f-backend">${backends}</select>
+    <label for="f-winedebug">WINEDEBUG <span class="hint">empty = the launcher's PROTON_LOG default (+timestamp,+pid,+seh,+loaddll,…); e.g. <code>+steamclient,err</code></span></label>
+    <input type="text" id="f-winedebug" value="${esc(S.winedebug)}" placeholder="(launcher default)">
+    <label for="f-env">Extra environment <span class="hint">one KEY=VALUE per line, e.g. <code>PROTON_NO_D3D12=1</code>, <code>MPROTON_METAL_HUD=1</code>, <code>WINEMSYNC=0</code></span></label>
+    <textarea id="f-env" spellcheck="false">${esc(S.env)}</textarea>
+    <label for="f-args">Extra arguments <span class="hint">appended after Steam's launch arguments${L.args ? ` (<code>${esc(L.args)}</code>)` : ""}</span></label>
+    <input type="text" id="f-args" value="${esc(S.args)}">
+    <label for="f-exe">Launch exe override <span class="hint">empty = Steam's launch config; absolute path, or relative to the game folder</span></label>
+    <input type="text" id="f-exe" value="${esc(S.exe)}" placeholder="${esc(L.source === "override" ? "" : L.exe || "")}">
+    <div class="row" style="margin-top:12px"><button class="primary" id="btn-save">Save settings</button><span id="save-out" class="hint"></span></div>
+    ${g.run.cmd ? `<details style="margin-top:14px"><summary>Last command</summary><pre class="log">cd ${esc(g.run.cwd)}\n${esc(Object.entries(g.run.env).map(([k,v]) => k + "=" + JSON.stringify(v)).join(" \\\n"))} \\\n${esc(g.run.cmd.map(a => JSON.stringify(a)).join(" "))}</pre></details>` : ""}
+  `;
+  $("#btn-play").onclick = () => act(g, "play", "Starting " + g.name + "…");
+  $("#btn-stop").onclick = () => act(g, "stop", "Stopping (wineserver -k)…");
+  $("#btn-relaunch").onclick = async () => { try { await api(`/api/game/${g.appid}/refresh`, {}); await refresh(true); toast("Launch config re-checked"); } catch (e) { toast(e.message); } };
+  el.querySelectorAll("[data-open]").forEach(b => b.onclick = () => openPath({kind: b.dataset.open, appid: g.appid}));
+  $("#btn-save").onclick = async () => {
+    const body = {backend: $("#f-backend").value, winedebug: $("#f-winedebug").value, env: $("#f-env").value, args: $("#f-args").value, exe: $("#f-exe").value};
+    try { await api(`/api/game/${g.appid}/settings`, body); await refresh(true); $("#save-out").textContent = "Saved. Applies on the next Play."; }
+    catch (e) { $("#save-out").textContent = "Not saved: " + e.message; }
+  };
+  $("#btn-report").onclick = async () => {
+    $("#report-out").textContent = "Saving…";
+    try { const r = await api(`/api/game/${g.appid}/report`, {});
+      $("#report-out").innerHTML = `Saved <code>${esc(r.zip)}</code> <button id="btn-showzip">Show in Finder</button>`;
+      $("#btn-showzip").onclick = () => openPath({kind: "zip", appid: g.appid, path: r.zip});
+    } catch (e) { $("#report-out").textContent = "Failed: " + e.message; }
+  };
+  if (keep) for (const [k, v] of Object.entries(keep)) $("#f-" + k).value = v;
+  loadLogs(g);
+}
+
+async function loadLogs(g) {
+  let logs = [];
+  try { logs = await api(`/api/game/${g.appid}/logs`); } catch (e) {}
+  const el = $("#logs");
+  if (!el) return;
+  if (!logs.length) { el.innerHTML = "No logs yet. They appear after the first Play."; return; }
+  el.innerHTML = `<table>${logs.map(l => `<tr><td>${esc(l.label)}<br><span class="mono hint">${esc(l.path)}</span></td>
+    <td style="white-space:nowrap">${fmtSize(l.size)}<br><span class="hint">${esc(l.mtime.replace("T", " "))}</span></td>
+    <td style="white-space:nowrap"><button data-view="${l.id}">View</button> <button data-openlog="${l.id}">Open</button></td></tr>`).join("")}</table>`;
+  el.querySelectorAll("[data-view]").forEach(b => b.onclick = () => viewLog(g, +b.dataset.view));
+  el.querySelectorAll("[data-openlog]").forEach(b => b.onclick = () => openPath({kind: "log", appid: g.appid, id: +b.dataset.openlog}));
+  if (OPENLOG !== null) viewLog(g, OPENLOG, true);
+}
+async function viewLog(g, id, keep) {
+  const v = $("#logview");
+  if (!keep && OPENLOG === id && !v.hidden) { v.hidden = true; OPENLOG = null; return; }
+  try { const r = await api(`/api/game/${g.appid}/log?id=${id}`);
+    const atEnd = v.hidden || v.scrollTop + v.clientHeight >= v.scrollHeight - 20;
+    v.textContent = r.text; v.hidden = false; OPENLOG = id; if (atEnd) v.scrollTop = v.scrollHeight;
+  } catch (e) { toast(e.message); }
+}
+async function openPath(body) { try { await api("/api/open", body); } catch (e) { toast(e.message); } }
+async function act(g, what, msg) {
+  toast(msg);
+  try { await api(`/api/game/${g.appid}/${what}`, {}); } catch (e) { toast(e.message, 6000); }
+  await refresh(false);
+}
+
+async function refresh(full) {
+  try {
+    [STATUS, GAMES] = await Promise.all([api("/api/status"), api("/api/games")]);
+  } catch (e) { toast("Library server not reachable: " + e.message); return; }
+  if (!SEL && GAMES.length) SEL = GAMES[0].appid;
+  renderStatus(); renderList(); renderDetail(full);
+}
+
+// --- Windows downloads toggle
+$("#dev-switch").onclick = () => {
+  const on = STATUS.dev_cfg.enabled;
+  $("#dd-title").textContent = on ? "Turn off Windows downloads?" : "Turn on Windows downloads?";
+  $("#dd-ok").textContent = on ? "Turn off" : "Turn on";
+  $("#dd-body").innerHTML = on ? `
+    <p>This removes the line <code>@sSteamCmdForcePlatformType windows</code> from <code class="mono">${esc(STATUS.dev_cfg.path)}</code>.
+    If the library created that file and nothing else is in it, the file is deleted, so Steam self-updates again.</p>
+    <p><b>Restart Steam afterwards.</b> Games you installed as Windows builds stay Windows builds until Steam updates or verifies them.</p>` : `
+    <p>This adds one line, <code>@sSteamCmdForcePlatformType windows</code>, to <code class="mono">${esc(STATUS.dev_cfg.path)}</code> (creating the file if needed). A backup of the current file is kept.</p>
+    <ul>
+      <li><b>It is global.</b> After a restart, the whole Steam client acts as a Windows client: it offers Install for Windows games and downloads Windows depots for <i>every</i> game. Games that have a Mac build may be switched to their Windows build when they update.</li>
+      <li><b>Steam stops updating itself</b> while <code>steam_dev.cfg</code> exists.</li>
+      <li><b>You must restart Steam</b> for it to take effect (Steam → Quit Steam, then open it again).</li>
+    </ul>
+    <p>Turn it off again when you've finished downloading.</p>`;
+  $("#dev-dialog").showModal();
+};
+$("#dd-cancel").onclick = () => $("#dev-dialog").close();
+$("#dd-ok").onclick = async () => {
+  $("#dev-dialog").close();
+  try { const r = await api("/api/devcfg", {enabled: !STATUS.dev_cfg.enabled});
+    toast("Windows downloads " + (r.enabled ? "ON" : "off") + ". Restart Steam to apply.", 6000); }
+  catch (e) { toast(e.message, 6000); }
+  refresh(false);
+};
+
+// --- paths
+$("#btn-paths").onclick = () => {
+  const p = STATUS.paths;
+  const f = (k, label) => `<label for="p-${k}">${label}</label><input type="text" id="p-${k}" placeholder="${esc(p[k] || "not found")}" value="">`;
+  $("#paths-body").innerHTML = f("launcher", "launcher/mproton") + f("proton_ref", "Proton reference tree (PYTHONPATH)") +
+    f("wine_dir", "mach9 bundle (MPROTON_WINE_DIR)") + f("python", "Python for the launcher") +
+    `<p class="hint">Currently: prefixes in <code>${esc(p.prefixes)}</code>, reports in <code>${esc(p.reports)}</code>, library state in <code>${esc(p.state_dir)}</code>.</p>`;
+  $("#paths-dialog").showModal();
+};
+$("#pd-cancel").onclick = () => $("#paths-dialog").close();
+$("#pd-save").onclick = async () => {
+  const body = {};
+  for (const k of ["launcher", "proton_ref", "wine_dir", "python"]) { const v = $("#p-" + k).value.trim(); if (v) body[k] = v; }
+  try { await api("/api/paths", body); toast("Paths saved"); } catch (e) { toast(e.message); }
+  $("#paths-dialog").close(); refresh(true);
+};
+$("#btn-refresh").onclick = async () => { toast("Rescanning…"); try { await api("/api/refresh", {}); } catch (e) { toast(e.message); } refresh(true); };
+$("#btn-reports").onclick = () => openPath({kind: "reports"});
+$("#btn-quit").onclick = async () => {
+  const running = (STATUS && STATUS.running.length) ? "\n\nGames still running keep running; use Stop first if you want them closed." : "";
+  if (!confirm("Quit mproton Library?" + running)) return;
+  try { await api("/api/quit", {}); } catch (e) {}
+  document.body.innerHTML = '<div class="panel" style="margin:40px auto;max-width:520px">mproton Library has quit. Start it again with <code>library/mproton-library</code> or the mproton Library app.</div>';
+};
+
+refresh(true);
+setInterval(() => { if (!document.hidden && !$("dialog[open]")) refresh(false); }, 2500);
+</script>
+</body>
+</html>

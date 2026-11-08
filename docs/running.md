@@ -1,5 +1,7 @@
 # Running a game by hand on a mach9 bundle
 
+To do the same with buttons (game list, Play/Stop, settings, logs, reports), use [mproton Library](../library/README.md): `library/mproton-library`.
+
 How to start a Windows game on an Apple Silicon Mac with `launcher/mproton` and a mach9 Wine bundle, without Steam's compatibility-tool plumbing. For the Steam side, see [steam-integration.md](steam-integration.md). For how the launcher maps settings onto mach9, see [launcher/README.md](../launcher/README.md#mach9-bundle).
 
 Status: the launcher logic is covered by the pytest suite on Linux, using mocked bundles. On 2026-11-07 it drove our signed bundle on the Mac for the first time: prefix creation, compatdb rules, `steam.exe` registry init and the Steam API all worked with `steam/tests/redirect/out/x86_64/connect_test.exe --stats` (`SteamAppId=SteamGameId=480`). The game's console output does not reach the terminal through `steam.exe`; use `PROTON_LOG=1`. The checklist at the end lists what to look at the first time.
