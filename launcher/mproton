@@ -1601,6 +1601,14 @@ def default_compat_config():
                 ]:
             ret.add("fnad3d11")
 
+        #mproton: emulated modesetting (win32u's virtual mode list). macOS lists only the
+        #panel's scaled modes, none of them 16:9 on most MacBooks, and these games offer
+        #only 16:9 resolutions (an empty list otherwise). PROTON_EMULATE_MODESET=0 turns it off.
+        if appid in [
+                "4231820", #Castlevania: Belmont's Curse (Unity, VideoSettings.supportOnly16By9)
+                ]:
+            ret.add("emulatemodeset")
+
     #options to also be enabled for prerequisite setup steps
     ret.add("gamedrive")
 
@@ -1967,6 +1975,7 @@ class Session:
         self.check_environment("PROTON_DISABLE_NVAPI", "disablenvapi")
         self.check_environment("PROTON_FORCE_NVAPI", "forcenvapi")
         self.check_environment("PROTON_HIDE_APU", "hideapu")
+        self.check_environment("PROTON_EMULATE_MODESET", "emulatemodeset") #mproton
         #mproton: extra graphics backends, in the style of PROTON_USE_WINED3D
         for (env_name, config_name) in mproton_graphics.BACKEND_ENV_VARS:
             self.check_environment(env_name, config_name)
@@ -2140,6 +2149,12 @@ class Session:
 
         if "noopwr" in self.compat_config:
             self.env["WINE_DISABLE_VULKAN_OPWR"] = "1"
+
+        #mproton: read by win32u in every process of the launch (wine/patches, "mproton: win32u:
+        #Let WINE_EMULATE_MODESET override ..."); explorer.exe builds the mode list, so a
+        #per-exe registry key would not reach it
+        if "emulatemodeset" in self.compat_config:
+            self.env.setdefault("WINE_EMULATE_MODESET", "1")
 
         if "PROTON_USE_XALIA" not in self.env:
             if "noxalia" in self.compat_config:

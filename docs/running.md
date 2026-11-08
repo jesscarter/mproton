@@ -88,6 +88,7 @@ Runtime knobs pass straight through to the bundle:
 - `WINENCPU=<n>` limits the reported CPU count. `PROTON_CPU_TOPOLOGY=<n>:…` sets it too.
 - `FEX_HARDWARE_TSO=0` makes FEX emulate x86 memory ordering instead of using hardware TSO.
 - `VK_DRIVER_FILES` replaces the bundled KosmicKrisp driver.
+- `PROTON_EMULATE_MODESET=1` gives the game Wine's emulated display modes (it sets `WINE_EMULATE_MODESET=1`, which a patch in our Wine series adds). Instead of the Mac's own scaled modes, the game sees win32u's standard list up to the desktop size, including 16:9 sizes such as 1280x720 and 960x540, and mode changes don't touch the Mac's display. `=0` turns it off for games that have it on by default. Use it when a game's resolution list is empty or lacks 16:9 sizes; see [display-modes.md](display-modes.md).
 
 ## First-run checklist on a Mac
 

@@ -91,6 +91,18 @@ def test_compat_tables_still_apply(darwin):
     assert s.env["WINE_CPU_TOPOLOGY"] == "16"
 
 
+def test_emulate_modeset_default_and_override(darwin):
+    assert "WINE_EMULATE_MODESET" not in darwin.start().env
+    s = darwin.start(SteamAppId="4231820", SteamGameId="4231820")  # Castlevania: Belmont's Curse
+    assert "emulatemodeset" in s.compat_config
+    assert s.env["WINE_EMULATE_MODESET"] == "1"
+    s = darwin.start(SteamAppId="4231820", SteamGameId="4231820", PROTON_EMULATE_MODESET="0")
+    assert "emulatemodeset" not in s.compat_config
+    assert "WINE_EMULATE_MODESET" not in s.env
+    s = darwin.start(PROTON_EMULATE_MODESET="1")
+    assert s.env["WINE_EMULATE_MODESET"] == "1"
+
+
 def test_default_overrides(darwin):
     o = overrides(darwin.start())
     assert o["steam.exe"] == "b"

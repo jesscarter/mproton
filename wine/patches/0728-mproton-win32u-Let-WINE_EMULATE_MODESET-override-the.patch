@@ -1,0 +1,44 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: jess <15219610+jesscarter@users.noreply.github.com>
+Date: Sat, 7 Nov 2026 22:08:35 -0500
+Subject: [PATCH] mproton: win32u: Let WINE_EMULATE_MODESET override the
+ EmulateModeset setting.
+
+The display mode list is built by whichever process refreshes the display
+cache, usually explorer.exe, so an AppDefaults\<game>.exe\X11 Driver key
+does not reach it; only the prefix-wide key does. An environment variable is
+seen by every process of a launch and leaves the prefix untouched, so a
+launcher can turn emulated modesetting on for one game.
+
+With it on, the mode list is win32u's virtual one, which has the usual 16:9,
+4:3 and 16:10 sizes up to the host mode. macOS lists only the panel's own
+scaled modes (on a 1470x956 MacBook Air none is 16:9), and games that only
+offer 16:9 resolutions (Castlevania: Belmont's Curse) show an empty list.
+---
+ dlls/win32u/sysparams.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/dlls/win32u/sysparams.c b/dlls/win32u/sysparams.c
+index 1fdb691a112..9476acd164d 100644
+--- a/dlls/win32u/sysparams.c
++++ b/dlls/win32u/sysparams.c
+@@ -6047,6 +6047,7 @@ void sysparams_init(void)
+     pthread_mutexattr_t attr;
+     HKEY hkey, appkey = 0;
+     DWORD len;
++    const char *env;
+ 
+     static const WCHAR oneW[] = {'1',0};
+     static const WCHAR x11driverW[] = {'\\','X','1','1',' ','D','r','i','v','e','r',0};
+@@ -6147,6 +6148,11 @@ void sysparams_init(void)
+         decorated_mode = IS_OPTION_TRUE( buffer[0] );
+     if (!get_config_key( hkey, appkey, "EmulateModeset", buffer, sizeof(buffer) ))
+         emulate_modeset = IS_OPTION_TRUE( buffer[0] );
++    /* The display mode list is built by whichever process refreshes the display cache
++     * (usually explorer.exe), so a per-application key does not reach it. An environment
++     * variable is seen by every process of a launch and leaves the prefix untouched. */
++    if ((env = getenv( "WINE_EMULATE_MODESET" )) && *env)
++        emulate_modeset = IS_OPTION_TRUE( env[0] );
+ 
+ #undef IS_OPTION_TRUE
+ 
