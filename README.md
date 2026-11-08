@@ -4,7 +4,7 @@
 
 mproton brings the pieces that make Valve's [Proton](https://github.com/ValveSoftware/Proton) work on the Steam Deck (its Wine patches, its Steam bridge and its launcher) to macOS on Apple Silicon. It builds on athei's [mach9](https://github.com/athei/mach9) ARM64 Wine stack: Wine runs natively on arm64, x86 game code runs under [FEX](https://github.com/FEX-Emu/FEX), and Direct3D goes to Metal through DXMT, or to Vulkan (KosmicKrisp) through DXVK and vkd3d-proton.
 
-> **Status: experimental.** It runs real games on the author's M2, but it's early. There are no prebuilt downloads yet, and building it needs a paid Apple Developer membership (see [Requirements](#requirements)).
+> **Status: experimental.** It runs real games on the author's M2, but it's early. Signed, notarized builds are on the [Releases](https://github.com/jesscarter/mproton/releases) page.
 
 ## What works
 
@@ -15,6 +15,8 @@ Tested on an Apple M2 with macOS 27.2 (November 2026):
 | Queen's Domain Demo | Unreal Engine 4 | x86_64 | D3D11 | ✅ connected | Runs, with sound |
 | ULTRAKILL Demo | Unity 2019 | x86_64 | D3D11 | (demo has none) | Plays fine |
 | Emily is Away | Unity 2017 | **32-bit** | D3D11 | ✅ connected | Runs correctly |
+| Lunacid | Unity 2020 | x86_64 | D3D11 | not checked | Works |
+| Castlevania: Belmont's Curse | Unity 2022 | x86_64 | D3D11 | not checked | Works; the resolution menu shows no resolutions |
 
 **The Steam side works too:** lsteamclient talks to the running Mac Steam client from both 64-bit and 32-bit games. A test program unlocked, stored and cleared a Steam achievement through it on both. Details and the list of games tried are in [docs/running.md](docs/running.md#games-tested).
 
@@ -27,22 +29,22 @@ Tested on an Apple M2 with macOS 27.2 (November 2026):
 ## Requirements
 
 - An Apple Silicon Mac (M1 or newer) with **macOS 26.4 or newer**.
-- **Full Xcode**, Homebrew, Rust and a few build tools: see [docs/building.md](docs/building.md#prerequisites).
-- **A paid Apple Developer Program membership.** Wine's loader needs Apple's `com.apple.developer.cross-architecture-support` entitlement, which only works through a provisioning profile from a paid team. A free Personal Team doesn't qualify ([why](docs/m0-baseline.md#signing-is-a-hard-requirement)). The only alternative is an ad-hoc signature with SIP disabled and an AMFI boot-arg, which weakens your Mac's security a lot. Use it only on a dedicated test machine.
 - Steam for Mac, signed in, for games that use the Steam API.
+- `git` and `python3`, both of which come with Apple's Command Line Tools (`xcode-select --install`).
+
+That's all you need to use a release. Building mproton yourself needs more, see [Building it yourself](#building-it-yourself).
 
 ## Getting started
 
-1. **Build the bundle** (about 25 minutes the first time, minutes after that):
+1. **Download mproton.** Get `mproton-<version>-macos-arm64.tar.xz` from [Releases](https://github.com/jesscarter/mproton/releases) and double-click it to unpack. You get a `wine` folder; move it somewhere permanent, such as `~/mproton-wine`. It's signed and notarized, so macOS opens it without warnings.
+
+2. **Get the launcher and the app:**
 
    ```bash
-   scripts/setup.sh
-   LOADER_PROFILE=~/signing/mproton-loader.provisionprofile build/mproton-build.sh
+   git clone https://github.com/jesscarter/mproton.git
    ```
 
-   Getting the provisioning profile from Xcode is described in [docs/m0-baseline.md](docs/m0-baseline.md#signing-is-a-hard-requirement), and the full build guide is [docs/building.md](docs/building.md). The result is a Wine bundle in `work/mach9/dist/wine`.
-
-2. **Get a game's Windows build.** In Steam, open the console (`steam://open/console` in a browser) and download the Windows depot of a game you own:
+3. **Get a game's Windows build.** Either turn on the **Windows downloads** switch in mproton Library (step 4) and press Install in Steam, or open Steam's console (`steam://open/console` in a browser) and download the Windows depot of a game you own:
 
    ```
    download_depot <appid> <depotid>
@@ -50,13 +52,27 @@ Tested on an Apple M2 with macOS 27.2 (November 2026):
 
    Depot IDs are listed on SteamDB or by `https://api.steamcmd.net/v1/info/<appid>`.
 
-3. **Play it** with mproton Library, a small local app with a game list and Play/Stop buttons:
+4. **Play it** with mproton Library, a small local app with a game list and Play/Stop buttons:
 
    ```bash
-   library/mproton-library
+   MPROTON_WINE_DIR=~/mproton-wine mproton/library/mproton-library
    ```
 
    Or run a game by hand with the launcher: see [docs/running.md](docs/running.md).
+
+## Building it yourself
+
+Only needed if you want to change mproton itself:
+
+- **Full Xcode**, Homebrew, Rust and a few build tools: see [docs/building.md](docs/building.md#prerequisites).
+- **A paid Apple Developer Program membership.** Wine's loader needs Apple's `com.apple.developer.cross-architecture-support` entitlement, which only works through a provisioning profile from a paid team. A free Personal Team doesn't qualify ([why](docs/m0-baseline.md#signing-is-a-hard-requirement)). The only alternative is an ad-hoc signature with SIP disabled and an AMFI boot-arg, which weakens your Mac's security a lot. Use it only on a dedicated test machine.
+
+```bash
+scripts/setup.sh
+LOADER_PROFILE=~/signing/mproton-loader.provisionprofile build/mproton-build.sh
+```
+
+The full guide is [docs/building.md](docs/building.md). `build/mproton-release.sh <tag>` turns a bundle signed with a Developer ID profile into a notarized release.
 
 ## How it fits together
 
