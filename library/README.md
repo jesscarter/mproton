@@ -113,7 +113,7 @@ Only that one line is changed:
 - If the file already exists, every other line is left exactly as it was. If the file already set `@sSteamCmdForcePlatformType` to another value, that line is replaced in place, and put back when you turn the switch off.
 - Before every change, a copy of the old file (or a note that there was no file) goes to `~/Library/Application Support/mproton-library/steam_dev.cfg.backups/`.
 
-Games you installed as Windows builds stay Windows builds after you turn it off, until Steam updates or verifies them.
+Not yet tested: what Steam does with a game installed as a Windows build after the switch is turned off. It may keep that build until the game updates or you verify its files, and then replace it with the Mac build. Games fetched with `download_depot` are not affected either way, because Steam does not manage `steamapps/content`.
 
 The library never patches, injects into or otherwise changes the Steam client (Mechanism B is not used).
 
