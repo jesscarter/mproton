@@ -60,6 +60,8 @@ The setting is the registry value `HKCU\Software\Wine\X11 Driver\EmulateModeset`
 - **Wine series:** `mproton: win32u: Let WINE_EMULATE_MODESET override the EmulateModeset setting.` `sysparams_init` reads `WINE_EMULATE_MODESET` after the registry. Every process of a launch has it, explorer.exe included.
 - **Launcher:** compat option `emulatemodeset` sets `WINE_EMULATE_MODESET=1`. It is on by default for 4231820. `PROTON_EMULATE_MODESET=1` turns it on for any game and `=0` turns it off.
 
+Checked in the game (2026-11-07): the menu shows 1280x720. That is its only entry, so the arrows don't change it. The emulated 960x540 isn't offered, presumably because the game has a minimum size; this is inferred, not read from its code. 1280x720 is the largest 16:9 size, because the virtual list stops at the 1470x956 desktop. Larger 16:9 sizes (1920x1080) would need the list to go up to the panel's 2560x1664 pixel modes, or Wine's Retina mode.
+
 With the rebuilt bundle and `PROTON_EMULATE_MODESET=1`, the probe lists the 13 sizes above in GDI and DXGI, on both x86_64 and i686.
 
 ## Upstream
