@@ -171,7 +171,7 @@ Without an injector, only Kaon's `steam_dev.cfg` route is available. It gives Wi
   - Gatekeeper and the Steam bootstrapper may "repair" the bundle.
   - Anything that relies on Steam's Team ID may behave differently (Keychain items, the overlay injector).
 - **No anti-cheat** *(source: NotProton README)*: VAC is not supported, and the port plan already excludes kernel anti-cheat.
-- **`legacycompat/`** *(inference)*: upstream copies `steamclient.dll`, `steamclient64.dll`, `Steam.dll` and `SteamService.exe` from `$STEAM_COMPAT_CLIENT_INSTALL_PATH/legacycompat/`. It is unknown whether the macOS client ships that directory. The launcher tolerates its absence (`os.path.isfile` checks), but games that load `steamclient.dll` directly will need those Windows binaries from somewhere.
+- **`legacycompat/`** *(answered 2026-11-07: the macOS client has no `legacycompat/` and no Windows steamclient at all. The launcher now copies the bundle's stand-ins from `lib/mproton/steamclient/` instead; see `steam/steamclient_stub/`.)* Upstream copies `steamclient.dll`, `steamclient64.dll`, `Steam.dll` and `SteamService.exe` from `$STEAM_COMPAT_CLIENT_INSTALL_PATH/legacycompat/`. It is unknown whether the macOS client ships that directory. The launcher tolerates its absence (`os.path.isfile` checks), but games that load `steamclient.dll` directly will need those Windows binaries from somewhere.
 
 ## Must verify on a Mac
 

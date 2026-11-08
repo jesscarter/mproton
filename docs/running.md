@@ -2,7 +2,7 @@
 
 How to start a Windows game on an Apple Silicon Mac with `launcher/mproton` and a mach9 Wine bundle, without Steam's compatibility-tool plumbing. For the Steam side, see [steam-integration.md](steam-integration.md). For how the launcher maps settings onto mach9, see [launcher/README.md](../launcher/README.md#mach9-bundle).
 
-Status: the launcher logic is covered by the pytest suite on Linux, using mocked bundles. It has **not** yet driven a real bundle on a Mac. The checklist at the end lists what to look at the first time.
+Status: the launcher logic is covered by the pytest suite on Linux, using mocked bundles. On 2026-11-07 it drove our signed bundle on the Mac for the first time: prefix creation, compatdb rules, `steam.exe` registry init and the Steam API all worked with `steam/tests/redirect/out/x86_64/connect_test.exe --stats` (`SteamAppId=SteamGameId=480`). The game's console output does not reach the terminal through `steam.exe`; use `PROTON_LOG=1`. The checklist at the end lists what to look at the first time.
 
 ## 1. Get a bundle
 
@@ -19,7 +19,7 @@ Optional: to give games the Steam API, install `steam.exe` and `lsteamclient` (`
 make -C steam install WINE_SRC=/path/to/wine WINE_OBJ=/path/to/wine-build DESTDIR=$MPROTON_WINE_DIR
 ```
 
-This adds files under `lib/wine/` and leaves `wine.app` alone. The launcher then starts games through `c:\windows\system32\steam.exe`. The steamclient → lsteamclient redirect does not fire on arm64 yet (open blocker in `steam/README.md`), so many games still won't see Steam.
+This adds files under `lib/wine/` and leaves `wine.app` alone. The launcher then starts games through `c:\windows\system32\steam.exe`. The steamclient → lsteamclient redirect works on arm64 since 2026-11-07, and Steam checks 2–4 pass ([steam/README.md](../steam/README.md)).
 
 ## 2. Install the game
 
@@ -42,6 +42,12 @@ mkdir -p "$STEAM_COMPAT_DATA_PATH"
 ```
 
 `MPROTON_WINE_DIR` can be the bundle itself or a directory that contains it as `wine/`. If you don't set it, the launcher looks for `wine/`, then `files/`, next to itself.
+
+When running from a repo checkout rather than a dist, the launcher's `import filelock` needs Proton's copy on the path:
+
+```bash
+export PYTHONPATH=$PWD/ref/proton
+```
 
 Then start the game:
 

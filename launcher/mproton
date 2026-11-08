@@ -1054,6 +1054,15 @@ class CompatData:
             srcfile = steam_linux_path + '/legacycompat/' + src
             if os.path.isfile(srcfile):
                 try_copy(srcfile, self.steam_in_pfx_dir + tgt, prefix=self.prefix_dir, track_file=tracked_files, link_debug=True)
+            elif g_proton.mach9 and src in ("steamclient.dll", "steamclient64.dll"): #mproton
+                #macOS Steam has no legacycompat/ (no Windows binaries at all).
+                #Without a steamclient(64).dll where SteamClientDll[64] points,
+                #steam_api fails and the game runs without Steam. The bundle's
+                #stand-ins only carry the export names; Wine's loader redirects
+                #them to lsteamclient (steam/steamclient_stub/).
+                stub = g_proton.mach9.path("lib/mproton/steamclient/" + src)
+                if os.path.isfile(stub):
+                    try_copy(stub, self.steam_in_pfx_dir + tgt, prefix=self.prefix_dir, track_file=tracked_files, link_debug=True)
 
         filestocopy = [("steamclient64.dll", "steamclient64.dll"),
                        ("GameOverlayRenderer.dll", "GameOverlayRenderer.dll"),

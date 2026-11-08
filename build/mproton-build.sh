@@ -511,6 +511,9 @@ steam_make() { # <make args>...
         UNIX_ARCHFLAGS="-arch arm64 -mmacosx-version-min=$(macos_floor)" "$@"
 }
 STEAM_OUTPUTS="aarch64-windows/lsteamclient.dll aarch64-windows/steam.exe i386-windows/lsteamclient.dll i386-windows/steam.exe aarch64-unix/lsteamclient.so"
+# x86 stand-ins for Valve's Windows steamclient(64).dll, installed into
+# lib/mproton/steamclient/ (not lib/wine: they must not be Wine builtins)
+STEAM_STUBS="steamclient/steamclient.dll steamclient/steamclient64.dll"
 
 do_steam() {
     local key f
@@ -533,7 +536,7 @@ do_steam() {
     stamp_clear steam
     [ "$CLEAN" -eq 0 ] || steam_make clean
     steam_make -j"$(ncpu)" all
-    for f in $STEAM_OUTPUTS; do
+    for f in $STEAM_OUTPUTS $STEAM_STUBS; do
         [ -f "$STEAM_O/$f" ] || die "steam/Makefile did not build $STEAM_O/$f"
     done
     "$MINGW_DIR/bin/llvm-readobj" --coff-load-config "$STEAM_O/aarch64-windows/lsteamclient.dll" \
@@ -584,8 +587,13 @@ install_steam_into_bundle() {
         head -c 128 "$DIST/lib/wine/$f" | grep -qa "Wine builtin DLL" \
             || { echo "  ERROR: lib/wine/$f is not marked as a Wine builtin"; bad=1; }
     done
+    for f in $STEAM_STUBS; do
+        cmp -s "$STEAM_O/$f" "$DIST/lib/mproton/$f" \
+            || { echo "  ERROR: lib/mproton/$f is not installed"; bad=1; }
+    done
     [ "$bad" -eq 0 ] || die "lsteamclient/steam.exe are not installed correctly in $DIST"
-    ok "lsteamclient.dll (ARM64X, i386), lsteamclient.so and steam.exe installed into lib/wine"
+    ok "lsteamclient.dll (ARM64X, i386), lsteamclient.so and steam.exe installed into lib/wine;"
+    ok "steamclient(64).dll stand-ins into lib/mproton/steamclient"
 }
 
 check_dxvk_trees() {

@@ -19,6 +19,10 @@
 #   aarch64-windows/steam.exe         aarch64 (Wine builds programs without arm64ec)
 #   i386-windows/{lsteamclient.dll,steam.exe}
 #   $(UNIX_ARCH)-unix/lsteamclient.so the unix side (a Mach-O dylib on macOS, as all Wine unixlibs)
+# and, under $(DESTDIR)/lib/mproton/steamclient/:
+#   steamclient.dll, steamclient64.dll  x86 stand-ins for Valve's Windows steamclient,
+#                                     which the launcher copies into the prefix (macOS
+#                                     Steam has no legacycompat/); see steamclient_stub/
 
 WINE_SRC ?=
 WINE_OBJ ?=
@@ -175,6 +179,20 @@ $(eval $(call pe_exe_rule,arm64ec))
 endif
 
 # ---------------------------------------------------------------------------
+# steamclient(64).dll stand-ins: plain x86 PE, no CRT, no Wine import libs
+
+STUB_SRC  := $(dir $(LSC_DIR))steamclient_stub/steamclient_stub.c
+STUB_DLLS := $(O)/steamclient/steamclient.dll $(O)/steamclient/steamclient64.dll
+
+$(O)/steamclient/steamclient.dll: $(STUB_SRC)
+	@mkdir -p $(@D)
+	$(i386_CC) -O2 -shared -nostdlib -Wl,-e,DllMainCRTStartup@12 -o $@ $<
+
+$(O)/steamclient/steamclient64.dll: $(STUB_SRC)
+	@mkdir -p $(@D)
+	$(x86_64_CC) -O2 -shared -nostdlib -Wl,-e,DllMainCRTStartup -o $@ $<
+
+# ---------------------------------------------------------------------------
 # unix side
 
 UNIX_OBJS := $(patsubst $(LSC_DIR)/%.cpp,$(O)/$(UNIX_ARCH)-unix/obj/%.o,$(LSC_UNIX_SRCS))
@@ -192,13 +210,14 @@ $(UNIX_LIB): $(UNIX_OBJS)
 # ---------------------------------------------------------------------------
 
 all: pe unix
-pe: $(LSC_DLLS) $(HELPER_EXES)
+pe: $(LSC_DLLS) $(HELPER_EXES) $(STUB_DLLS)
 unix: $(UNIX_LIB)
 
 install: all
 	for f in $(LSC_DLLS) $(HELPER_EXES) $(UNIX_LIB); do \
 	  d=$(DESTDIR)/lib/wine/$$(basename $$(dirname $$f)); mkdir -p $$d && cp -f $$f $$d/; \
 	done
+	mkdir -p $(DESTDIR)/lib/mproton/steamclient && cp -f $(STUB_DLLS) $(DESTDIR)/lib/mproton/steamclient/
 
 clean:
 	rm -rf $(O)
