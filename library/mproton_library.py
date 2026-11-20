@@ -250,6 +250,106 @@ def windows_launch_entries(info):
     return [e for _, e in sorted(out, key=lambda x: x[0])]
 
 
+# ---------------------------------------------------------------- finding Windows depots to download
+
+STORE_SEARCH = "https://store.steampowered.com/api/storesearch/"
+
+
+def _fetch_json(url, timeout=15):
+    req = urllib.request.Request(url, headers={"User-Agent": "mproton-library/1"})
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        return json.load(r)
+
+
+def store_search(term):
+    """Steam store search by name -> [{appid, name, windows, mac, linux}].
+
+    A bare number is taken as an appid and looked up with steamcmd_info instead, so apps the
+    store search doesn't list (delisted, unreleased) can still be found."""
+    term = (term or "").strip()[:100]
+    if not term:
+        return []
+    if term.isdigit():
+        info = steamcmd_info(term, refresh=True) or steamcmd_info(term)
+        common = (info or {}).get("common") or {}
+        if not common:
+            return []
+        oslist = common.get("oslist", "")
+        return [{"appid": term, "name": common.get("name") or f"App {term}",
+                 "type": common.get("type", ""), "windows": "windows" in oslist,
+                 "mac": "macos" in oslist, "linux": "linux" in oslist}]
+    url = STORE_SEARCH + "?" + urllib.parse.urlencode({"term": term, "cc": "us", "l": "en"})
+    doc = _fetch_json(url)
+    out = []
+    for it in doc.get("items") or []:
+        if it.get("type") != "app" or not it.get("id"):
+            continue
+        p = it.get("platforms") or {}
+        out.append({"appid": str(it["id"]), "name": it.get("name", ""), "type": "",
+                    "windows": bool(p.get("windows")), "mac": bool(p.get("mac")),
+                    "linux": bool(p.get("linux"))})
+    return out
+
+
+def windows_depots(info, language="english"):
+    """Depots a Windows install of this app uses, from steamcmd app info.
+
+    -> [{depot, name, size, needed, why, ...}]. 'needed' depots are what Steam would install on
+    Windows for this language: oslist contains windows or is empty (shared content), a public
+    build exists, not DLC, not another language, not a Steamworks shared redistributable, and
+    not the 32-bit twin of a 64-bit depot. Other Windows depots are listed with 'why' skipped."""
+    depots = (info or {}).get("depots") or {}
+    out = []
+    for did, d in depots.items():
+        if not str(did).isdigit() or not isinstance(d, dict):
+            continue
+        cfg = d.get("config") or {}
+        oslist = [o for o in (cfg.get("oslist") or "").split(",") if o]
+        if oslist and "windows" not in oslist:
+            continue
+        pub = (d.get("manifests") or {}).get("public")
+        size = pub.get("size") if isinstance(pub, dict) else None
+        e = {"depot": str(did), "name": d.get("name", ""), "oslist": oslist,
+             "osarch": cfg.get("osarch", ""), "language": cfg.get("language", ""),
+             "size": int(size) if str(size or "").isdigit() else None, "needed": True, "why": ""}
+        if d.get("depotfromapp"):
+            e.update(needed=False, why=f"shared Steamworks redistributable (from app "
+                     f"{d['depotfromapp']}); not needed under Wine")
+        elif d.get("dlcappid"):
+            e.update(needed=False, why=f"DLC {d['dlcappid']}; only if you own it")
+        elif e["language"] and e["language"] != language:
+            e.update(needed=False, why=f"{e['language']} language files")
+        elif cfg.get("lowviolence"):
+            e.update(needed=False, why="low-violence version")
+        elif pub is None:
+            e.update(needed=False, why="no public build (beta or unreleased only)")
+        out.append(e)
+    if any(e["needed"] and e["osarch"] == "64" for e in out):
+        for e in out:
+            if e["needed"] and e["osarch"] == "32":
+                e.update(needed=False, why="32-bit build; the 64-bit one is listed")
+    out.sort(key=lambda e: (not e["needed"], int(e["depot"])))
+    return out
+
+
+def depot_lookup(appid):
+    """Everything the page needs to download a game's Windows build with download_depot."""
+    appid = str(appid)
+    info = steamcmd_info(appid, refresh=True) or steamcmd_info(appid)
+    if info is None:
+        raise RuntimeError(f"couldn't fetch Steam app info for {appid} (api.steamcmd.net)")
+    common = info.get("common") or {}
+    deps = windows_depots(info)
+    for e in deps:
+        e["downloaded"] = (CONTENT_DIR / f"app_{appid}" / f"depot_{e['depot']}").is_dir()
+    oslist = common.get("oslist", "")
+    return {"appid": appid, "name": common.get("name") or f"App {appid}",
+            "type": common.get("type", ""), "mac": "macos" in oslist,
+            "windows": "windows" in oslist or bool(deps), "depots": deps,
+            "commands": [f"download_depot {appid} {e['depot']}" for e in deps if e["needed"]],
+            "content_dir": str(CONTENT_DIR / f"app_{appid}")}
+
+
 def find_case_insensitive(base, rel):
     """base/rel, matching each path component case-insensitively (Steam paths are Windows paths)."""
     p = Path(base)
@@ -947,6 +1047,20 @@ class Handler(BaseHTTPRequestHandler):
                 return
             if parts == ["api", "open"]:
                 return self._send(200, open_path(body))
+            if parts == ["api", "copy"]:
+                # Fallback for browsers that deny navigator.clipboard. Only download_depot lines.
+                text = str(body.get("text", ""))
+                if not re.fullmatch(r"(download_depot \d+ \d+\n?)+", text):
+                    return self._err(400, "only download_depot lines can be copied")
+                subprocess.run(["pbcopy"], input=text.encode(), check=True, timeout=5)
+                return self._send(200, {"copied": True})
+            if parts == ["api", "search"]:
+                return self._send(200, store_search(str(body.get("term", ""))))
+            if parts == ["api", "depots"]:
+                appid = str(body.get("appid", ""))
+                if not appid.isdigit():
+                    return self._err(400, "bad appid")
+                return self._send(200, depot_lookup(appid))
             if len(parts) == 4 and parts[:2] == ["api", "game"]:
                 appid, action = parts[2], parts[3]
                 if not appid.isdigit():
@@ -996,6 +1110,10 @@ def open_path(body):
         target, reveal = REPORTS, False
     elif kind == "devcfg":
         target, reveal = DEV_CFG.parent, False
+    elif kind == "steam_console":
+        # Steam's own URL for its console tab; macOS hands it to Steam (starting it if needed).
+        code, out = run_cmd(["open", "steam://open/console"])
+        return {"opened": "steam://open/console", "code": code, "output": out}
     else:
         g = find_game(appid)
         if not g:

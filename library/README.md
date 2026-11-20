@@ -30,6 +30,8 @@ This creates `~/Applications/mproton Library.app`, a small script bundle that ru
 
 - **Steam running / not running**: whether a `steam_osx` process exists.
 - **Bundle signed (TEAMID)**: whether the bundle was found and whether `codesign --verify --strict` passes on its `wine.app` loader. An ad hoc signature shows as a warning. Hover over it to see the bundle path and `share/mproton/BUILD-INFO`.
+- **Get a Windows game**: finds the `download_depot` commands for a game's Windows build. See [Get a Windows game](#get-a-windows-game-download_depot) below.
+- **Steam console** opens Steam's console (`open steam://open/console`), where `download_depot` lines go.
 - **Windows downloads** switch: see [Windows downloads](#windows-downloads-steam_devcfg) below.
 - **Refresh**: scans for games again and re-fetches the Steam launch configs. **Reports folder** opens `~/mproton-reports`. **Paths** sets the launcher, `ref/proton`, the bundle and the Python to use.
 
@@ -99,6 +101,22 @@ For each game the page lists these logs. **View** shows the end of a log on the 
 - the prefix's `compatdb.rules`
 - the bundle's `BUILD-INFO`
 
+## Get a Windows game (`download_depot`)
+
+This is the per-game way to get a Windows build. It changes nothing in Steam, so games you have as Mac builds stay Mac builds. Use it instead of the global [Windows downloads](#windows-downloads-steam_devcfg) switch when you want only one game.
+
+1. Type a game's name, or its appid, and press **Search**. Names go to Steam's store search (`store.steampowered.com/api/storesearch`). An appid is looked up directly, which also finds apps the store search doesn't list.
+2. Pick a result. The library fetches its depots from `api.steamcmd.net` and shows one `download_depot <appid> <depot>` line per depot a Windows install needs, with **Copy** buttons. **Copy** uses the browser's clipboard, or `pbcopy` through the server if the browser denies it; the server copies only `download_depot` lines.
+3. Press **Open Steam console**, paste each line and press Return. Steam prints "Depot download complete" when it's done, with no progress bar. Then press **Refresh**.
+
+Which depots are listed as needed: those for Windows or for all platforms (no `oslist`), with a public build, for English or no language. These are shown but not needed, with the reason: Steamworks shared redistributables (`depotfromapp`, for example the Visual C++ installers), DLC (`dlcappid`), other languages, low-violence versions, depots with only beta builds, and 32-bit depots when a 64-bit one exists. A depot already in `steamapps/content` shows as "downloaded".
+
+Limits:
+
+- `download_depot` only works for games you own (demos are free to download).
+- Each depot goes into its own `depot_<id>` folder. The library looks for the exe in all of them, but the game runs from the folder its exe is in. If a game's files are split across depots and it won't start, copy them into one folder and set that as the **Launch exe override**.
+- Steam doesn't update these files. Run the same line again for a newer build.
+
 ## Windows downloads (`steam_dev.cfg`)
 
 This switch is Mechanism A from [../docs/steam-integration.md](../docs/steam-integration.md). It adds or removes the line `@sSteamCmdForcePlatformType windows` in `~/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/steam_dev.cfg`. It is **off by default**, and the page asks before changing it. When it's on:
@@ -131,7 +149,7 @@ The library never patches, injects into or otherwise changes the Steam client (M
 | `mproton_library.py` | Server, game discovery, launch-config lookup, Play/Stop, logs, reports, `steam_dev.cfg` switch |
 | `static/index.html` | The page (plain HTML, CSS and JavaScript; no external libraries) |
 | `make-app.sh` | Builds `mproton Library.app` |
-| `tests/test_library.py` | Unit tests: `python3 -m unittest discover -s library/tests` |
+| `tests/test_library.py` | Unit tests (including depot filtering on Hypernet Explorer's real app info): `python3 -m unittest discover -s library/tests` |
 
 Environment overrides, mainly for tests: `MPROTON_STEAM_ROOT`, `MPROTON_LIBRARY_HOME` (state folder), `MPROTON_PREFIXES`, `MPROTON_REPORTS`, `MPROTON_LIBRARY_PORT`, `MPROTON_PYTHON`.
 

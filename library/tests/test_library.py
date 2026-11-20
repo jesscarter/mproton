@@ -137,5 +137,75 @@ class Env(Base):
         self.assertEqual(d, {"a": {"b": 'x "q"', "c": {"d": "1"}}})
 
 
+class Depots(Base):
+    # Shape of api.steamcmd.net data for Hypernet Explorer (4193010), 2026-11-20.
+    HYPERNET = {"common": {"name": "Hypernet Explorer", "type": "Game", "oslist": "windows"},
+                "depots": {"228989": {"config": {"oslist": "windows"}, "depotfromapp": "228980",
+                                      "sharedinstall": "1"},
+                           "4193011": {"config": {"osarch": "64", "oslist": "windows"},
+                                       "manifests": {"public": {"gid": "1", "size": "500000000"},
+                                                     "beta": {"gid": "2"}}},
+                           "baselanguages": "english", "branches": {"public": {}}}}
+
+    def test_hypernet(self):
+        self.infos["4193010"] = self.HYPERNET
+        d = self.m.depot_lookup("4193010")
+        self.assertEqual(d["commands"], ["download_depot 4193010 4193011"])
+        self.assertEqual((d["name"], d["mac"]), ("Hypernet Explorer", False))
+        skipped = [e for e in d["depots"] if not e["needed"]]
+        self.assertEqual([e["depot"] for e in skipped], ["228989"])
+        self.assertIn("redistributable", skipped[0]["why"])
+        self.assertEqual(d["depots"][0]["size"], 500000000)
+        self.assertFalse(d["depots"][0]["downloaded"])
+        (self.m.CONTENT_DIR / "app_4193010/depot_4193011").mkdir(parents=True)
+        self.assertTrue(self.m.depot_lookup("4193010")["depots"][0]["downloaded"])
+
+    def test_mixed(self):
+        pub = {"manifests": {"public": {"gid": "1", "size": "10"}}}
+        info = {"depots": {
+            "11": dict(pub, config={"oslist": "macos"}),                       # Mac only: hidden
+            "12": dict(pub, config={"oslist": "windows", "osarch": "64"}),     # needed
+            "13": dict(pub, config={"oslist": "windows", "osarch": "32"}),     # 32-bit twin
+            "14": dict(pub),                                                   # all platforms
+            "15": dict(pub, config={"language": "german"}),                    # other language
+            "16": dict(pub, config={"language": "english"}),                   # needed
+            "17": dict(pub, dlcappid="99"),                                    # DLC
+            "18": {"config": {"oslist": "windows"}, "manifests": {"beta": {"gid": "3"}}},  # no public
+            "19": dict(pub, config={"lowviolence": "1"}),
+        }}
+        deps = {e["depot"]: e for e in self.m.windows_depots(info)}
+        self.assertNotIn("11", deps)
+        self.assertEqual(sorted(k for k, e in deps.items() if e["needed"]), ["12", "14", "16"])
+        self.assertIn("32-bit", deps["13"]["why"])
+        self.assertIn("german", deps["15"]["why"])
+        self.assertIn("DLC", deps["17"]["why"])
+        self.assertIn("public", deps["18"]["why"])
+        self.assertIn("low-violence", deps["19"]["why"])
+
+    def test_only_32bit_is_needed(self):
+        info = {"depots": {"5": {"config": {"oslist": "windows", "osarch": "32"},
+                                 "manifests": {"public": {"gid": "1"}}}}}
+        self.assertTrue(self.m.windows_depots(info)[0]["needed"])
+
+    def test_search_by_appid_and_name(self):
+        self.infos["4193010"] = self.HYPERNET
+        r = self.m.store_search(" 4193010 ")
+        self.assertEqual((r[0]["appid"], r[0]["windows"], r[0]["mac"]), ("4193010", True, False))
+        self.assertEqual(self.m.store_search("123"), [])
+        self.assertEqual(self.m.store_search("  "), [])
+        seen = []
+        self.m._fetch_json = lambda url: seen.append(url) or {"items": [
+            {"type": "app", "id": 4193010, "name": "Hypernet Explorer",
+             "platforms": {"windows": True, "mac": False, "linux": False}},
+            {"type": "sub", "id": 5, "name": "a package"}]}
+        r = self.m.store_search("hypernet explorer")
+        self.assertEqual([x["appid"] for x in r], ["4193010"])
+        self.assertIn("term=hypernet+explorer", seen[0])
+
+    def test_lookup_offline(self):
+        with self.assertRaises(RuntimeError):
+            self.m.depot_lookup("1")
+
+
 if __name__ == "__main__":
     unittest.main()

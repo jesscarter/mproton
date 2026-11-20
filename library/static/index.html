@@ -66,6 +66,16 @@ pre.log { background: var(--code); border: 1px solid var(--line); border-radius:
 .switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: #fff; transition: left .15s; }
 .switch.on { background: var(--warn); } .switch.on::after { left: 20px; }
 dialog { border: 1px solid var(--line); border-radius: 12px; background: var(--panel); color: var(--text); max-width: 560px; }
+dialog.wide { width: min(720px, calc(100vw - 32px)); max-width: none; }
+.results { display: flex; flex-direction: column; gap: 4px; max-height: 240px; overflow: auto; }
+.result { display: flex; gap: 8px; align-items: center; padding: 6px 8px; border: 1px solid var(--line);
+  border-radius: 7px; cursor: pointer; background: none; color: inherit; text-align: left; width: 100%; }
+.result.sel { outline: 2px solid var(--accent); }
+.result .name { flex: 1; min-width: 0; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cmd { display: flex; gap: 8px; align-items: center; background: var(--code); border: 1px solid var(--line);
+  border-radius: 6px; padding: 4px 4px 4px 10px; margin: 4px 0; }
+.cmd code { flex: 1; font-size: 13px; }
+tr.skip td { color: var(--muted); }
 dialog::backdrop { background: rgba(0,0,0,.35); }
 .banner { border-radius: 8px; padding: 8px 12px; margin: 0 20px; margin-top: 12px; background: var(--chip); }
 .banner.warn { border-left: 4px solid var(--warn); }
@@ -85,6 +95,8 @@ details summary { cursor: pointer; color: var(--muted); }
     <span id="dev-label">Windows downloads</span>
   </span>
   <span style="flex:1"></span>
+  <button id="btn-find" class="primary" title="Search Steam and get the download_depot commands for a game's Windows build">Get a Windows game</button>
+  <button id="btn-console" title="Open Steam's console (steam://open/console)">Steam console</button>
   <button id="btn-refresh" title="Rescan games and re-fetch Steam launch configs">Refresh</button>
   <button id="btn-reports">Reports folder</button>
   <button id="btn-paths">Paths</button>
@@ -115,6 +127,20 @@ details summary { cursor: pointer; color: var(--muted); }
   </div>
 </dialog>
 
+<dialog id="find-dialog" class="wide">
+  <h3 style="margin-top:0">Get a Windows game</h3>
+  <p class="hint" style="margin-top:0">Downloads one game's Windows build with Steam's <code>download_depot</code>. Nothing else in Steam changes, so games you have as Mac builds stay Mac builds. You need to own the game (demos are free).</p>
+  <form id="find-form" class="row" autocomplete="off">
+    <input type="text" id="find-term" placeholder="Game name or appid" style="flex:1;width:auto;font-family:inherit;font-size:14px">
+    <button class="primary" type="submit">Search</button>
+  </form>
+  <div id="find-results" style="margin-top:10px"></div>
+  <div id="find-detail"></div>
+  <div class="row" style="justify-content:flex-end;margin-top:14px">
+    <button id="fd-close">Close</button>
+  </div>
+</dialog>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -134,7 +160,7 @@ function toast(msg, ms = 3500) {
   const t = $("#toast"); t.textContent = msg; t.classList.add("show");
   clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("show"), ms);
 }
-function fmtSize(n) { return n > 1e6 ? (n/1e6).toFixed(1) + " MB" : n > 1e3 ? (n/1e3).toFixed(0) + " kB" : n + " B"; }
+function fmtSize(n) { return n > 1e9 ? (n/1e9).toFixed(1) + " GB" : n > 1e6 ? (n/1e6).toFixed(1) + " MB" : n > 1e3 ? (n/1e3).toFixed(0) + " kB" : n + " B"; }
 
 function renderStatus() {
   const s = STATUS;
@@ -342,6 +368,70 @@ $("#pd-save").onclick = async () => {
   try { await api("/api/paths", body); toast("Paths saved"); } catch (e) { toast(e.message); }
   $("#paths-dialog").close(); refresh(true);
 };
+// --- get a Windows game: store search -> depots -> download_depot commands
+$("#btn-console").onclick = () => openPath({kind: "steam_console"});
+$("#btn-find").onclick = () => { $("#find-dialog").showModal(); $("#find-term").focus(); $("#find-term").select(); };
+$("#fd-close").onclick = () => $("#find-dialog").close();
+const platforms = r => [r.windows && "Windows", r.mac && "Mac", r.linux && "Linux"].filter(Boolean).join(" · ") || "platforms unknown";
+let FIND_SEQ = 0;
+$("#find-form").onsubmit = async ev => {
+  ev.preventDefault();
+  const term = $("#find-term").value.trim();
+  if (!term) return;
+  const seq = ++FIND_SEQ, out = $("#find-results");
+  out.innerHTML = `<div class="hint">Searching Steam…</div>`; $("#find-detail").innerHTML = "";
+  let res;
+  try { res = await api("/api/search", {term}); } catch (e) { out.innerHTML = `<div class="hint">Search failed: ${esc(e.message)}</div>`; return; }
+  if (seq !== FIND_SEQ) return;
+  if (!res.length) { out.innerHTML = `<div class="hint">Nothing found. Try another spelling, or type the appid from the game's store URL (store.steampowered.com/app/<b>appid</b>/…).</div>`; return; }
+  out.innerHTML = `<div class="results">${res.map(r => {
+    const have = GAMES.find(g => g.appid === r.appid);
+    return `<button class="result" data-appid="${esc(r.appid)}"><span class="name">${esc(r.name)}</span>
+      ${have ? `<span class="chip">in your list</span>` : ""}
+      <span class="hint">${esc(r.appid)} · ${esc(platforms(r))}</span></button>`; }).join("")}</div>`;
+  out.querySelectorAll(".result").forEach(b => b.onclick = () => {
+    out.querySelectorAll(".result").forEach(x => x.classList.toggle("sel", x === b));
+    showDepots(b.dataset.appid);
+  });
+  if (res.length === 1) out.querySelector(".result").click();
+};
+async function showDepots(appid) {
+  const seq = ++FIND_SEQ, el = $("#find-detail");
+  el.innerHTML = `<div class="hint" style="margin-top:10px">Fetching depots from api.steamcmd.net…</div>`;
+  let d;
+  try { d = await api("/api/depots", {appid}); } catch (e) { el.innerHTML = `<div class="hint" style="margin-top:10px">${esc(e.message)}</div>`; return; }
+  if (seq !== FIND_SEQ) return;
+  const size = n => n == null ? "" : fmtSize(n);
+  const needed = d.depots.filter(x => x.needed);
+  const total = needed.reduce((a, x) => a + (x.size || 0), 0);
+  let html = `<h3>${esc(d.name)} <span class="hint" style="text-transform:none;letter-spacing:0">appid ${esc(d.appid)}${d.type ? " · " + esc(d.type) : ""}</span></h3>`;
+  if (!needed.length) {
+    html += `<p>No downloadable Windows depot found for this app${d.type && d.type.toLowerCase() !== "game" && d.type.toLowerCase() !== "demo" ? ` (it's a ${esc(d.type)}, not a game)` : ""}.</p>`;
+  } else {
+    if (d.mac) html += `<p class="hint">This game also has a Mac build. <code>download_depot</code> puts the Windows build in a separate folder, so a Mac install isn't touched.</p>`;
+    html += `<p style="margin:6px 0">1. <button id="fd-console">Open Steam console</button> 2. Paste ${needed.length > 1 ? "each line" : "this line"} there and press Return:</p>`;
+    html += d.commands.map(c => `<div class="cmd"><code>${esc(c)}</code><button data-copy="${esc(c)}">Copy</button></div>`).join("");
+    if (needed.length > 1) html += `<div class="row" style="margin:4px 0"><button id="fd-copyall">Copy all ${needed.length} lines</button>
+      <span class="hint">Each depot downloads into its own <code>depot_&lt;id&gt;</code> folder. If the game won't start, copy them into one folder and set it as the Launch exe override.</span></div>`;
+    html += `<p class="hint">3. Wait for "Depot download complete" in the console (it shows no progress bar)${total ? `, about ${esc(size(total))}` : ""}, then press <b>Refresh</b> here.
+      Files go to <code>${esc(d.content_dir)}</code>. Steam doesn't update them; run the same line again for a new version.</p>`;
+  }
+  if (d.depots.length) html += `<details${needed.length ? "" : " open"}><summary>All Windows depots (${d.depots.length})</summary><table>${d.depots.map(x => `
+      <tr class="${x.needed ? "" : "skip"}"><td class="mono">${esc(x.depot)}</td><td>${esc(x.name || (x.oslist.length ? x.oslist.join(",") : "all platforms"))}${x.osarch ? " · " + esc(x.osarch) + "-bit" : ""}</td>
+      <td style="white-space:nowrap">${esc(size(x.size))}</td>
+      <td>${x.needed ? (x.downloaded ? "downloaded" : "needed") : esc(x.why)}</td></tr>`).join("")}</table></details>`;
+  el.innerHTML = html;
+  el.querySelectorAll("[data-copy]").forEach(b => b.onclick = () => copyText(b.dataset.copy, b));
+  if ($("#fd-copyall")) $("#fd-copyall").onclick = e => copyText(d.commands.join("\n"), e.target);
+  if ($("#fd-console")) $("#fd-console").onclick = () => openPath({kind: "steam_console"});
+}
+async function copyText(text, btn) {
+  // The browser's clipboard first; some browsers deny it, then the server copies with pbcopy.
+  try { await navigator.clipboard.writeText(text); }
+  catch (e) { try { await api("/api/copy", {text}); } catch (e2) { toast("Couldn't copy: " + e2.message); return; } }
+  const was = btn.textContent; btn.textContent = "Copied"; setTimeout(() => btn.textContent = was, 1500);
+}
+
 $("#btn-refresh").onclick = async () => { toast("Rescanning…"); try { await api("/api/refresh", {}); } catch (e) { toast(e.message); } refresh(true); };
 $("#btn-reports").onclick = () => openPath({kind: "reports"});
 $("#btn-quit").onclick = async () => {

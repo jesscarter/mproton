@@ -44,13 +44,13 @@ That's all you need to use a release. Building mproton yourself needs more, see 
    git clone https://github.com/jesscarter/mproton.git
    ```
 
-3. **Get a game's Windows build.** Either turn on the **Windows downloads** switch in mproton Library (step 4) and press Install in Steam, or open Steam's console (`steam://open/console` in a browser) and download the Windows depot of a game you own:
+3. **Get a game's Windows build.** In mproton Library (step 4), press **Get a Windows game**, search for a game you own, and paste the `download_depot` lines it shows into Steam's console (the **Steam console** button opens it). This downloads only that game's Windows build, so games you have as Mac builds aren't touched. By hand, the console command is:
 
    ```
    download_depot <appid> <depotid>
    ```
 
-   Depot IDs are listed on SteamDB or by `https://api.steamcmd.net/v1/info/<appid>`.
+   Depot IDs are also listed on SteamDB or by `https://api.steamcmd.net/v1/info/<appid>`. The other way is the **Windows downloads** switch in mproton Library, which makes Steam download Windows builds of every game, including games that have a Mac build.
 
 4. **Play it** with mproton Library, a small local app with a game list and Play/Stop buttons:
 
