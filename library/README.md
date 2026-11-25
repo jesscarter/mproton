@@ -10,13 +10,15 @@ library/mproton-library
 
 This starts a small server on `http://127.0.0.1:8417/` and opens that page in your browser. If the library is already running, the command just opens the page again. Options: `--port N` and `--no-browser`.
 
-To start it from Finder, Spotlight or the Dock instead, build the app wrapper once:
+To use it as a Mac app instead (Finder, Spotlight, the Dock), build it once:
 
 ```bash
 library/make-app.sh
 ```
 
-This creates `~/Applications/mproton Library.app`, a small script bundle that runs `library/mproton-library` from this checkout. It has no Dock icon while it runs. Its output goes to `~/Library/Logs/mproton-library.log`. To stop the library, use the **Quit** button on the page. Games that are still running keep running.
+This creates `~/Applications/mproton Library.app`, which runs `library/mproton-library` from this checkout. It shows the library in its own window, with a Dock icon and menus. It starts the server when it opens and stops it when you quit (⌘Q, closing the window, or the page's **Quit** button). If a library server is already running on port 8417, for example one started from a terminal, the app uses it and leaves it running when it quits. Games that are still running keep running either way. The server's output goes to `~/Library/Logs/mproton-library.log` (**View → Show Server Log**). Run `make-app.sh` again after moving the checkout.
+
+The app is `library/app/main.swift`, compiled with `swiftc` from Xcode or the Command Line Tools. Its icon is drawn at build time by `library/app/make-icon.swift`. It's signed ad hoc, so it runs on the Mac that built it. Without `swiftc`, `make-app.sh` builds the older script bundle instead: no window or Dock icon, and it opens the page in your browser.
 
 ## What you need
 
@@ -135,10 +137,11 @@ Not yet tested: what Steam does with a game installed as a Windows build after t
 
 The library never patches, injects into or otherwise changes the Steam client (Mechanism B is not used).
 
-## Design choice: local web page served by Python, not SwiftUI
+## Design choice: a local web page served by Python, in a thin native window
 
-- **Why this way.** No build step and no Xcode needed: the library uses only the Python standard library, which this Mac already has for the launcher. Every action is a plain HTTP call, so it can be tested with `curl`, and the parsing and `steam_dev.cfg` logic has unit tests.
-- **The cost.** It isn't a native app. The window is a browser tab, and the `.app` from `make-app.sh` is only a launcher with no icon or menu bar. Closing the tab doesn't stop the server; use **Quit** for that.
+- **Why this way.** The library itself needs no build step: it uses only the Python standard library, which this Mac already has for the launcher. Every action is a plain HTTP call, so it can be tested with `curl`, and the parsing and `steam_dev.cfg` logic has unit tests.
+- **The window.** `mproton Library.app` is a small Swift program (about 250 lines) that shows the page in a WKWebView, the web view Safari uses, and starts and stops the server. All the UI stays in `static/index.html`. Electron would add about 150 MB of Chromium for one page. Tauri uses the same WKWebView but adds a Rust and npm toolchain. A SwiftUI rewrite would duplicate the page.
+- **The cost.** It still needs Python 3. On a Mac without the Command Line Tools, `/usr/bin/python3` only offers to install them. Without the app, the page runs in a browser tab, and closing the tab doesn't stop the server; use **Quit** for that.
 - **Safety.** The server listens only on `127.0.0.1`. It only answers requests addressed to `127.0.0.1` or `localhost`, which blocks DNS-rebinding attacks. Every action needs an `X-Mproton: 1` header, which a web page on another site can't send without a CORS preflight, and the server never grants one. Files can only be opened if they are on the library's own lists.
 
 ## Files
@@ -148,7 +151,9 @@ The library never patches, injects into or otherwise changes the Steam client (M
 | `mproton-library` | Start script: picks a Python, then runs `mproton_library.py` |
 | `mproton_library.py` | Server, game discovery, launch-config lookup, Play/Stop, logs, reports, `steam_dev.cfg` switch |
 | `static/index.html` | The page (plain HTML, CSS and JavaScript; no external libraries) |
-| `make-app.sh` | Builds `mproton Library.app` |
+| `make-app.sh` | Builds `mproton Library.app` (native with `swiftc`, else a script bundle) |
+| `app/main.swift` | The app: window, menus, starting and stopping the server |
+| `app/make-icon.swift` | Draws the app icon at build time |
 | `tests/test_library.py` | Unit tests (including depot filtering on Hypernet Explorer's real app info): `python3 -m unittest discover -s library/tests` |
 
 Environment overrides, mainly for tests: `MPROTON_STEAM_ROOT`, `MPROTON_LIBRARY_HOME` (state folder), `MPROTON_PREFIXES`, `MPROTON_REPORTS`, `MPROTON_LIBRARY_PORT`, `MPROTON_PYTHON`.
