@@ -137,6 +137,33 @@ class Env(Base):
         self.assertEqual(d, {"a": {"b": 'x "q"', "c": {"d": "1"}}})
 
 
+class ReleaseLayout(Base):
+    def test_wine_beside_app(self):
+        t = Path(self.tmp.name)
+        (t / "dl/wine/bin").mkdir(parents=True)
+        (t / "dl/wine/bin/wine").touch()
+        s = {"paths": {}, "games": {}, "dev_cfg": {}}
+        os.environ["MPROTON_APP_PATH"] = str(t / "dl/mproton Library.app")
+        try:
+            os.environ.pop("MPROTON_WINE_DIR", None)
+            self.assertEqual(self.m.resolve_paths(s)["wine_dir"], str(t / "dl/wine"))
+            s["paths"]["wine_dir"] = "/nowhere"  # unusable setting: falls through
+            self.assertEqual(self.m.resolve_paths(s)["wine_dir"], str(t / "dl/wine"))
+        finally:
+            del os.environ["MPROTON_APP_PATH"]
+
+    def test_version_without_git(self):
+        t = Path(self.tmp.name) / "app/mproton"
+        (t / "library").mkdir(parents=True)
+        (t / "VERSION").write_text("0.3.0 (abc1234)\n")
+        self.m.REPO = t
+        calls = []
+        self.m.run_cmd = lambda cmd, timeout=20: calls.append(cmd) or (0, "")
+        self.assertEqual(self.m.repo_version(), "0.3.0 (abc1234)")
+        self.assertEqual(self.m.repo_version(), "0.3.0 (abc1234)")
+        self.assertEqual(calls, [])  # never runs git (a stub without the Command Line Tools)
+
+
 class Depots(Base):
     # Shape of api.steamcmd.net data for Hypernet Explorer (4193010), 2026-11-20.
     HYPERNET = {"common": {"name": "Hypernet Explorer", "type": "Game", "oslist": "windows"},

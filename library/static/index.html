@@ -119,7 +119,7 @@ details summary { cursor: pointer; color: var(--muted); }
 
 <dialog id="paths-dialog">
   <h3 style="margin-top:0">Paths</h3>
-  <p class="hint">Leave a field empty to use the automatic choice (this checkout, then ~/mproton).</p>
+  <p class="hint">Leave a field empty to use the automatic choice: the copy inside the app or this checkout, then the <code>wine</code> folder next to the app, then ~/mproton and ~/mproton-wine.</p>
   <div id="paths-body"></div>
   <div class="row" style="justify-content:flex-end;margin-top:14px">
     <button id="pd-cancel">Close</button>
@@ -183,7 +183,7 @@ function renderStatus() {
   if (d.restart_needed) ban.push(`<div class="banner warn"><b>Restart Steam</b> to apply the Windows-downloads change (Steam reads steam_dev.cfg only at start). Quit it from the menu bar (Steam → Quit Steam), then open it again.</div>`);
   if (d.enabled) ban.push(`<div class="banner warn"><b>Windows downloads is on.</b> Steam acts as a Windows client for every game and does not self-update while <code>steam_dev.cfg</code> exists. Turn it off when you're done downloading.</div>`);
   else if (d.exists) ban.push(`<div class="banner">Note: <code>${esc(d.path)}</code> exists with other settings (${d.other_lines} line(s)) that the library did not write, so Steam self-updates stay paused.</div>`);
-  if (!b.exists) ban.push(`<div class="banner warn">No mach9 bundle found. Build it with <code>build/mproton-build.sh</code>, or set its path under Paths.</div>`);
+  if (!b.exists) ban.push(`<div class="banner warn"><b>No Wine bundle found.</b> Keep the <code>wine</code> folder from the mproton download in the same folder as mproton Library, or set where it is under <b>Paths</b>. (Building from source: <code>build/mproton-build.sh</code>.)</div>`);
   $("#banners").innerHTML = ban.join("");
 }
 
@@ -438,7 +438,7 @@ $("#btn-quit").onclick = async () => {
   const running = (STATUS && STATUS.running.length) ? "\n\nGames still running keep running; use Stop first if you want them closed." : "";
   if (!confirm("Quit mproton Library?" + running)) return;
   try { await api("/api/quit", {}); } catch (e) {}
-  document.body.innerHTML = '<div class="panel" style="margin:40px auto;max-width:520px">mproton Library has quit. Start it again with <code>library/mproton-library</code> or the mproton Library app.</div>';
+  document.body.innerHTML = '<div class="panel" style="margin:40px auto;max-width:520px">mproton Library has quit. Start it again from the mproton Library app.</div>';
 };
 
 refresh(true);

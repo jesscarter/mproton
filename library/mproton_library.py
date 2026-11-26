@@ -175,16 +175,23 @@ def resolve_paths(s=None):
 
     Order: settings.json "paths" > environment > this checkout > ~/mproton. A git worktree has
     launcher/ but not the untracked ref/ and work/ trees, hence the ~/mproton fallback.
+
+    In a release, REPO is the copy of launcher/ and library/ inside mproton Library.app, and
+    the Wine bundle is the `wine` folder unpacked next to the app (MPROTON_APP_PATH, set by the
+    app), or ~/mproton-wine.
     """
     s = s or load_settings()
     p = s.get("paths", {})
     roots = [REPO, HOME / "mproton"]
+    app = os.environ.get("MPROTON_APP_PATH")
+    beside_app = [Path(app).parent / "wine"] if app else []
     launcher = _first_existing([p.get("launcher")] + [r / "launcher/mproton" for r in roots],
                                lambda x: x.is_file())
     proton_ref = _first_existing([p.get("proton_ref")] + [r / "ref/proton" for r in roots],
                                  lambda x: (x / "filelock.py").is_file() or x.is_dir())
     wine_dir = _first_existing([p.get("wine_dir"), os.environ.get("MPROTON_WINE_DIR")]
-                               + [r / "work/mach9/dist/wine" for r in roots],
+                               + beside_app + [r / "work/mach9/dist/wine" for r in roots]
+                               + [HOME / "mproton-wine"],
                                lambda x: (x / "bin/wine").exists())
     python = p.get("python") or sys.executable
     return {"launcher": launcher, "proton_ref": proton_ref, "wine_dir": wine_dir, "python": python,
@@ -926,6 +933,24 @@ def bundle_status(wine_dir):
     return info
 
 
+_version = []
+
+
+def repo_version():
+    """The checkout's commit, or the VERSION file a release build puts next to launcher/.
+
+    Looked up once: without the Command Line Tools /usr/bin/git is only a stub that offers to
+    install them, so it is never run when there is no .git here."""
+    if not _version:
+        v = ""
+        if (REPO / ".git").exists():
+            _, v = run_cmd(["git", "-C", str(REPO), "rev-parse", "--short", "HEAD"])
+        elif (REPO / "VERSION").is_file():
+            v = (REPO / "VERSION").read_text(errors="replace").strip()
+        _version.append(v.strip())
+    return _version[0]
+
+
 def get_status():
     s = load_settings()
     paths = resolve_paths(s)
@@ -936,7 +961,7 @@ def get_status():
                                  and base.get("steam_started") == steam["started"]
                                  and base.get("enabled") != dev["enabled"])
     dev["last_backup"] = s["dev_cfg"].get("last_backup")
-    _, head = run_cmd(["git", "-C", str(REPO), "rev-parse", "--short", "HEAD"])
+    head = repo_version()
     return {"steam": steam, "bundle": bundle_status(paths["wine_dir"]), "dev_cfg": dev,
             "paths": paths, "repo_head": head, "running": RUNS.any_running(),
             "backends": {k: v[0] for k, v in BACKENDS.items()}}

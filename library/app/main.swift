@@ -3,7 +3,9 @@
 // Starts library/mproton-library (the Python server) unless one is already answering on the
 // port, shows http://127.0.0.1:<port>/ in a WKWebView, and stops the server it started when
 // the app quits. Games keep running: the server starts them in their own sessions.
-// Built by library/make-app.sh, which writes the script path into Info.plist (MprotonLibraryScript).
+// Built by library/make-app.sh: from a checkout it writes the checkout's script path into
+// Info.plist (MprotonLibraryScript); with --bundle (releases) it copies launcher/ and library/
+// into Contents/Resources/mproton instead.
 
 import AppKit
 import WebKit
@@ -60,9 +62,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
 
     func startServerAndLoad() {
         if !serverAnswers() {
-            guard let script = Bundle.main.object(forInfoDictionaryKey: "MprotonLibraryScript") as? String,
-                  FileManager.default.isExecutableFile(atPath: script) else {
+            guard let script = libraryScript() else {
                 return fail("This app can't find library/mproton-library. Build it again with library/make-app.sh from your mproton checkout.")
+            }
+            guard pythonAvailable() else {
+                return DispatchQueue.main.async { self.showPythonMissing() }
             }
             do {
                 try startServer(script)
@@ -83,6 +87,55 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
         DispatchQueue.main.async { self.web.load(URLRequest(url: pageURL)) }
     }
 
+    /// A checkout build (make-app.sh) names the checkout's script in Info.plist; a release build
+    /// (make-app.sh --bundle) carries launcher/ and library/ in Contents/Resources/mproton.
+    func libraryScript() -> String? {
+        var candidates: [String] = []
+        if let s = Bundle.main.object(forInfoDictionaryKey: "MprotonLibraryScript") as? String { candidates.append(s) }
+        if let r = Bundle.main.resourceURL {
+            candidates.append(r.appendingPathComponent("mproton/library/mproton-library").path)
+        }
+        return candidates.first { FileManager.default.isExecutableFile(atPath: $0) }
+    }
+
+    /// The same Pythons library/mproton-library tries. /usr/bin/python3 is only a stub that
+    /// offers to install the Command Line Tools unless they (or Xcode) are installed.
+    func pythonAvailable() -> Bool {
+        let env = ProcessInfo.processInfo.environment
+        if let p = env["MPROTON_PYTHON"], !p.isEmpty { return FileManager.default.isExecutableFile(atPath: p) }
+        if ["/opt/homebrew/bin/python3", "/usr/local/bin/python3"].contains(where: {
+            FileManager.default.isExecutableFile(atPath: $0) }) { return true }
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: "/usr/bin/xcode-select")
+        p.arguments = ["-p"]
+        p.standardOutput = FileHandle.nullDevice
+        p.standardError = FileHandle.nullDevice
+        guard (try? p.run()) != nil else { return false }
+        p.waitUntilExit()
+        return p.terminationStatus == 0
+    }
+
+    func showPythonMissing() {
+        let html = """
+        <!doctype html><meta charset="utf-8"><style>
+        :root { color-scheme: light dark; }
+        body { font: 14px/1.5 -apple-system, sans-serif; display: flex; align-items: center; justify-content: center;
+          height: 100vh; margin: 0; padding: 0 40px; }
+        div { max-width: 520px; } h2 { font-size: 18px; } code { font: 13px ui-monospace, Menlo, monospace; }
+        a.button { display: inline-block; background: #0a66d8; color: #fff; padding: 7px 16px; border-radius: 7px;
+          text-decoration: none; font-weight: 600; margin: 6px 0; }
+        </style><body><div>
+        <h2>mproton Library needs Python 3</h2>
+        <p>The library and the mproton launcher are Python programs. The easiest way to get Python on a Mac
+        is Apple's Command Line Tools, a free download from Apple of about 1 GB.</p>
+        <p><a class="button" href="mproton-app:install-clt">Install the Command Line Tools…</a></p>
+        <p>This opens Apple's installer (the same as running <code>xcode-select --install</code> in Terminal).
+        When it has finished, choose <b>View → Reload</b> (⌘R). Python from Homebrew works too.</p>
+        </div></body>
+        """
+        web.loadHTMLString(html, baseURL: nil)
+    }
+
     func startServer(_ script: String) throws {
         try FileManager.default.createDirectory(at: logURL.deletingLastPathComponent(),
                                                 withIntermediateDirectories: true)
@@ -94,6 +147,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
         let p = Process()
         p.executableURL = URL(fileURLWithPath: script)
         p.arguments = ["--no-browser", "--port", String(port)]
+        var env = ProcessInfo.processInfo.environment
+        // Lets the library find the `wine` folder unpacked next to the app.
+        env["MPROTON_APP_PATH"] = Bundle.main.bundlePath
+        // The launcher's Python modules may sit inside this signed app; don't write
+        // __pycache__ into it (games inherit this through the library's environment).
+        env["PYTHONDONTWRITEBYTECODE"] = "1"
+        p.environment = env
         p.standardOutput = log
         p.standardError = log
         p.standardInput = FileHandle.nullDevice
@@ -156,6 +216,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
     func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction,
                  decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
         guard let url = action.request.url else { return decisionHandler(.cancel) }
+        if url.absoluteString == "mproton-app:install-clt" {
+            let p = Process()
+            p.executableURL = URL(fileURLWithPath: "/usr/bin/xcode-select")
+            p.arguments = ["--install"]
+            try? p.run()
+            return decisionHandler(.cancel)
+        }
         if url.scheme == "about" || (url.host == "127.0.0.1" && url.port == port) {
             return decisionHandler(.allow)
         }

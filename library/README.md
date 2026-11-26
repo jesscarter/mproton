@@ -4,6 +4,10 @@ A small Mac app that turns testing a Windows Steam game into button clicks: it l
 
 ## Start it
 
+From a [release download](https://github.com/jesscarter/mproton/releases): open **mproton Library**, kept in the same folder as the download's `wine` folder. The app carries its own copy of `launcher/` and `library/`.
+
+From a checkout:
+
 ```bash
 library/mproton-library
 ```
@@ -18,13 +22,13 @@ library/make-app.sh
 
 This creates `~/Applications/mproton Library.app`, which runs `library/mproton-library` from this checkout. It shows the library in its own window, with a Dock icon and menus. It starts the server when it opens and stops it when you quit (⌘Q, closing the window, or the page's **Quit** button). If a library server is already running on port 8417, for example one started from a terminal, the app uses it and leaves it running when it quits. Games that are still running keep running either way. The server's output goes to `~/Library/Logs/mproton-library.log` (**View → Show Server Log**). Run `make-app.sh` again after moving the checkout.
 
-The app is `library/app/main.swift`, compiled with `swiftc` from Xcode or the Command Line Tools. Its icon is drawn at build time by `library/app/make-icon.swift`. It's signed ad hoc, so it runs on the Mac that built it. Without `swiftc`, `make-app.sh` builds the older script bundle instead: no window or Dock icon, and it opens the page in your browser.
+The app is `library/app/main.swift`, compiled with `swiftc` from Xcode or the Command Line Tools. Its icon is drawn at build time by `library/app/make-icon.swift`. It's signed ad hoc, so it runs on the Mac that built it. Releases build it with `make-app.sh --bundle`, which copies the tracked files of `launcher/` and `library/` into `Contents/Resources/mproton` with a `VERSION` file; `build/mproton-release.sh` then signs it with the Developer ID, notarizes and staples it, and packs it beside `wine/`. The app sets `PYTHONDONTWRITEBYTECODE=1`, so Python never writes `__pycache__` into the signed bundle. Without `swiftc`, `make-app.sh` builds the older script bundle instead: no window or Dock icon, and it opens the page in your browser.
 
 ## What you need
 
-- A signed mproton Wine bundle: either a [release download](https://github.com/jesscarter/mproton/releases) (set its `wine` folder with the **Paths** button, or start the library with `MPROTON_WINE_DIR=/path/to/wine`), or your own build (`build/mproton-build.sh`, see [../docs/building.md](../docs/building.md)). The library looks for a build in this checkout first, then in `~/mproton`, so it also works from a git worktree, which has no `work/`. The launcher carries its own `filelock.py`; a Proton reference tree in `ref/proton` is optional and only used if present.
+- A signed mproton Wine bundle: either a [release download](https://github.com/jesscarter/mproton/releases) or your own build (`build/mproton-build.sh`, see [../docs/building.md](../docs/building.md)). The library uses the first of: the **Paths** setting, `MPROTON_WINE_DIR`, the `wine` folder next to mproton Library.app, a build in this checkout, a build in `~/mproton` (so it also works from a git worktree, which has no `work/`), and `~/mproton-wine`. The launcher carries its own `filelock.py`; a Proton reference tree in `ref/proton` is optional and only used if present.
 - Steam for Mac, running and signed in, if the game uses the Steam API. The library never asks for or enters Steam credentials.
-- Nothing else. The library uses only the Python standard library. `mproton-library` uses Homebrew's `python3` if it is installed, otherwise `/usr/bin/python3`. The launcher runs under the same Python.
+- Nothing else. The library uses only the Python standard library. `mproton-library` uses Homebrew's `python3` if it is installed, otherwise `/usr/bin/python3`, which works once Apple's Command Line Tools (or Xcode) are installed; without them the app shows a page that offers to install them. The launcher runs under the same Python. The library never runs `git` unless it is in a checkout: without the Command Line Tools, `/usr/bin/git` would only offer to install them.
 
 ## What's on the page
 

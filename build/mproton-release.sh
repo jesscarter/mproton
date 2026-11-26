@@ -12,12 +12,18 @@
 #      (mach9 leaves this to the app that embeds the bundle; we ship the
 #      bundle itself). wine.app is left as it is: re-signing it loses its
 #      profile;
-#   3. send the bundle to Apple's notary service and wait for the verdict;
-#   4. check that the bundle still runs (bin/wine --version);
-#   5. pack it as <outdir>/mproton-<tag>-macos-arm64.tar.xz, as wine/, with
-#      a SHA-256 file and release notes naming the commits it was built from.
+#   3. build mproton Library.app with its own copy of launcher/ and library/
+#      (library/make-app.sh --bundle) next to the bundle, and sign it the same
+#      way;
+#   4. send the bundle and the app to Apple's notary service, wait for the
+#      verdicts, and staple the app's ticket to it;
+#   5. check that the bundle still runs (bin/wine --version) and the app
+#      verifies;
+#   6. pack both as <outdir>/mproton-<tag>-macos-arm64.tar.xz, holding wine/
+#      and mproton Library.app side by side, with a SHA-256 file and release
+#      notes naming the commits it was built from.
 #
-# It changes the bundle in place (step 2). Nothing is uploaded except the
+# It changes the bundle in place (step 2) and replaces <dist>/mproton Library.app. Nothing is uploaded except the
 # notarization submission; publishing the GitHub release is a separate,
 # manual step (the notes say how).
 #
@@ -25,13 +31,14 @@
 #   NOTARY_PROFILE  notarytool keychain profile (default mproton-notary),
 #                   made once with `xcrun notarytool store-credentials`
 #   MPROTON_WORK    workspace (default <repo>/work/mach9)
-#   SKIP_NOTARIZE=1 do everything but step 3 (for checking the script; the
+#   SKIP_NOTARIZE=1 do everything but step 4 (for checking the script; the
 #                   result must not be published)
 set -euo pipefail
 
 REPO=$(cd "$(dirname "$0")/.." && pwd)
 WORK=${MPROTON_WORK:-$REPO/work/mach9}
 DIST=$WORK/dist/wine
+APP="$WORK/dist/mproton Library.app"
 NOTARY_PROFILE=${NOTARY_PROFILE:-mproton-notary}
 DEVELOPER_DIR=${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Developer}
 export DEVELOPER_DIR
@@ -88,7 +95,33 @@ codesign --verify --strict --deep "$LOADER" || bad=1
 [ "$bad" -eq 0 ] || die "signatures do not verify (above)"
 echo "  $count files signed and verified; wine.app verifies"
 
-step "3. notarize"
+step "3. mproton Library.app"
+# Swift needs the macOS SDK from DEVELOPER_DIR (Xcode), which is exported above.
+"$REPO/library/make-app.sh" --bundle --version "${TAG#v}" "$WORK/dist"
+err=$(codesign --force --options runtime --timestamp --sign "$IDENTITY" "$APP" 2>&1) \
+    || die "signing mproton Library.app failed: $err"
+codesign --verify --strict --deep "$APP" || die "mproton Library.app does not verify"
+echo "  signed: $APP"
+
+# notarize <path> <name>: zip it, submit it, wait; dies unless Apple accepts it.
+notarize() {
+    local zip=$OUT/notarize-$TAG-$2.zip result id status
+    rm -f "$zip"
+    ditto -c -k --keepParent "$1" "$zip"
+    result=$(xcrun notarytool submit "$zip" --keychain-profile "$NOTARY_PROFILE" --wait --output-format json) \
+        || true
+    rm -f "$zip"
+    id=$(python3 -c 'import json,sys; print(json.loads(sys.argv[1]).get("id",""))' "$result" 2>/dev/null || true)
+    status=$(python3 -c 'import json,sys; print(json.loads(sys.argv[1]).get("status",""))' "$result" 2>/dev/null || true)
+    echo "  $2: submission $id: $status"
+    if [ "$status" != "Accepted" ]; then
+        [ -n "$id" ] && xcrun notarytool log "$id" --keychain-profile "$NOTARY_PROFILE" "$OUT/notary-log-$2.json" >/dev/null 2>&1 \
+            && echo "  Apple's log: $OUT/notary-log-$2.json"
+        die "notarization of $2 was not accepted: ${result:-no response}"
+    fi
+}
+
+step "4. notarize"
 if [ "${SKIP_NOTARIZE:-0}" = 1 ]; then
     echo "  SKIPPED (SKIP_NOTARIZE=1): do not publish this build"
 else
@@ -96,32 +129,26 @@ else
         || die "no notarytool credentials named '$NOTARY_PROFILE'; make them once with:" \
                "  xcrun notarytool store-credentials $NOTARY_PROFILE --apple-id <your Apple ID> --team-id <team>"
     mkdir -p "$OUT"
-    zip=$OUT/notarize-$TAG.zip
-    rm -f "$zip"
-    ditto -c -k --keepParent "$DIST" "$zip"
-    result=$(xcrun notarytool submit "$zip" --keychain-profile "$NOTARY_PROFILE" --wait --output-format json) \
-        || true
-    rm -f "$zip"
-    id=$(python3 -c 'import json,sys; print(json.loads(sys.argv[1]).get("id",""))' "$result" 2>/dev/null || true)
-    status=$(python3 -c 'import json,sys; print(json.loads(sys.argv[1]).get("status",""))' "$result" 2>/dev/null || true)
-    echo "  submission $id: $status"
-    if [ "$status" != "Accepted" ]; then
-        [ -n "$id" ] && xcrun notarytool log "$id" --keychain-profile "$NOTARY_PROFILE" "$OUT/notary-log.json" >/dev/null 2>&1 \
-            && echo "  Apple's log: $OUT/notary-log.json"
-        die "notarization was not accepted: ${result:-no response}"
-    fi
+    notarize "$DIST" wine
+    notarize "$APP" app
+    # The ticket inside the app lets Gatekeeper accept it offline on first launch.
+    xcrun stapler staple "$APP" >/dev/null || die "stapling the app's notarization ticket failed"
+    echo "  app ticket stapled"
 fi
 
-step "4. smoke test"
+step "5. smoke test"
 version=$("$DIST/bin/wine" --version 2>/dev/null) || die "bin/wine --version failed after signing"
 echo "  $version"
+codesign --verify --strict --deep "$APP" || die "mproton Library.app no longer verifies"
+[ -x "$APP/Contents/Resources/mproton/library/mproton-library" ] || die "the app carries no library/"
+echo "  mproton Library.app verifies; carries $(cat "$APP/Contents/Resources/mproton/VERSION")"
 
-step "5. pack"
+step "6. pack"
 mkdir -p "$OUT"
 name=mproton-$TAG-macos-arm64
 tarball=$OUT/$name.tar.xz
 rm -f "$tarball"
-tar -C "$(dirname "$DIST")" -cf - "$(basename "$DIST")" | xz -T0 > "$tarball"
+tar -C "$(dirname "$DIST")" -cf - "$(basename "$DIST")" "$(basename "$APP")" | xz -T0 > "$tarball"
 (cd "$OUT" && shasum -a 256 "$name.tar.xz" > "$name.tar.xz.sha256")
 commit=$(git -C "$REPO" rev-parse HEAD)
 dirty=$(git -C "$REPO" status --porcelain --untracked-files=no | head -n 1)
@@ -133,7 +160,7 @@ Experimental build of mproton for Apple Silicon Macs (macOS 26.4 or newer).
 - Wine: $version. Signed with "$IDENTITY" and notarized by Apple.
 - SHA-256: \`$(cut -d' ' -f1 "$OUT/$name.tar.xz.sha256")\`
 
-Unpack it anywhere and point the launcher or mproton Library at the \`wine\` folder (\`MPROTON_WINE_DIR\`); see [docs/running.md](https://github.com/jesscarter/mproton/blob/$commit/docs/running.md).
+Double-click the download to unpack it. You get a folder holding **mproton Library** and a \`wine\` folder: keep the two together (move the whole folder wherever you like) and open mproton Library. It needs Python 3, which comes with Apple's Command Line Tools; the app offers to install them if they're missing. See the [README](https://github.com/jesscarter/mproton/blob/$commit/README.md#getting-started). To run games by hand with the launcher instead, point it at the \`wine\` folder (\`MPROTON_WINE_DIR\`); see [docs/running.md](https://github.com/jesscarter/mproton/blob/$commit/docs/running.md).
 
 Source: this bundle contains Wine and other LGPL software. The corresponding source is this repository at \`$commit\` together with the upstream commits pinned there; \`build/mproton-build.sh\` rebuilds it.
 ${build_info:+

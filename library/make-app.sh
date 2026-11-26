@@ -1,14 +1,30 @@
 #!/bin/bash
 # Build "mproton Library.app" so the library can be started from Finder, Spotlight or the Dock.
-# Usage: library/make-app.sh [dest dir]      (default: ~/Applications)
+# Usage: library/make-app.sh [--bundle] [--version X.Y.Z] [dest dir]   (default: ~/Applications)
 #
 # With swiftc (Xcode or the Command Line Tools) it builds a native app (library/app/main.swift):
 # a window with the library page, a Dock icon and menus, which starts the library server and
 # stops it on quit. Without swiftc it falls back to a script bundle that starts the server and
-# opens the page in your browser. Either way the app runs library/mproton-library from this
-# checkout. Signed ad hoc only; nothing is installed system-wide.
+# opens the page in your browser.
+#
+# By default the app runs library/mproton-library from this checkout. With --bundle (used by
+# build/mproton-release.sh) it carries its own copy of launcher/ and library/ in
+# Contents/Resources/mproton (the files git tracks, as they are in the working tree) and a
+# VERSION file, so it runs without a checkout; it then needs swiftc. Signed ad hoc only (the
+# release script re-signs it); nothing is installed system-wide.
 set -euo pipefail
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+repo="$(cd "$here/.." && pwd)"
+bundle=0
+version=1.0
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --bundle) bundle=1; shift ;;
+        --version) version="${2:?--version needs a value}"; shift 2 ;;
+        -*) echo "unknown option $1" >&2; exit 2 ;;
+        *) break ;;
+    esac
+done
 dest="${1:-$HOME/Applications}"
 app="$dest/mproton Library.app"
 script="$here/mproton-library"
@@ -26,13 +42,31 @@ plist_common() {
   <key>CFBundleIdentifier</key><string>dev.mproton.library</string>
   <key>CFBundleExecutable</key><string>mproton-library</string>
   <key>CFBundlePackageType</key><string>APPL</string>
-  <key>CFBundleShortVersionString</key><string>1.0</string>
+  <key>CFBundleShortVersionString</key><string>$version</string>
   <key>CFBundleVersion</key><string>$rev</string>
-  <key>NSHumanReadableCopyright</key><string>Runs $script</string>
 PLIST
 }
 
 swiftc="$(xcrun --find swiftc 2>/dev/null || true)"
+if [ "$bundle" = 1 ] && [ -z "$swiftc" ]; then
+    echo "--bundle needs swiftc (Xcode or the Command Line Tools)" >&2
+    exit 1
+fi
+if [ "$bundle" = 1 ]; then
+    # The runtime files only: no tests, app sources or build scripts.
+    res="$build/Contents/Resources/mproton"
+    mkdir -p "$res"
+    git -C "$repo" ls-files -z -- LICENSE launcher library/mproton-library library/mproton_library.py \
+            library/static library/README.md \
+        | tar -C "$repo" --null -T - -cf - | tar -C "$res" -xf -
+    [ -x "$res/library/mproton-library" ] && [ -f "$res/launcher/mproton" ] \
+        || { echo "copying launcher/ and library/ into the app failed" >&2; exit 1; }
+    dirty="$(git -C "$repo" status --porcelain --untracked-files=no -- launcher library | head -n 1)"
+    echo "$version ($rev${dirty:+, with uncommitted changes})" > "$res/VERSION"
+    script_key=""
+else
+    script_key="<key>MprotonLibraryScript</key><string>$script</string>"
+fi
 if [ -n "$swiftc" ]; then
     xcrun --sdk macosx swiftc -O -target arm64-apple-macos13 -o "$build/Contents/MacOS/mproton-library" "$here/app/main.swift"
     icon_key=""
@@ -58,7 +92,7 @@ $(plist_common)
   <key>LSMinimumSystemVersion</key><string>13.0</string>
   <key>NSHighResolutionCapable</key><true/>
   <key>NSPrincipalClass</key><string>NSApplication</string>
-  <key>MprotonLibraryScript</key><string>$script</string>
+  $script_key
   <key>NSAppTransportSecurity</key><dict><key>NSAllowsLocalNetworking</key><true/></dict>
 </dict></plist>
 PLIST
@@ -92,5 +126,6 @@ rm -rf "$app"
 mv "$build" "$app"
 # Make Finder and the Dock pick up the new icon and Info.plist.
 lsregister=/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister
-[ -x "$lsregister" ] && "$lsregister" -f "$app" || true
+[ "$bundle" = 0 ] && [ -x "$lsregister" ] && "$lsregister" -f "$app" || true
+[ "$bundle" = 1 ] && kind="$kind, carrying launcher/ and library/ $(cat "$app/Contents/Resources/mproton/VERSION")"
 echo "built: $app ($kind)"

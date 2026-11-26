@@ -8,17 +8,9 @@ mproton brings the pieces that make Valve's [Proton](https://github.com/ValveSof
 
 ## What works
 
-Tested on an Apple M2 with macOS 27.2 (November 2026):
+The games tried so far, with what worked and what didn't, are listed in [docs/running.md](docs/running.md#games-tested).
 
-| Game | Engine | Arch | Graphics | Steam API | Result |
-|---|---|---|---|---|---|
-| Queen's Domain Demo | Unreal Engine 4 | x86_64 | D3D11 | ✅ connected | Runs, with sound |
-| ULTRAKILL Demo | Unity 2019 | x86_64 | D3D11 | (demo has none) | Plays fine |
-| Emily is Away | Unity 2017 | **32-bit** | D3D11 | ✅ connected | Runs correctly |
-| Lunacid | Unity 2020 | x86_64 | D3D11 | not checked | Works |
-| Castlevania: Belmont's Curse | Unity 2022 | x86_64 | D3D11 | not checked | Works; the resolution menu shows no resolutions |
-
-**The Steam side works too:** lsteamclient talks to the running Mac Steam client from both 64-bit and 32-bit games. A test program unlocked, stored and cleared a Steam achievement through it on both. Details and the list of games tried are in [docs/running.md](docs/running.md#games-tested).
+**The Steam side works too:** lsteamclient talks to the running Mac Steam client from both 64-bit and 32-bit games. A test program unlocked, stored and cleared a Steam achievement through it on both.
 
 **Not working yet, or unknown:**
 - Games with anti-cheat. macOS has no equivalent of the Linux anti-cheat runtimes Proton uses, so online games protected by EAC, BattlEye or VAC are out of scope for now.
@@ -30,21 +22,19 @@ Tested on an Apple M2 with macOS 27.2 (November 2026):
 
 - An Apple Silicon Mac (M1 or newer) with **macOS 26.4 or newer**.
 - Steam for Mac, signed in, for games that use the Steam API.
-- `git` and `python3`, both of which come with Apple's Command Line Tools (`xcode-select --install`).
+- Python 3, which comes with Apple's Command Line Tools. If they're missing, mproton Library offers to install them (or run `xcode-select --install`).
 
 That's all you need to use a release. Building mproton yourself needs more, see [Building it yourself](#building-it-yourself).
 
 ## Getting started
 
-1. **Download mproton.** Get `mproton-<version>-macos-arm64.tar.xz` from [Releases](https://github.com/jesscarter/mproton/releases) and double-click it to unpack. You get a `wine` folder; move it somewhere permanent, such as `~/mproton-wine`. It's signed and notarized, so macOS opens it without warnings.
+1. **Download mproton.** Get `mproton-<version>-macos-arm64.tar.xz` from [Releases](https://github.com/jesscarter/mproton/releases) and double-click it to unpack. You get a folder holding **mproton Library** and a `wine` folder. Keep the two together: move the whole folder somewhere permanent (for example into your Applications folder). Everything is signed and notarized, so macOS opens it without warnings.
 
-2. **Get the launcher and the app:**
+   v0.1.0 has only the `wine` folder. For it, move `wine` to `~/mproton-wine`, clone this repository and start the library with `mproton/library/mproton-library`.
 
-   ```bash
-   git clone https://github.com/jesscarter/mproton.git
-   ```
+2. **Open mproton Library.** It's a small app with your Windows games, Play and Stop buttons, logs and per-game settings ([library/README.md](library/README.md)).
 
-3. **Get a game's Windows build.** In mproton Library (step 4), press **Get a Windows game**, search for a game you own, and paste the `download_depot` lines it shows into Steam's console (the **Steam console** button opens it). This downloads only that game's Windows build, so games you have as Mac builds aren't touched. By hand, the console command is:
+3. **Get a game's Windows build.** In mproton Library, press **Get a Windows game**, search for a game you own, and paste the `download_depot` lines it shows into Steam's console (the **Steam console** button opens it). This downloads only that game's Windows build, so games you have as Mac builds aren't touched. By hand, the console command is:
 
    ```
    download_depot <appid> <depotid>
@@ -52,13 +42,7 @@ That's all you need to use a release. Building mproton yourself needs more, see 
 
    Depot IDs are also listed on SteamDB or by `https://api.steamcmd.net/v1/info/<appid>`. The other way is the **Windows downloads** switch in mproton Library, which makes Steam download Windows builds of every game, including games that have a Mac build.
 
-4. **Play it** with mproton Library, a small local app with a game list and Play/Stop buttons:
-
-   ```bash
-   MPROTON_WINE_DIR=~/mproton-wine mproton/library/mproton-library
-   ```
-
-   Or run a game by hand with the launcher: see [docs/running.md](docs/running.md).
+4. **Play it:** pick the game in mproton Library and press **Play**. Or run a game by hand with the launcher: see [docs/running.md](docs/running.md).
 
 ## Building it yourself
 
@@ -72,7 +56,7 @@ scripts/setup.sh
 LOADER_PROFILE=~/signing/mproton-loader.provisionprofile build/mproton-build.sh
 ```
 
-The full guide is [docs/building.md](docs/building.md). `build/mproton-release.sh <tag>` turns a bundle signed with a Developer ID profile into a notarized release.
+The full guide is [docs/building.md](docs/building.md). `build/mproton-release.sh <tag>` turns a bundle signed with a Developer ID profile into a notarized release, with mproton Library.app built, signed and notarized beside it.
 
 ## How it fits together
 
