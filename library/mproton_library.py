@@ -18,6 +18,7 @@ import subprocess
 import sys
 import threading
 import time
+import traceback
 import urllib.parse
 import urllib.request
 import webbrowser
@@ -80,11 +81,19 @@ def read_json(path, default):
 def write_json_atomic(path, data):
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_name(path.name + ".tmp")
-    with open(tmp, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, sort_keys=True)
-        f.write("\n")
-    os.replace(tmp, path)
+    # Unique tmp name: two library servers (or threads) writing the same file must not share
+    # one tmp, or the second os.replace finds it already moved (FileNotFoundError).
+    tmp = path.with_name(f"{path.name}.{os.getpid()}.{threading.get_ident()}.tmp")
+    try:
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, sort_keys=True)
+            f.write("\n")
+        os.replace(tmp, path)
+    finally:
+        try:
+            tmp.unlink()
+        except FileNotFoundError:
+            pass
 
 
 def parse_vdf(text):
@@ -227,7 +236,10 @@ def steamcmd_info(appid, refresh=False, offline=False):
         _fetch_failures[appid] = time.time()
         log(f"steamcmd lookup for {appid} failed: {e}")
         return None
-    write_json_atomic(cache, {"fetched": now_iso(), "url": url, "data": data})
+    try:
+        write_json_atomic(cache, {"fetched": now_iso(), "url": url, "data": data})
+    except OSError as e:  # the reply is still good; the cache is retried on the next lookup
+        log(f"steamcmd cache write for {appid} failed: {e!r}")
     return data
 
 
@@ -371,7 +383,10 @@ def find_case_insensitive(base, rel):
         if name is None:
             return None
         p = p / name
-    return p if p.is_file() else None
+    try:
+        return p if p.is_file() else None
+    except OSError:
+        return None
 
 
 def exe_candidates(dirs, depth=3):
@@ -520,31 +535,48 @@ def _scan_games(refresh=False):
             if d.is_dir() and exe_candidates([d]):
                 raw.append((appid, "library", [d], st.get("name")))
 
+    def info_for(appid):
+        try:
+            return steamcmd_info(appid, refresh=refresh)
+        except OSError:
+            log(f"scan: steamcmd info for {appid} failed:\n{traceback.format_exc()}")
+            return None
+
     ids = sorted({r[0] for r in raw})
     with concurrent.futures.ThreadPoolExecutor(max_workers=6) as ex:
-        infos = dict(zip(ids, ex.map(lambda a: steamcmd_info(a, refresh=refresh), ids)))
+        infos = dict(zip(ids, ex.map(info_for, ids)))
 
     games, seen = [], set()
     for appid, source, dirs, mname in raw:
         info = infos.get(appid)
-        if source == "library":
-            # A Windows build: Steam's Windows launch target exists on disk. Without launch
-            # info (offline) fall back to "has a .exe" and mark it unverified.
-            if info is not None:
-                ok = any(find_case_insensitive(dirs[0], e["executable"])
-                         for e in windows_launch_entries(info))
-                if not ok:
-                    continue
+        gs = game_settings(s, appid)
+        name = ((info or {}).get("common") or {}).get("name") or mname or f"App {appid}"
+        # Steam may be updating or deleting this game's files right now: an OSError here
+        # degrades this one entry instead of failing the whole list (a 500 empties the page).
+        try:
+            if source == "library":
+                # A Windows build: Steam's Windows launch target exists on disk. Without launch
+                # info (offline) fall back to "has a .exe" and mark it unverified.
+                if info is not None:
+                    ok = any(find_case_insensitive(dirs[0], e["executable"])
+                             for e in windows_launch_entries(info))
+                    if not ok:
+                        continue
+            launch = resolve_launch(appid, dirs, gs, info)
+            has_icon = find_icon(appid) is not None
+        except OSError as e:
+            log(f"scan: {appid} ({source}, {', '.join(map(str, dirs))}) changed during the scan:\n"
+                f"{traceback.format_exc()}")
+            launch = {"exe": None, "source": None, "args": "", "cwd": None, "ok": False,
+                      "note": f"files changed during scan ({e.strerror or e}); refresh to retry"}
+            has_icon = False
         key = (appid, source)
         if key in seen:
             continue
         seen.add(key)
-        gs = game_settings(s, appid)
-        launch = resolve_launch(appid, dirs, gs, info)
-        name = ((info or {}).get("common") or {}).get("name") or mname or f"App {appid}"
         games.append({
             "appid": appid, "name": name, "source": source, "dirs": [str(d) for d in dirs],
-            "launch": launch, "settings": gs, "has_icon": find_icon(appid) is not None,
+            "launch": launch, "settings": gs, "has_icon": has_icon,
             "steam_info": info is not None, "prefix": str(PREFIXES / appid),
             "prefix_exists": (PREFIXES / appid / "pfx").is_dir(),
             "verified_windows": info is not None or source == "download_depot",
@@ -1020,7 +1052,11 @@ class Handler(BaseHTTPRequestHandler):
                 if not p:
                     return self._err(404, "no icon")
                 ctype = "image/png" if p.suffix == ".png" else "image/jpeg"
-                return self._send(200, p.read_bytes(), ctype, {"Cache-Control": "max-age=3600"})
+                try:
+                    data = p.read_bytes()
+                except FileNotFoundError:  # Steam replaced the cached image since find_icon
+                    return self._err(404, "no icon")
+                return self._send(200, data, ctype, {"Cache-Control": "max-age=3600"})
             if len(parts) == 4 and parts[:2] == ["api", "game"] and parts[3] == "logs":
                 g = find_game(parts[2])
                 return self._send(200, game_logs(g) if g else [])
@@ -1032,7 +1068,7 @@ class Handler(BaseHTTPRequestHandler):
                     return self._err(404, "no such log")
                 return self._send(200, {"path": lg["path"], "text": tail(lg["path"])})
         except Exception as e:
-            log(f"GET {self.path}: {e!r}")
+            log(f"GET {self.path}: {e!r}\n{traceback.format_exc()}")
             return self._err(500, str(e))
         return self._err(404, "not found")
 
@@ -1121,7 +1157,7 @@ class Handler(BaseHTTPRequestHandler):
         except RuntimeError as e:
             return self._err(409, str(e))
         except Exception as e:
-            log(f"POST {self.path}: {e!r}")
+            log(f"POST {self.path}: {e!r}\n{traceback.format_exc()}")
             return self._err(500, str(e))
         return self._err(404, "not found")
 

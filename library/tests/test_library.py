@@ -100,6 +100,62 @@ class Discovery(Base):
         self.assertEqual(games["200"]["launch"]["source"], "guess")  # no launch info offline
         self.assertFalse(games["200"]["verified_windows"])
 
+    def test_vanished_file_degrades_one_game(self):
+        for appid in ("100", "400"):
+            depot = self.macos / f"steamapps/content/app_{appid}/depot_{appid}1"
+            depot.mkdir(parents=True)
+            (depot / "game.exe").write_text("MZ")
+        real = self.m.resolve_launch
+
+        def flaky(appid, dirs, gs, info):
+            if appid == "100":  # Steam deleted a file between listing and stat
+                raise FileNotFoundError(2, "No such file or directory", str(dirs[0]))
+            return real(appid, dirs, gs, info)
+
+        self.m.resolve_launch = flaky
+        games = {g["appid"]: g for g in self.m.scan_games()}
+        self.assertEqual(sorted(games), ["100", "400"])
+        self.assertTrue(games["400"]["launch"]["ok"])
+        self.assertFalse(games["100"]["launch"]["ok"])
+        self.assertIn("changed during scan", games["100"]["launch"]["note"])
+        self.assertEqual(set(games["100"]), set(games["400"]))  # same shape
+
+    def test_steam_info_error_skips_only_that_info(self):
+        for appid in ("100", "400"):
+            depot = self.macos / f"steamapps/content/app_{appid}/depot_{appid}1"
+            depot.mkdir(parents=True)
+            (depot / "game.exe").write_text("MZ")
+
+        def info(appid, refresh=False, offline=False):
+            if appid == "100":
+                raise FileNotFoundError(2, "No such file or directory")
+            return None
+
+        self.m.steamcmd_info = info
+        self.assertEqual(sorted(g["appid"] for g in self.m.scan_games()), ["100", "400"])
+
+    def test_concurrent_atomic_writes(self):
+        # Two servers caching the same steamcmd reply used to share one .tmp file.
+        import threading
+        path = self.m.STATE_DIR / "x.json"
+        errors = []
+
+        def w(i):
+            try:
+                for _ in range(50):
+                    self.m.write_json_atomic(path, {"i": i})
+            except OSError as e:
+                errors.append(e)
+
+        ts = [threading.Thread(target=w, args=(i,)) for i in range(4)]
+        for t in ts:
+            t.start()
+        for t in ts:
+            t.join()
+        self.assertEqual(errors, [])
+        self.assertIn(json.loads(path.read_text())["i"], range(4))
+        self.assertEqual([p.name for p in path.parent.iterdir()], ["x.json"])
+
     def test_override(self):
         depot = self.macos / "steamapps/content/app_100/depot_101"
         depot.mkdir(parents=True)
